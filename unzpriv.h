@@ -1392,29 +1392,6 @@ struct file_list {
   struct file_list *next;
 };
 
-
-/* function prototypes */
-
-/* get the next option from args */
-unsigned long get_option OF((int option_group,
-                             char ***pargs, int *argc, int *argnum,
-                             int *optchar,
-                             char **value, int *negated, int *first_nonopt_arg,
-                             int *option_num, int recursion_depth));
-
-/* copy args - copy an args array, allocating space as needed */
-char **copy_args OF((char **args, int max_args));
-
-/* arg count - count args in argv like array */
-int arg_count OF((char **args));
-
-/* free args - free args created with one of these functions */
-int free_args OF((char **args));
-
-/* insert arg - copy an arg into args */
-int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
-                   int free_args));
-
 /*--------------------------------------------------------------------
     End of Long option support
   --------------------------------------------------------------------*/
@@ -2336,6 +2313,30 @@ typedef struct _APIDocStruct {
    int    usage                  OF((__GPRO__ int error));
 #endif /* !WINDLL */
 
+/* Long option function prototypes */
+
+/* get the next option from args */
+unsigned long get_option OF((__GPRO__ int option_group,
+                             char ***pargs, int *argc, int *argnum,
+                             int *optchar,
+                             char **value, int *negated, int *first_nonopt_arg,
+                             int *option_num, int recursion_depth));
+
+/* copy args - copy an args array, allocating space as needed */
+char **copy_args OF((__GPRO__ char **args, int max_args));
+
+/* arg count - count args in argv like array */
+int arg_count OF((char **args));
+
+/* free args - free args created with one of these functions */
+int free_args OF((char **args));
+
+/* insert arg - copy an arg into args */
+int insert_arg OF((__GPRO__ char ***args, ZCONST char *arg, int insert_at,
+                   int free_args));
+
+void show_commandline OF((__GPRO__ char *args[]));
+
 /*---------------------------------------------------------------------------
     Functions in process.c (main driver routines):
   ---------------------------------------------------------------------------*/
@@ -2715,7 +2716,7 @@ char    *GetLoadPath     OF((__GPRO));                              /* local */
    int   set_direc_attribs  OF((__GPRO__ direntry *d));             /* local */
 #endif
 #ifdef TIMESTAMP
-# ifdef WIN32
+# if defined( VMS) || defined( WIN32)
    int   stamp_file      OF((__GPRO__
                              ZCONST char *fname, time_t modtime));  /* local */
 # else

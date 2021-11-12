@@ -706,8 +706,6 @@ int      UZ_EXP UzpFileTree        OF((char *name, cbList(callBack),
 unsigned UZ_EXP UzpVersion2        OF((UzpVer2 *version));
 int      UZ_EXP UzpValidate        OF((char *archive, int AllCodes));
 
-void     show_commandline          OF((char *args[]));
-
 
 /* default I/O functions (can be swapped out via UzpAltMain() entry point): */
 

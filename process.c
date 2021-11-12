@@ -1000,7 +1000,7 @@ static int do_seekable(__G__ lastchance)        /* return PK-type error code */
 
 #ifdef TIMESTAMP
     if (uO.T_flag && !uO.zipinfo_mode && (nmember > 0L)) {
-# ifdef WIN32
+# if defined( VMS) || defined( WIN32)
         if (stamp_file(__G__ G.zipfn, uxstamp)) {       /* TIME-STAMP 'EM */
 # else
         if (stamp_file(G.zipfn, uxstamp)) {             /* TIME-STAMP 'EM */

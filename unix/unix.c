@@ -450,7 +450,15 @@ int mapattr(__G)
              * value, after a check for consistency with the MSDOS attribute
              * bits (see below).
              */
-            G.pInfo->file_attr = (unsigned)(tmp >> 16);
+            /* 2010-09-22 SMS.  User complaints suggest that we can't
+             * trust these external attribute bits to be UNIX-like
+             * attribute bits if bit 2 of the _internal_ attributes is
+             * set.  For safety, trust nothing with any bits other than
+             * 0 or 1 set in the internal attributes.
+             */
+            if ((G.crec.internal_file_attributes & 0xfc) == 0) {
+                G.pInfo->file_attr = (unsigned)(tmp >> 16);
+            }
             /* fall through! */
         case FS_HPFS_:
         case FS_NTFS_:

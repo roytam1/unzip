@@ -1687,7 +1687,7 @@ int uz_opts(__G__ pargc, pargv)
     G.wildzipfn = NULL;
 
     /* make copy of args that can use with insert_arg() used by get_option() */
-    args = copy_args(*pargv, 0);
+    args = copy_args(__G__ *pargv, 0);
 
 
     /* Initialize lists */
@@ -1717,7 +1717,7 @@ int uz_opts(__G__ pargc, pargv)
            negated - option was negated with trailing -
     */
 
-    while ((option = get_option(UZO, &args, &argcnt, &argnum,
+    while ((option = get_option(__G__ UZO, &args, &argcnt, &argnum,
                                 &optchar, &value, &negative,
                                 &fna, &optnum, 0)))
     {
@@ -2415,7 +2415,7 @@ opts_done:  /* yes, very ugly...but only used by UnZipSFX with -x xlist */
     } else if (showhelp == -3) {
       /* show command line args */
       *pargc = -1;
-      show_commandline(args);
+      show_commandline(__G__ args);
       return PK_OK;
 # endif /* ndef SFX */
     }
@@ -3059,7 +3059,8 @@ static void show_options(__G)
 } /* end function show_options() */
 
 /* Print processed command line. */
-void show_commandline(args)
+void show_commandline(__G__ args)
+    __GDEF
     char *args[];
 {
 #define MAX_CARG_LEN (WSIZE>>2)
@@ -3578,7 +3579,8 @@ static int optionerr(options, buf, err, optind, islong)
  * allocated with malloc or by NULL if last argument so that free_args
  * will properly work.
  */
-char **copy_args(args, max_args)
+char **copy_args(__G__ args, max_args)
+  __GDEF
   char **args;
   int max_args;
 {
@@ -3661,7 +3663,8 @@ int free_args(args)
  * argv but only on args allocated with malloc.
  */
 
-int insert_arg(pargs, arg, at_arg, free_args)
+int insert_arg(__G__ pargs, arg, at_arg, free_args)
+   __GDEF
    char ***pargs;
    ZCONST char *arg;
    int at_arg;
@@ -3761,8 +3764,9 @@ int insert_arg(pargs, arg, at_arg, free_args)
  *                   value lists.
  *    depth        - recursion depth (0 at top level, 1 or more in arg files)
  */
-static unsigned long get_shortopt(option_group, args, argnum, optchar, negated,
-                                  value, option_num, depth)
+static unsigned long get_shortopt(__G__ option_group, args, argnum,
+                                  optchar, negated, value, option_num, depth)
+  __GDEF
   int option_group;
   ZCONST char **args;
   int argnum;
@@ -4014,8 +4018,8 @@ static unsigned long get_shortopt(option_group, args, argnum, optchar, negated,
  * Parameters same as for get_shortopt.
  */
 
-static unsigned long get_longopt(option_group, args, argnum, optchar, negated,
-                                 value, option_num, depth)
+static unsigned long get_longopt(__G__ option_group, args, argnum,
+                                 optchar, negated, value, option_num, depth)
   int option_group;
   ZCONST char **args;
   int argnum;
@@ -4402,8 +4406,10 @@ static unsigned long get_longopt(option_group, args, argnum, optchar, negated,
  *
  */
 
-unsigned long get_option(option_group, pargs, argc, argnum, optchar, value,
-                         negated, first_nonopt_arg, option_num, recursion_depth)
+unsigned long get_option(__G__ option_group, pargs, argc, argnum,
+                         optchar, value, negated, first_nonopt_arg,
+                         option_num, recursion_depth)
+  __GDEF
   int option_group;
   char ***pargs;
   int *argc;
@@ -4549,7 +4555,7 @@ unsigned long get_option(option_group, pargs, argc, argnum, optchar, value,
         /* this is only needed for argument files */
         /* but is also good for show command line so command lines with lists
            can always be read back in */
-        argcnt = insert_arg(&args, "@", first_nonoption_arg, 1);
+        argcnt = insert_arg(__G__ &args, "@", first_nonoption_arg, 1);
         argn++;
         if (first_nonoption_arg > -1) {
           first_nonoption_arg++;
@@ -4702,8 +4708,8 @@ unsigned long get_option(option_group, pargs, argc, argnum, optchar, value,
           }
 
         } else {
-          option_ID = get_longopt(option_group, (ZCONST char **)args, argn,
-                                  &optc, negated,
+          option_ID = get_longopt(__G__ option_group, (ZCONST char **)args,
+                                  argn, &optc, negated,
                                   value, option_num, recursion_depth);
           if (option_ID == o_BAD_ERR) {
             return o_BAD_ERR;
@@ -4716,7 +4722,7 @@ unsigned long get_option(option_group, pargs, argc, argnum, optchar, value,
 
       } else {
         /* short option */
-        option_ID = get_shortopt(option_group, (ZCONST char **)args, argn,
+        option_ID = get_shortopt(__G__ option_group, (ZCONST char **)args, argn,
                                  &optc, negated,
                                  value, option_num, recursion_depth);
 
