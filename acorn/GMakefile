@@ -1,8 +1,8 @@
 #-----------------------------------------------------------------------
-#    acorn/GMakefile -- RISC OS, GCC            Revised: 2018-12-20
+#    acorn/GMakefile -- RISC OS, GCC            Revised: 2019-01-06
 #    For UnZip, fUnZip, UnZipSFX, and ZipInfo
 #
-# Copyright (c) 2004-2018 Info-ZIP.  All rights reserved.
+# Copyright (c) 2004-2019 Info-ZIP.  All rights reserved.
 #
 # See the accompanying file LICENSE, version 2009-Jan-2 or later (the
 # contents of which are also included in zip.h) for terms of use.  If,
@@ -68,17 +68,17 @@
 #
 #-----------------------------------------------------------------------
 
-# Product file directory default is "@".
+# Product file directory.  Default is the current directory, "@".
 PROD = @
 
 #-----------------------------------------------------------------------
 #    Tools
 #-----------------------------------------------------------------------
-AR      = ar cq
 CC      = gcc
-LD      = $(CC)
+AR      = ar qc
 AS      = $(CC) -c
-SQUEEZE = squeeze -v
+LD      = $(CC)
+RANLIB  = ranlib
 
 #-----------------------------------------------------------------------
 #  Object library names, options.
@@ -87,30 +87,35 @@ SQUEEZE = squeeze -v
 
 # Object library: AES_WG encryption
 LIB_AES_WG = aes_wg
+AA_AES_WG  = $(PROD).lib$(LIB_AES_WG)/a
 AR_AES_WG  = $(PROD)/lib$(LIB_AES_WG).a
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Object library: BZIP2 compression
 LIB_BZIP2  = bz2
+AA_BZIP2   = $(PROD).lib$(LIB_BZIP2)/a
 AR_BZIP2   = $(PROD)/lib$(LIB_BZIP2).a
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Object library: LZMA compression
 LIB_LZMA   = iz_lzma
+AA_LZMA    = $(PROD).lib$(LIB_LZMA)/a
 AR_LZMA    = $(PROD)/lib$(LIB_LZMA).a
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # Object library: PPMd compression
 LIB_PPMD   = iz_ppmd
+AA_PPMD    = $(PROD).lib$(LIB_PPMD)/a
 AR_PPMD    = $(PROD)/lib$(LIB_PPMD).a
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # object library: Callable UnZip
 LIB_UNZIP  = izunzip
+AA_UNZIP   = $(PROD).lib$(LIB_UNZIP)/a
 AR_UNZIP   = $(PROD)/lib$(LIB_UNZIP).a
 LIB_OPT_UNZIP = -L$(PROD) -l$(LIB_UNZIP)
 
@@ -224,7 +229,7 @@ CF       = $(CFLAGS) $(CF_NOOPT) $(CFEAT)       # C compiler flags.
 # Linker and linker options (early and late).
 
 LF1     = -mlibscl $(LF1_ICONV_MAPPING)
-LF2     =
+LF2     = -s
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -247,21 +252,21 @@ MISC_TARGETS = clean  dashv  help
 #  Build configuration: Executable programs
 #-----------------------------------------------------------------------
 
-PGM_FUZ      = funzip$(PGMEXT)
-PGM_SFX      = unzipsfx$(PGMEXT)
-PGM_UNZIP    = unzip$(PGMEXT)
-PGM_UNZXMPL  = izunzip_example$(PGMEXT)
-PGM_ZGREP    = zipgrep
-PGM_ZINFO    = zipinfo$(PGMEXT)
+PGM_FUNZIP    = funzip$(PGMEXT)
+PGM_UNZIP     = unzip$(PGMEXT)
+PGM_UNZIPSFX  = unzipsfx$(PGMEXT)
+PGM_UNZXMPL   = izunzip_example$(PGMEXT)
+PGM_ZIPGREP   = zipgrep
+PGM_ZIPINFO   = zipinfo$(PGMEXT)
 
-PPGM_FUZ     = $(PROD)/$(PGM_FUZ)
-PPGM_SFX     = $(PROD)/$(PGM_SFX)
-PPGM_UNZIP   = $(PROD)/$(PGM_UNZIP)
-PPGM_UNZXMPL = $(PROD)/$(PGM_UNZXMPL)
+PPGM_FUNZIP    = $(PROD)/$(PGM_FUNZIP)
+PPGM_UNZIPSFX  = $(PROD)/$(PGM_UNZIPSFX)
+PPGM_UNZIP     = $(PROD)/$(PGM_UNZIP)
+PPGM_UNZXMPL   = $(PROD)/$(PGM_UNZXMPL)
 
-UNZIP_PPGMS = $(PPGM_FUZ)   \
-              $(PPGM_SFX)   \
-              $(PPGM_UNZIP)
+UNZIP_PPGMS = $(PPGM_FUNZIP)   \
+              $(PPGM_UNZIP)    \
+              $(PPGM_UNZIPSFX)
 
 #-----------------------------------------------------------------------
 
@@ -281,14 +286,15 @@ all: prod_dir $(BINS)
 L:          $(AR_UNZIP) $(PPGM_UNZXMPL)
 LM:         $(AR_UNZIP) $(PPGM_UNZXMPL) $(PPGM_UNZIP)
 LMU:        $(AR_UNZIP) $(PPGM_UNZXMPL) $(UNZIP_PPGMS)
-LU:         $(AR_UNZIP) $(PPGM_UNZXMPL) $(PPGM_FUZ) $(PPGM_SFX)
+LU:         $(AR_UNZIP) $(PPGM_UNZXMPL) $(PPGM_FUNZIP) $(PPGM_UNZIPSFX)
 M:          $(PPGM_UNZIP)
 MU:         $(UNZIP_PPGMS)
-U:          $(PPGM_FUZ) $(PPGM_SFX)
+U:          $(PPGM_FUNZIP) $(PPGM_UNZIPSFX)
 
 #-----------------------------------------------------------------------
 
 # Create product directory.  (Required before any use of $(PROD).)
+
 prod_dir:
 	%cdir $(PROD)
 
@@ -445,7 +451,7 @@ O_SFX    = $(PROD)/unzipsfx.o    \
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 # object files: funzip
-O_FUZ    = $(PROD)/funzip.o    \
+O_FUNZIP = $(PROD)/funzip.o    \
            $(PROD)/crc32_f.o   \
            $(PROD)/crypt_f.o   \
            $(PROD)/globals_f.o \
@@ -495,16 +501,9 @@ O_BZIP2   = $(PROD)/blocksort.o  \
 #-----------------------------------------------------------------------
 .SUFFIXES:
 
-#-----------------------------------------------------------------------
-#  Build rules: C compile (.c -> .o)
-#  - Explicit 1:1 rules are used.
-#-----------------------------------------------------------------------
-
-# C Compile rules: UnZip
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# A) Core UnZip C files
+# Compile UnZip C files.
 
 $(PROD)/unzip.o:      unzip.c     $(H_UNZIP) consts.h crypt.h \
                        if_lzma.h if_ppmd.h unzvers.h
@@ -570,7 +569,7 @@ $(PROD)/zipinfo.o:    zipinfo.c   $(H_UNZIP)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# B) System-specific C files
+# Compile system-specific UnZip C files.
 
 $(PROD)/acorn.o:       acorn/acorn.c $(UNZIP_H)
 	$(CC) $(CF) -c -o $@ acorn/acorn.c
@@ -583,7 +582,7 @@ $(PROD)/swiven.o:	acorn/swiven.c
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# A') Callable UnZip C files
+# Compile UnZip object library C files
 
 $(PROD)/api_l.o:      api.c       $(H_UNZIPL)
 	$(CC) -c $(CF) -DDLL -o $@ api.c
@@ -649,7 +648,7 @@ $(PROD)/unix_l.o:   unix/unix.c $(H_UNZIPL) unix/macosx.h
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# B') System-specific C files
+# Compile system-specific UnZip object library C files
 
 $(PROD)/acorn_l.o:	acorn/acorn.c $(UNZIP_H)
 	$(CC) $(CF) -c -DDLL -o $@ acorn/acorn.c
@@ -659,7 +658,7 @@ $(PROD)/riscos_l.o:	acorn/riscos.c $(UNZIP_H)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# C Compile rules: UnZip object library, example program.
+# Compile UnZip object library, example program C files.
 
 $(PROD)/api.o:        api.c       $(H_UNZIP)
 	$(CC) -c $(CF) -DDLL -o $@ api.c
@@ -667,14 +666,12 @@ $(PROD)/api.o:        api.c       $(H_UNZIP)
 $(PROD)/apihelp.o:    apihelp.c   $(H_UNZIP)
 	$(CC) -c $(CF) -DDLL -o $@ apihelp.c
 
-$(PROD)/izunzip_example.o:   libiz/izunzip_example.c $(H_UNZIP)
-	$(CC) -c $(CF) -o $@ libiz/izunzip_example.c
+$(PROD)/izunzip_example.o:   izunzip_example.c $(H_UNZIP)
+	$(CC) -c $(CF) -o $@ izunzip_example.c
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# C Compile rules: UnZipSFX
-
-# A) Core UnZipSFX C files
+# Compile UnZipSFX C files.
 
 $(PROD)/unzipsfx.o:   unzip.c     $(H_UNZIP) consts.h crypt.h \
                                    if_lzma.h if_ppmd.h unzvers.h
@@ -719,7 +716,7 @@ $(PROD)/ubz2err_s.o:  ubz2err.c   $(H_UNZIP)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# B) System-specific C files.
+# Compile system-specific UnZipSFX C files.
 
 $(PROD)/acorn_s.o:	acorn/acorn.c $(UNZIP_H)
 	$(CC) $(CF) -c -DSFX -DSFX_EXDIR -o $@ acorn/acorn.c
@@ -729,7 +726,7 @@ $(PROD)/riscos_s.o:	acorn/riscos.c $(UNZIP_H)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# C Compile rules: fUnZip
+# Compile fUnZip C files.
 
 $(PROD)/funzip.o:     funzip.c    $(H_UNZIP) crc32.h crypt.h ttyio.h
 	$(CC) -c $(CF) -DFUNZIP -o $@ funzip.c
@@ -752,11 +749,9 @@ $(PROD)/match_f.o:    match.c     $(H_UNZIP)
 $(PROD)/ttyio_f.o:    ttyio.c     $(H_UNZIP) zip.h crypt.h ttyio.h
 	$(CC) -c $(CF) -DFUNZIP -o $@ ttyio.c
 
-# B) fUnZip C files for specific ports
-
 #-----------------------------------------------------------------------
 
-# C Compile rules: AES_WG encryption
+# Compile AES_WG encryption C files.
 
 $(PROD)/aescrypt.o: aes_wg/aescrypt.c $(H_AES)
 	$(CC) -c $(CF) -o $@ wrap/aescrypt.c
@@ -784,7 +779,7 @@ $(PROD)/sha1.o:     aes_wg/sha1.c     $(H_AES)
 
 #-----------------------------------------------------------------------
 
-# C Compile rules: BZIP2 compression
+# Compile BZIP2 compression C files.
 
 $(PROD)/blocksort.o : bzip2/blocksort.c
 	$(CC) -c $(CF_BZ) -o $@ bzip2/blocksort.c
@@ -809,7 +804,7 @@ $(PROD)/randtable.o : bzip2/randtable.c
 
 #-----------------------------------------------------------------------
 
-# C Compile rules: LZMA compression
+# Compile LZMA compression C files.
 
 $(PROD)/LzFind.o:   lzma/LzFind.c     $(H_LZMA)
 	$(CC) -c $(CF) -o $@ wrap/LzFind.c
@@ -819,7 +814,7 @@ $(PROD)/LzmaDec.o:  lzma/LzmaDec.c    $(H_LZMA)
 
 #-----------------------------------------------------------------------
 
-# C Compile rules: PPMd compression
+# Compile PPMd compression C files.
 
 $(PROD)/Ppmd8.o:    ppmd/Ppmd8.c      $(H_PPMD)
 	$(CC) -c $(CF) -o $@ wrap/Ppmd8.c
@@ -831,51 +826,51 @@ $(PROD)/Ppmd8Dec.o: ppmd/Ppmd8Dec.c   $(H_PPMD)
 #  Build rules: Object libraries (.o -> .a)
 #-----------------------------------------------------------------------
 
-# Object library rule: AES_WG
+# AES_WG object library.
 
 $(AR_AES_WG): $(O_AES_WG)
 	@%echo 'Building/updating AES_WG object library...'
-	-$(RM) $@
+	%IfThere $(AA_AES_WG) Then %remove $(AA_AES_WG)
 	$(AR) $@ $(O_AES_WG)
 	-$(RANLIB) $@
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Object library rule: BZIP2
+# BZIP2 object library.
 
 $(AR_BZIP2): $(O_BZIP2)
 	@%echo 'Building/updating BZIP2 object library...'
-	-$(RM) $@
+	%IfThere $(AA_BZIP2) Then %remove $(AA_BZIP2)
 	$(AR) $@ $(O_BZIP2)
 	-$(RANLIB) $@
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Object library rule: LZMA
+# LZMA object library.
 
 $(AR_LZMA): $(O_LZMA)
 	@%echo 'Building/updating LZMA object library...'
-	-$(RM) $@
+	%IfThere $(AA_LZMA) Then %remove $(AA_LZMA)
 	$(AR) $@ $(O_LZMA)
 	-$(RANLIB) $@
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Object library rule: PPMd
+# PPMd object library.
 
 $(AR_PPMD): $(O_PPMD)
 	@%echo 'Building/updating PPMd object library...'
-	-$(RM) $@
+	%IfThere $(AA_PPMD) Then %remove $(AA_PPMD)
 	$(AR) $@ $(O_PPMD)
 	-$(RANLIB) $@
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Object library rule: Callable UnZip
+# UnZip object library.
 
 $(AR_UNZIP): $(O_UNZIPLR) $(O_UNZIPLN) $(O_AES_WG) $(O_LZMA) $(O_PPMD)
 	@%echo 'Building/updating Callable UnZip object library...'
-	-$(RM) $@
+	%IfThere $(AA_UNZIP) Then %remove $(AA_UNZIP)
 	$(AR) $@ $(O_UNZIPLR) $(O_UNZIPLN) \
          $(O_AES_WG) $(O_LZMA) $(O_PPMD)
 	-$(RANLIB) $@
@@ -884,14 +879,14 @@ $(AR_UNZIP): $(O_UNZIPLR) $(O_UNZIPLN) $(O_AES_WG) $(O_LZMA) $(O_PPMD)
 #  Build rules: Link programs (.o -> executables)
 #-----------------------------------------------------------------------
 
-# Link rule: funzip
+# Link fUnZip.
 
-$(PPGM_FUZ): $(O_FUZ)
-	$(LD) -o $@ $(LF1) $(O_FUZ) $(LF2)
+$(PPGM_FUNZIP): $(O_FUNZIP)
+	$(LD) -o $@ $(LF1) $(O_FUNZIP) $(LF2)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Link rule: unzip
+# Link UnZip.
 
 $(PPGM_UNZIP): $(O_UNZIP) $(AR_AES_WG_) $(AR_BZIP2_) \
                $(AR_LZMA_) $(AR_PPMD_)
@@ -899,15 +894,15 @@ $(PPGM_UNZIP): $(O_UNZIP) $(AR_AES_WG_) $(AR_BZIP2_) \
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Link rule: unzipsfx
+# Link UnZipSFX.
 
-$(PPGM_SFX): $(O_SFX) $(AR_AES_WG_) $(AR_BZIP2_) \
+$(PPGM_UNZIPSFX): $(O_SFX) $(AR_AES_WG_) $(AR_BZIP2_) \
                $(AR_LZMA_) $(AR_PPMD_)
 	$(LD) -o $@ $(LF1) $(O_SFX) $(LIB_OPTS) $(LF2)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-# Link rule: izunzip_example
+# Link izunzip_example.
 
 $(PPGM_UNZXMPL): $(O_UNZXMPL) $(AR_UNZIP) $(AR_BZIP2_)
 	$(LD) -o $@ $(LF1) $(O_UNZXMPL) \
@@ -915,19 +910,26 @@ $(PPGM_UNZXMPL): $(O_UNZXMPL) $(AR_UNZIP) $(AR_BZIP2_)
 
 #-----------------------------------------------------------------------
 
-install:  unzip funzip unzipsfx
-	$(SQUEEZE) unzip %.unzip
-	$(SQUEEZE) funzip %.funzip
-	$(SQUEEZE) unzipsfx unzipsfx
-	copy %.unzip %.zipinfo ~CVF
+#### Target: install
+###    Does this make any sense now?  "squeeze" is not part of the GCC
+###    tools.
+### 
+### SQUEEZE = squeeze -v
+### 
+### install:  $(UNZIP_PPGMS)
+### 	$(SQUEEZE) $(PROD).$(PGM_FUNZIP) %.$(PGM_FUNZIP)
+### 	$(SQUEEZE) $(PROD).$(PGM_UNZIP) %.$(PGM_UNZIP)
+### 	$(SQUEEZE) $(PROD).$(PGM_UNZIPSFX) %.$(PGM_UNZIPSFX)
+### 	copy %.$(PGM_UNZIP) %.$(PGM_ZIPINFO) ~CVF
 
 #-----------------------------------------------------------------------
 
 # Target: clean
 # Remove programs, object libraries, object files.
+
 clean: prod_dir
-	-remove $(PROD).$(PGM_FUZ)
-	-remove $(PROD).$(PGM_SFX)
+	-remove $(PROD).$(PGM_FUNZIP)
+	-remove $(PROD).$(PGM_UNZIPSFX)
 	-remove $(PROD).$(PGM_UNZIP)
 	-wipe $(PROD).*/a ~cf
 	-cdir $(PROD).o
@@ -936,55 +938,32 @@ clean: prod_dir
 
 #-----------------------------------------------------------------------
 
+# Target: dashv
+# Show "unzip -v" report for the local UnZip program.
+# ("%" stops "make" from hiding the action line if $(PROD) is "@".)
+
 dashv:
-	$(PROD).$(PGM_UNZIP) -v
+	%$(PROD).$(PGM_UNZIP) -v
 
 #-----------------------------------------------------------------------
 
+# Target: help
+# Show instructions for this "make" file.
+#
+# Between GNU "make" and the RISC OS command interpreter, arbitrary text
+# formatting here (using "%echo") ranges from inconvenient to
+# impossible, hence the separate text file.
+#
 help:
-	@%echo ""
-	@%echo "Additional "make" targets include:"
-	@%echo ""
-	@%echo "  $(MISC_TARGETS)"
-	@%echo ""
-	@%echo '"make" macros to control various optional features:'
-	@%echo '    "NO_AES_WG=1"     Disable AES_WG encryption.'
-	@%echo '    "AES_WG_SFX=1"    Ensable AES_WG encryption in SFX.'
-	@%echo '    "BINS=[L][M][U]   Binaries build list:'
-	@%echo '                       L: object library (libizunzip.a)'
-	@%echo '                       M: main program (UnZip)'
-	@%echo '                       U: utility programs (fUnZip, UnZipSFX)'
-	@%echo '                       Default: MU.'
-	@%echo '    "IZ_BZIP2=bz2dir" Use bzip2 compression from dir "bz2dir".'
-	@%echo '    "NO_IZ_BZIP2=1"   Disable bzip2 compression.'
-	@%echo '    "BZIP2_SFX=1"     Ensable bzip2 compression in SFX.'
-	@%echo '    "LOCAL_UNZIP=opts" Add C compiler options, "opts".'
-	@%echo '    "NO_LZMA=1"       Disable LZMA compression.'
-	@%echo '    "LZMA_SFX=1"      Enable LZMA compression in SFX.'
-	@%echo '    "NO_PPMD=1"       Disable PPMd compression.'
-	@%echo '    "PPMD_SFX=1"      Enable PPMd compression in SFX.'
-	@%echo '    "PROD=subdir"     Build product files in "subdir", not "@".'
-	@%echo ''
-	@%echo 'Examples:'
-	@%echo '   Make UnZip programs without LZMA or PPMd compression.'
-	@%echo '      make -f acorn/GMakefile NO_LZMA=1 NO_PPMD=1'
-	@%echo ''
-	@%echo 'Use the "clean" target to delete any product files before'
-	@%echo 'building with different options.  (Or, specify an empty'
-	@%echo 'PROD directory.)'
-	@%echo ''
-	@%echo 'After UnZip has been built, use the "dashv" target to get'
-	@%echo 'an "unzip -v" report from the created executable.'
-	@%echo ''
-	@%echo 'See the files INSTALL, unzip.txt, and acorn.GMakefile for more'
-	@%echo 'information.'
-	@%echo ''
+	@%echo
+	@%echo The default target (all) builds the main program (UnZip)
+	@%echo and utilities (fUnZip, UnZipSFX).
+	@%echo
+	@%echo Additional make targets include:
+	@%echo
+	@%echo | | | $(MISC_TARGETS)
+	@%type acorn.Gmakefile/help
 
-###
-###	@%echo '    "NO_ICONV=1"      Disable ISO/OEM (iconv) conversion.'
-###	@%echo '    "IZ_ZLIB=zdir"    Use zlib from dir "zdir" for Deflate.'
-###	@%echo '    "LIST=1"          Generate C compiler and linker listing.'
-###
 #-----------------------------------------------------------------------
 
 # end of Makefile

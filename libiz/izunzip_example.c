@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2018 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2019 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -110,7 +110,10 @@ int main( OFT( int) argc, OFT( char **)argv)
     char *features;
     int sts;
 #ifdef __VMS
+# define RET_STS vsts
     int vsts;
+#else
+# define RET_STS sts
 #endif
     ZCONST UzpVer *unzip_ver_p; /* Storage for program version string. */
     UzpCB user_functions;       /* User-supplied call-back functions. */
@@ -160,4 +163,6 @@ int main( OFT( int) argc, OFT( char **)argv)
     features = UzpFeatures();
     if (features != NULL)
         fprintf( stderr, " UnZip features: %s\n", features);
+
+    return RET_STS;
 }

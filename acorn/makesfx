@@ -1,0 +1,76 @@
+| makesfx
+|
+|    Obey script to create a self-extracting ZIP archive on RISC OS.
+|
+|    Last revised: 2018-12-22
+|
+|----------------------------------------------------------------------
+| Copyright (c) 2018-2018 Info-ZIP.  All rights reserved.
+|
+| See the accompanying file LICENSE, version 2009-Jan-2 or later (the
+| contents of which are also included in zip.h) for terms of use.  If,
+| for some reason, all these files are missing, the Info-ZIP license
+| may also be found at: ftp://ftp.info-zip.org/pub/infozip/license.html
+|----------------------------------------------------------------------
+|
+|    Usage: Obey makesfx unzipsfx archive/zip sfx-archive/zip
+|
+|       unzipsfx:        UnZipSFX program
+|       archive/zip:     Plain zip archive
+|       sfx-archive/zip: Resulting SFX package
+|
+|    Action: Concatenates an UnZipSFX program and a plain zip archive to
+|            make the resulting self-extracting package.  (The offsets
+|            in the resulting sfx-archive/zip are adjusted using a
+|            "zip -A" command.)
+|
+|    "%SetType makesfx Obey" should obviate the explicit "Obey" shown in
+|    the command above.
+|
+|-----------------------------------------------------------------------
+|
+Set prg "makesfx"
+|
+| Check presence of three arguments.
+%Set sts 0
+%If "%3" <> "" Then SetEval sts sts OR 1
+%If "%2" = "" Then SetEval Sts sts OR 2
+|
+%If ( sts AND 1 ) = 1 Then %Echo <prg>: Too many arguments (>3).
+%If ( sts AND 2 ) = 2 Then %Echo <prg>: Too few arguments (<3).
+|
+%If sts <> 0 Then %Echo | | | Usage: <prg> unzipsfx archive/zip sfx-archive/zip
+%If sts <> 0 Then %Error ""
+|
+| Check existence of input UnZipSFX (%0).
+%IfThere "%0" Then Else %Error <prg>: Can't find UnZipSFX: %0
+|
+| Check existence of input archive (%1).
+%IfThere "%1" Then Else %Error <prg>: Can't find input archive: %1
+|
+| Copy the UnZipSFX program (%0) to the output SFX archive (%2).
+%Echo | | | Copying %0 ...
+%Copy %0 %2 ~cf
+|
+| Check existence of output SFX archive (%2).
+%IfThere %2 Then Else %Error <prg>: Can't find output SFX archive: %2
+|
+| Append the input zip archive (%1) to the output SFX archive (%2).
+%Echo | | | Appending %1 ...
+%print %1 { >> %2 }
+|
+| Use "zip -A" to adjust the offsets in the result file (%2).
+| (We assume that "zip" will find a suitable zip program.)
+%Echo | | | Adjusting %2 ...
+zip -A %2
+%Set sts <Sys$ReturnCode>
+|
+| Check "zip -A" exit status.
+%If sts <> 0 Then %Echo Zip exit status: <sts>
+%If sts <> 0 Then %Error <prg>: Can't find output SFX archive: %2
+|
+| Restore the type of the resulting SFX package to "Absolute", so that
+| it's seen as an executable, rather than as a zip archive.
+%Echo | | | Resetting file type of %2 ...
+%SetType %2 Absolute
+|

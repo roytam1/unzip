@@ -1,0 +1,41 @@
+
+"make" macros to control various optional features:
+
+    NO_AES_WG=1       Disable AES_WG encryption.
+    AES_WG_SFX=1      Enable AES_WG encryption in UnZipSFX.
+    BINS=[L][M][U]    Binaries build list (alphabetical order):
+                       L: object library (libizunzip.a)
+                       M: main program (UnZip)
+                       U: utility programs (fUnZip, UnZipSFX)
+                       Default: MU.
+    NO_IZ_BZIP2=1     Disable bzip2 compression.
+    BZIP2_SFX=1       Enable bzip2 compression in UnZipSFX.
+    LOCAL_UNZIP=opts  Add C compiler options, "opts".
+    NO_LZMA=1         Disable LZMA compression.
+    LZMA_SFX=1        Enable LZMA compression in UnZipSFX.
+    NO_PPMD=1         Disable PPMd compression.
+    PPMD_SFX=1        Enable PPMd compression in UnZipSFX.
+    PROD=subdir       Build product files in "subdir", not ".".
+    NO_TRAD=1         Disable Traditional encryption.
+    TRAD_SFX=1        Enable Traditional encryption in UnZipSFX.
+
+Examples:
+
+    Make UnZip programs without LZMA or PPMd compression:
+        make -f acorn/GMakefile NO_LZMA=1 NO_PPMD=1
+
+    Make UnZipSFX with AES_WG encryption:
+        make -f acorn/GMakefile AES_WG_SFX=1
+
+Use the "clean" target to delete any product files before
+building with different options.  (Or, specify an empty
+PROD directory.)
+
+After UnZip has been built, use the "dashv" target  to get
+an "unzip -v" report from the created UnZip executable.
+
+        make -f acorn/GMakefile [ PROD=subdir ...] dashv
+
+See the files INSTALL, docs.unzip/txt, and acorn.GMakefile for
+more information.
+
