@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -53,7 +53,8 @@
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ASM_CRC;x_BZIP2_SUPPORT;x_CRYPT_AES_WG;LZMA_SUPPORT;PPMD_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+     
+<PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ASM_CRC;x_BZIP2_SUPPORT;x_CRYPT_AES_WG;LZMA_SUPPORT;PPMD_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -83,6 +84,7 @@
     <ClInclude Include="..\..\..\aes_wg\brg_endian.h" />
     <ClInclude Include="..\..\..\aes_wg\fileenc.h" />
     <ClInclude Include="..\..\..\aes_wg\hmac.h" />
+    <ClInclude Include="..\..\..\aes_wg\iz_aes_wg.h" />
     <ClInclude Include="..\..\..\aes_wg\prng.h" />
     <ClInclude Include="..\..\..\aes_wg\pwd2key.h" />
     <ClInclude Include="..\..\..\aes_wg\sha1.h" />
