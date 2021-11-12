@@ -212,7 +212,7 @@ static ZCONST char Far MthdTerse[] = "tersed (IBM)";
 static ZCONST char Far MthdLZ77[] = "LZ77-compressed (IBM)";
 static ZCONST char Far MthdWavPack[] = "WavPacked";
 static ZCONST char Far MthdPPMd[] = "PPMd-ed";
-static ZCONST char Far MthdAES_WG[] = "AES_WG-ed";
+static ZCONST char Far MthdAES[] = "AES-ed";
 
 static ZCONST char Far DeflNorm[] = "normal";
 static ZCONST char Far DeflMax[] = "maximum";
@@ -346,7 +346,7 @@ static ZCONST char Far efMD5[] = "Fred Kantor MD5";
 static ZCONST char Far efASiUnix[] = "ASi Unix";
 static ZCONST char Far efTandem[] = "Tandem NSK";
 static ZCONST char Far efTheos[] = "Theos";
-static ZCONST char Far efAES[] = "AES_WG encrypt";
+static ZCONST char Far efAES[] = "AES encrypt";
 static ZCONST char Far efUnknown[] = "unknown";
 
 static ZCONST char Far OS2EAs[] = ".\n\
@@ -420,7 +420,7 @@ static ZCONST char Far ColonIndent[] = ":\n   ";
 static ZCONST char Far efFormat[] = " %02x";
 
 static ZCONST char Far AesExtraField[] = ".\n\
-    Vers: %s, Vend ID: %c%c, Mode: %s, Cmpr mthd: %s";
+    Vers: 0x%04x, Vend ID: %c%c, AES mode: 0x%02x, Cmpr mthd: %s";
 
 static ZCONST char Far lExtraFieldType[] = "\n\
   There %s a local extra field with ID 0x%04x (%s) and\n\
@@ -449,7 +449,7 @@ static ZCONST char Far *method[NUM_METHODS] = {
     MthdNone, MthdShrunk, MthdRedF1, MthdRedF2, MthdRedF3, MthdRedF4,
     MthdImplode, MthdToken, MthdDeflate, MthdDeflat64, MthdDCLImplode,
     MthdBZip2, MthdLZMA, MthdTerse, MthdLZ77, MthdWavPack, MthdPPMd,
-    MthdAES_WG
+    MthdAES
 };
 
 
@@ -1748,45 +1748,13 @@ static int zi_long(__G__ pEndprev, error_in_archive)
             /* additional, field-specific information: */
             switch (eb_id) {
                 case EF_AES_WG:
-                {
-                    char *aes_strngth_p;        /* Strngth/key-size ptr. */
-                    char aes_strngth_s[ 8];     /* Strngth/key-size buffer. */
-                    uch aes_strngth;            /* Strngth/key-size value. */
-                    char *vend_vers_p;          /* Vendor version ptr. */
-                    char vend_vers_s[ 8];       /* Vendor version buffer. */
-                    ush vend_vers;              /* Vendor version value. */
-
-                    vend_vers = makeword( ef_ptr);  /* Vendor version. */
-                    if (vend_vers == 1)
-                        vend_vers_p = "AE-1";
-                    else if (vend_vers == 2)
-                        vend_vers_p = "AE-2";
-                    else
-                    {
-                        vend_vers_p = vend_vers_s;
-                        sprintf( vend_vers_s, "0x%04x", vend_vers);
-                    }
-
-                    if (ef_ptr[ 4] == 1)
-                        aes_strngth_p = "AES128";
-                    else if (ef_ptr[ 4] == 2)
-                        aes_strngth_p = "AES192";
-                    else if (ef_ptr[ 4] == 3)
-                        aes_strngth_p = "AES256";
-                    else
-                    {
-                        aes_strngth_p = aes_strngth_s;
-                        sprintf( aes_strngth_s, "0x%02x", ef_ptr[ 4]);
-                    }
-
                     Info(slide, 0, ((char *)slide,
                      LoadFarString( AesExtraField),
-                     vend_vers_p,                           /* Vendor versn. */
+                     makeword( ef_ptr),                     /* Version. */
                      ef_ptr[ 2], ef_ptr[ 3],                /* Vendor ID. */
-                     aes_strngth_p,                         /* AES mode. */
+                     ef_ptr[ 4],                            /* AES mode. */
                      cmpr_mthd( makeword( &ef_ptr[ 5]))));  /* Cmpr mthd. */
                     break;
-                }
                 case EF_OS2:
                 case EF_ACL:
                     if (eb_datalen >= EB_OS2_HLEN) {

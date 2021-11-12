@@ -1,4 +1,4 @@
-#                                               17 June 2011.  SMS.
+#                                               27 May 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Source Description File.
 #
@@ -94,10 +94,18 @@ GCC_ =
 LARGE_VAX = 1
 .ENDIF                              # LARGE
 .IFDEF VAXC_OR_FORCE_VAXC           # VAXC_OR_FORCE_VAXC
+.IFDEF AES                              # AES
+VAXC_AES = 1
+.ENDIF                                  # AES
 .IFDEF GNUC                             # GNUC
 VAX_MULTI_CMPL = 1
 .ENDIF                                  # GNUC
 .ENDIF                              # VAXC_OR_FORCE_VAXC
+.IFDEF GNUC                         # GNUC
+.IFDEF AES                              # AES
+GNUC_AES = 1
+.ENDIF                                  # AES
+.ENDIF                              # GNUC
 .ELSE                           # __VAX__
 .IFDEF VAXC_OR_FORCE_VAXC           # VAXC_OR_FORCE_VAXC
 NON_VAX_CMPL = 1
@@ -205,6 +213,20 @@ BUILD_BZIP2 = 1
 	@ define incl_zlib $(IZ_ZLIB)
 	@ @[.VMS]FIND_BZIP2_LIB.COM $(IZ_ZLIB) -
 	   contrib.infback9 infback9.h incl_zlib_contrib_infback9
+.ELSE                                           # IZ_ZLIB
+.IFDEF VAXC_AES                                     # VAXC_AES
+	@ write sys$output -
+ "   Macro ""AES"" is incompatible with ""VAXC"" or ""FORCE_VAXC""."
+	@ write sys$output ""
+	I_WILL_DIE_NOW.  /$$$$INVALID$$$$
+.ELSE                                               # VAXC_AES
+.IFDEF GNUC_AES                                         # GNU_AES
+	@ write sys$output -
+ "   Macro ""AES"" is incompatible with ""GNUC""."
+	@ write sys$output ""
+	I_WILL_DIE_NOW.  /$$$$INVALID$$$$
+.ENDIF                                                  # GNUC_AES
+.ENDIF                                              # VAXC_AES
 .ENDIF                                          # IZ_ZLIB
 	@ write sys$output "   Destination: [.$(DEST)]"
 	@ write sys$output ""
@@ -215,11 +237,11 @@ BUILD_BZIP2 = 1
 .ENDIF                              # VAX_MULTI_CMPL
 .ENDIF                          # UNK_DEST
 
-# AES_WG options.
+# AES options.
 
-.IFDEF AES_WG                   # AES_WG
-CDEFS_AES = , CRYPT_AES_WG
-.ENDIF                          # AES_WG
+.IFDEF AES                      # AES
+CDEFS_AES = , CRYPT_AES_WG, _ENDIAN_H="""endian.h"""
+.ENDIF                          # AES
 
 # BZIP2 options.
 
@@ -412,9 +434,9 @@ MODS_OBJS_LIB_UNZIP_N = \
 MODS_OBJS_LIB_UNZIP_V = \
  VMS=[.$(DEST)]VMS.OBJ
 
-#    Primary object library, [.AES_WG].
+#    Primary object library, [.AES].
 
-.IFDEF AES_WG                   # AES_WG
+.IFDEF AES                      # AES
 MODS_OBJS_LIB_UNZIP_AES = \
  AESCRYPT=[.$(DEST)]AESCRYPT.OBJ \
  AESKEY=[.$(DEST)]AESKEY.OBJ \
@@ -424,7 +446,7 @@ MODS_OBJS_LIB_UNZIP_AES = \
  PRNG=[.$(DEST)]PRNG.OBJ \
  PWD2KEY=[.$(DEST)]PWD2KEY.OBJ \
  SHA1=[.$(DEST)]SHA1.OBJ
-.ENDIF                          # AES_WG
+.ENDIF                          # AES
 
 MODS_OBJS_LIB_UNZIP = $(MODS_OBJS_LIB_UNZIP_N) $(MODS_OBJS_LIB_UNZIP_V) \
  $(MODS_OBJS_LIB_UNZIP_AES)
@@ -460,9 +482,9 @@ MODS_OBJS_LIB_UNZIPSFX_N = \
 MODS_OBJS_LIB_UNZIPSFX_V = \
  VMS$(GCC_)=[.$(DEST)]VMS_.OBJ
 
-#    SFX object library, [.AES_WG].
+#    SFX object library, [.AES].
 
-.IFDEF AES_WG                   # AES_WG
+.IFDEF AES                      # AES
 MODS_OBJS_LIB_UNZIPSFX_AES = \
  AESCRYPT=[.$(DEST)]AESCRYPT.OBJ \
  AESKEY=[.$(DEST)]AESKEY.OBJ \
@@ -472,7 +494,7 @@ MODS_OBJS_LIB_UNZIPSFX_AES = \
  PRNG=[.$(DEST)]PRNG.OBJ \
  PWD2KEY=[.$(DEST)]PWD2KEY.OBJ \
  SHA1=[.$(DEST)]SHA1.OBJ
-.ENDIF                          # AES_WG
+.ENDIF                          # AES
 
 MODS_OBJS_LIB_UNZIPSFX = \
  $(MODS_OBJS_LIB_UNZIPSFX_N) \

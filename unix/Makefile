@@ -1,6 +1,6 @@
 #==============================================================================
 # Makefile for UnZip, UnZipSFX and fUnZip:  Unix and MS-DOS ("real" makes only)
-# Version:  6.1                                                     17 Jun 2011
+# Version:  6.1                                                     05 May 2011
 #==============================================================================
 
 
@@ -24,12 +24,10 @@
 # well tested, and may need considerable help from the user to get optimal
 # results (or any success at all).
 #
-# If you want bzip2 support included, the "generic" target should find bzip2
-# source code in the local ./bzip2 subdirectory, or the user can set the
-# "make" macro IZ_BZIP2 to a directory containing suitable bzip2 header and
-# object/shared library files.
-#
-# Similarly, to use zlib for uncompressing instead of UnZip's built-in code,
+# The "generic" target should find bzip2 source code in the local ./bzip2
+# subdirectory, or the user can set the "make" macro IZ_BZIP2 to a directory
+# containing suitable bzip2 header and object/shared library files.
+# Similarly, to use zlib compress-expand code instead of UnZip's built-in code,
 # set the "make" macro IZ_ZLIB to a directory containing suitable zlib header
 # and object/shared library files.  For example:
 #     make -f unix/Makefile IZ_BZIP2=../../bzip2/bzip2-1.0.6 \
@@ -135,8 +133,8 @@ OBJF = funzip$O crc32$O $(CRCA_O) cryptf$O globalsf$O inflatef$O ttyiof$O
 #OBJS_OS2 = $(OBJS1:.o=.obj) $(OBJS2:.o=.obj) os2.obj
 #OBJF_OS2 = $(OBJF:.o=.obj)
 UNZIP_H = unzip.h unzpriv.h globals.h $(OSDEP_H) $(ACONF_DEP)
-AES_H = aes_wg/aes.h aes_wg/aesopt.h aes_wg/fileenc.h aes_wg/hmac.h \
-        aes_wg/prng.h aes_wg/pwd2key.h aes_wg/sha1.h
+AES_H = aes/aes.h aes/aesopt.h aes/fileenc.h aes/hmac.h aes/prng.h \
+        aes/pwd2key.h aes/sha1.h
 
 # installation
 # (probably can change next two to `install' and `install -d' if you have it)
@@ -190,35 +188,32 @@ help:
 	@echo '  target "generic".  For example: "make generic" (cc) or'
 	@echo '  "make generic CC=gcc" (gcc).  Other (older) targets are less'
 	@echo '  well tested, and may need considerable help from the user to'
-	@echo '  get optimal results (or any success at all).  Use "make list"'
+	@echo '  get optimal results (or any success at all).  Use "make liat"'
 	@echo '  to get a list of valid targets.'
-	@echo ''
 	@echo '  Add "CC=gcc" to the "make" command to use "gcc" instead of'
 	@echo '  "cc".  First try "make -f unix/Makefile generic" (to use "cc")'
 	@echo '  (or "make -f unix/Makefile generic CC=gcc" (to use "gcc")), as'
 	@echo '  "generic" should autodetect and set the proper flags.'
+	@echo '  To make the manuals use "make unzipsman" after UnZip is made.'
+	@echo '  See the files INSTALL and unzip.txt for more information.'
 	@echo ''
-	@echo '  If the "generic" target fails, then you might try an older'
-	@echo '  generic target which is now called "generic1".  Always do'
-	@echo '  "make clean" before trying a different target.'
+	@echo '  If "generic" fails, then you might try the original generic'
+	@echo '  which is now "generic1".  Always do "make clean" before trying'
+	@echo '  a different target.'
 	@echo ''
 	@echo '  If the compiler complains about "timezone redefined", then the'
 	@echo '  "generic2" target may work better.  If the linker complains'
 	@echo '  about an undefined symbol, "_ftime", then the "generic3"'
 	@echo '  target may work better.'
-	@echo ''
 	@echo '  One of these actions should produce working UnZip programs on'
 	@echo '  most UNIX(-like) systems.  If you know a bit more about the'
 	@echo '  system on which you work, then you might try "make list" for'
 	@echo '  a list of the system-specific targets supported herein.  (Many'
-	@echo "  of them do exactly the same thing, so don't agonize too much"
+	@echo '  of them do exactly the same thing, so don't agonize too much'
 	@echo '  over which to pick if two or more sound equally likely.)'
 	@echo '  The comments in unix/Makefile and the INSTALL file may offer'
 	@echo '  some useful information for building on various target'
 	@echo '  systems.'
-	@echo ''
-	@echo '  To make the manuals use "make unzipsman" after UnZip is made.'
-	@echo '  See the files INSTALL and unzip.txt for more information.'
 	@echo ''
 
 list:
@@ -316,16 +311,16 @@ unzipsdocs:	unzips docs
 # EDIT HERE FOR PARALLEL MAKES on Sequent (and others?)--screws up MS-DOS
 # make utilities if default:  change "unzip$E:" to "unzip$E:&"
 
-unzip$E:	$(OBJS) $(LIBBZ2) $(LIB_AES_WG) # add `&' for parallel makes
+unzip$E:	$(OBJS) $(LIBBZ2) $(LIB_AES)    # add `&' for parallel makes
 	$(LD) $(LF) $(LOBJS) $(LF2)
 
-unzipsfx$E:	$(OBJX) $(LIB_AES_WG)           # add `&' for parallel makes
+unzipsfx$E:	$(OBJX) $(LIB_AES)              # add `&' for parallel makes
 	$(LD) $(SL) $(LOBJX) $(SL2)
 
 funzip$E:	$(OBJF)                         # add `&' for parallel makes
 	$(LD) $(FL) $(OBJF) $(FL2)
 
-zipinfo$E:	unzip$E $(LIB_AES_WG)           # `&' is pointless here...
+zipinfo$E:	unzip$E $(LIB_AES)              # `&' is pointless here...
 	@echo\
  '  This is a Unix-specific target.  ZipInfo is not enabled in some MS-DOS'
 	@echo\
@@ -341,29 +336,29 @@ libaes.a : $(OBJAES)
 	$(AR) cq libaes.a $(OBJAES)
 	-$(RANLIB) libaes.a
 
-aescrypt.o: aes_wg/aescrypt.c
-	$(CC) -c $(CF) aes_wg/aescrypt.c
+aescrypt.o: aes/aescrypt.c
+	$(CC) -c $(CF) aes/aescrypt.c
 
-aeskey.o: aes_wg/aeskey.c
-	$(CC) -c $(CF) aes_wg/aeskey.c
+aeskey.o: aes/aeskey.c
+	$(CC) -c $(CF) aes/aeskey.c
 
-aestab.o: aes_wg/aestab.c
-	$(CC) -c $(CF) aes_wg/aestab.c
+aestab.o: aes/aestab.c
+	$(CC) -c $(CF) aes/aestab.c
 
-fileenc.o: aes_wg/fileenc.c
-	$(CC) -c $(CF) aes_wg/fileenc.c
+fileenc.o: aes/fileenc.c
+	$(CC) -c $(CF) aes/fileenc.c
 
-hmac.o: aes_wg/hmac.c
-	$(CC) -c $(CF) aes_wg/hmac.c
+hmac.o: aes/hmac.c
+	$(CC) -c $(CF) aes/hmac.c
 
-prng.o: aes_wg/prng.c
-	$(CC) -c $(CF) aes_wg/prng.c
+prng.o: aes/prng.c
+	$(CC) -c $(CF) aes/prng.c
 
-pwd2key.o: aes_wg/pwd2key.c
-	$(CC) -c $(CF) aes_wg/pwd2key.c
+pwd2key.o: aes/pwd2key.c
+	$(CC) -c $(CF) aes/pwd2key.c
 
-sha1.o: aes_wg/sha1.c
-	$(CC) -c $(CF) aes_wg/sha1.c
+sha1.o: aes/sha1.c
+	$(CC) -c $(CF) aes/sha1.c
 
 
 # when the optional bzip2 support is provided (as recommended) by sources
@@ -537,7 +532,7 @@ uninstall:
 	$(RM) $(INSTALLEDBIN) $(INSTALLEDMAN)
 
 flags:  unix/configure
-	sh unix/configure "AES_WG=${AES_WG}" \
+	sh unix/configure "AES=${AES}" \
          "CC=${CC}" "CFLAGS=${CF_NOOPT}" \
          "IZ_BZIP2=${IZ_BZIP2}" "IZ_ZLIB=${IZ_ZLIB}"
 
@@ -553,11 +548,11 @@ check:
 	@echo '#####     Make sure unzip, funzip and unzipsfx are compiled and'
 	@echo '#####     in this directory.'
 	@if test ! -f ./unzip; then \
-	    echo "#####  ERROR:  can't find ./unzip"; exit 1; fi
+	    echo '#####  ERROR:  can't find ./unzip'; exit 1; fi
 	@if test ! -f ./funzip; then \
-	    echo "#####  ERROR:  can't find ./funzip"; exit 1; fi
+	    echo '#####  ERROR:  can't find ./funzip'; exit 1; fi
 	@if test ! -f ./unzipsfx; then \
-	    echo "#####  ERROR:  can't find ./unzipsfx"; exit 1; fi
+	    echo '#####  ERROR:  can't find ./unzipsfx'; exit 1; fi
 #
 	@if test ! -f $(TESTZIP); then \
 	    echo "#####  ERROR:  can't find test file $(TESTZIP)"; exit 1; fi
@@ -571,7 +566,7 @@ check:
 	@echo '#####  testing zipinfo (unzip -Z)'
 	@./unzip -Z $(TESTZIP) > testmake.unzip-Z
 	@if diff testmake.unzip-Z testmake.zipinfo; then echo 'OK.'; else \
-	    echo "#####  WARNING:  zipinfo output doesn't match stored version"; \
+	    echo '#####  WARNING:  zipinfo output doesn't match stored version'; \
 	    echo '#####     (If the only difference is the file times, compare your'; \
 	    echo '#####      timezone with the Central European timezone, which is one'; \
 	    echo '#####      hour east of Greenwich but effectively 2 hours east'; \

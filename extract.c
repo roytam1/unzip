@@ -150,7 +150,7 @@ static ZCONST char Far ComprMsgNum[] =
    static ZCONST char Far CmprIBMLZ77[]    = "IBM LZ77";
    static ZCONST char Far CmprWavPack[]    = "WavPack";
    static ZCONST char Far CmprPPMd[]       = "PPMd";
-   static ZCONST char Far CmprAES[]        = "AES_WG encr";
+   static ZCONST char Far CmprAES[]        = "AES encr";
    static ZCONST char Far *ComprNames[NUM_METHODS] = {
      CmprNone, CmprShrink, CmprReduce, CmprReduce, CmprReduce, CmprReduce,
      CmprImplode, CmprTokenize, CmprDeflate, CmprDeflat64, CmprDCLImplode,
@@ -1375,7 +1375,7 @@ static int extract_or_test_entrylist(__G__ numchunk,
             /* Scan the extra field for an AES block. */
             ef_scan_for_aes( G.extra_field,
                              G.lrec.extra_field_length,
-                             &G.pInfo->cmpr_vers_aes,   /* AES version, */
+                             NULL,                      /* AES version, */
                              NULL,                      /* AES vendor, */
                              &G.pInfo->cmpr_mode_aes,   /* AES mode. */
                              &G.pInfo->cmpr_mthd_aes);  /* AES method. */
@@ -1721,7 +1721,7 @@ reprompt:
         UserStop();
 #endif
     } /* end for-loop (i:  files in current block) */
-
+ 
     return error_in_archive;
 
 } /* end function extract_or_test_entrylist() */
@@ -2390,7 +2390,7 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
      * For STORED data, the output bytes are counted in bytes_put_out,
      * and limited (below) to the known uncompressed data size.
      */
-    zusz_t bytes_put_out;
+    zoff_t bytes_put_out;
 
 #if CRYPT && defined( CRYPT_AES_WG)
     zoff_t g_csize_adj = 0;             /* Temporary adjustment to G.csize. */
@@ -2812,15 +2812,10 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
         return error;
     }
 
-    /* Complain about a bad CRC or an AES MAC mis-match.
-     * Ignore a bad CRC for AES version 2.
-     */
-    if (((G.crc32val != G.lrec.crc32)
+    if ((G.crc32val != G.lrec.crc32)
 #if CRYPT && defined( CRYPT_AES_WG)
-     && (G.pInfo->cmpr_vers_aes != 2)) || aes_mac_mismatch
-#else /* CRYPT && defined( CRYPT_AES_WG) */
-     )
-#endif /* CRYPT && defined( CRYPT_AES_WG) [else] */
+     || aes_mac_mismatch
+#endif /* CRYPT && defined( CRYPT_AES_WG) */
     )
     {
         /* if quiet enough, we haven't output the filename yet:  do it */
@@ -3489,26 +3484,26 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
     wchar_t *wostring;   /* wchar_t version of output string */
     size_t woslen;       /* length of wostring */
     wchar_t *woc;        /* pointer to char in wostring */
-    char *newraw;        /* new raw */
-    ZCONST uch *r;
+	char *newraw;        /* new raw */
+	ZCONST uch *r;
     uch *s=space;
     uch *slim=NULL;
     uch *se=NULL;
     int have_overflow = FALSE;
 
     wslen = mbstowcs(NULL, raw, 0 );
-    if ((wstring = malloc((wslen + 1) * sizeof(wchar_t))) == NULL) {
+	if ((wstring = malloc((wslen + 1) * sizeof(wchar_t))) == NULL) {
         strcpy( (char *)space, raw);
         return (char *)space;
     }
-    if ((wostring = malloc(2 * (wslen + 1) * sizeof(wchar_t))) == NULL) {
-        free(wstring);
+	if ((wostring = malloc(2 * (wslen + 1) * sizeof(wchar_t))) == NULL) {
+		free(wstring);
         strcpy( (char *)space, raw);
         return (char *)space;
     }
     wslen = mbstowcs(wstring, raw, wslen + 1);
-    wc = wstring;
-    woc = wostring;
+	wc = wstring;
+	woc = wostring;
 
     while (*wc) {
         if (!iswprint(*wc)) {
@@ -3530,9 +3525,9 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
 
     /* convert back to local string to work with output buffer */
     woslen = wcstombs(NULL, wostring, 0 );
-    if ((newraw = malloc(woslen + 1)) == NULL) {
-        free(wstring);
-        free(wostring);
+	if ((newraw = malloc(woslen + 1)) == NULL) {
+		free(wstring);
+		free(wostring);
         strcpy( (char *)space, raw);
         return (char *)space;
     }

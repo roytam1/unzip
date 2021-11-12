@@ -685,6 +685,7 @@
 /*  Defines  */
 /*************/
 
+#define UNZIP_AESVERS   51
 #define UNZIP_BZ2VERS   46
 #ifdef ZIP64_SUPPORT
 # ifdef USE_BZIP2
@@ -2155,7 +2156,6 @@ typedef struct min_info {
 #endif
 #ifdef CRYPT_AES_WG
        ush cmpr_mthd_aes;
-       ush cmpr_vers_aes;
        char cmpr_mode_aes;
 #endif /* def CRYPT_AES_WG */
 } min_info;
