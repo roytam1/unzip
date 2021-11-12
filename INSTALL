@@ -1,6 +1,6 @@
 __________________________________________________________________________
 
-  This is the Info-ZIP file INSTALL (for UnZip), last updated 16 Apr 2009.
+  This is the Info-ZIP file INSTALL (for UnZip), last updated 23 Jul 2010.
 __________________________________________________________________________
 
   Yes, this is a rather long file, but don't be intimidated:  much of its
@@ -65,7 +65,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
 
     As of UnZip 5.53, support for the bzip2 compression algorithm has been
     added to UnZip. However, this support requires the original sources of
-    the bzip2 compression library which have to be aquired separately;
+    the bzip2 compression library which have to be acquired separately;
     see "http://www.bzip.org/" for further reference.
 
 
@@ -522,6 +522,25 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         else fails, read the makefile itself; it contains numerous comments.
         (One of these days we'll make a configure script that automates this
         procedure better.)
+
+        When requesting bzip2 compression support, an existing bzip2 kit can
+        be used instead of dropping a bzip2 source kit into the UnZip "bzip2"
+        subdirectory.  Use the "make" macro IZ_BZIP2 with the "generic" target
+        to specify a directory where an existing bzip2 header file and
+        suitable object/shared library may be found.  For example:
+             make -f unix/Makefile IZ_BZIP2=../../bzip2/bzip-1.0.5 generic
+
+        Similarly, use of zlib can be requested by specifying an appropriate
+        zlib header+library directory using the "make" macro IZ_ZLIB.  For
+        example:
+             make -f unix/Makefile IZ_ZLIB=../../zlib/zlib-1.2.5 generic
+
+        IZ_BZIP2 and IZ_ZLIB may both be specified, if desired.
+
+        Use of "make" targets other than "generic" (or "generic_gcc") requires
+        some care, because many other targets will not use the unix/configure
+        script (or its intermediate "flags" file), and this may cause programs
+        to be built without some expected features enabled.
 
       VMS (OpenVMS):
         On VMS, two build methods are provided: a command procedure, and

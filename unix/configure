@@ -1,27 +1,36 @@
 :
 #!/bin/sh -x
-# The above : is necessary on some buggy systems.
+# The above ":" is necessary on some buggy systems.
 
-# configure: Guess values for system-dependent variables
+# configure: Test to determine values for system-dependent variables.
 # Output the flag definitions to the file "flags".
-# Parameters: $1 = $(CC), $2 = $(CFLAGS), $3 = $(IZ_BZIP2)
+# Parameters: $1 = $CC, $2 = $CFLAGS, $3 = $IZ_BZIP2, $4 = $IZ_ZLIB
+#
+# This file is typically called from Makefile rather than executed
+# from the command line.
+#
 # To construct unzip automatically using this file, type
 # "make -f unix/Makefile generic".
 # If this fails, then type "make list" to get a list of special targets.
 
 trap "rm -f conftest* core a.out; exit 1" 1 2 3 15
 
-CC=${1-cc}
+CC=${1:-cc}
 CFLAGS=${2}
 CFLAGSR=${CFLAGS}
-IZ_BZIP2=${3}
 CFLAGS="${CFLAGS} -I. -DUNIX"
 LFLAGS1=""
 LFLAGS2="-s"
 LN="ln -s"
 
-CFLAGS_OPT=''
+# bzip2
+IZ_BZIP2=${3-}
 CFLAGS_BZ=''
+
+# zlib
+IZ_ZLIB=${4-}
+
+CFLAGS_OPT=''
 BZLF=''
 
 echo "Check C compiler operation"
@@ -609,9 +618,7 @@ rm -f a.out conftest.c conftest.o conftest null
 # bzip2
 
 echo "Check bzip2 support"
-D_USE_BZ2=""
 LIBBZ2=""
-L_BZ2=""
 CC_BZ="${CC}"
 
 if test -n "${IZ_BZIP2}" -a "${IZ_BZIP2}" != "bzip2" ; then
@@ -627,8 +634,6 @@ if test -n "${IZ_BZIP2}" -a "${IZ_BZIP2}" != "bzip2" ; then
       echo "    Found bzip2 BZ_NO_STDIO library, ${IZ_BZIP2}/libbz2.a"
       if test -f "${IZ_BZIP2}/bzlib.h"; then
         LIBBZ2="${IZ_BZIP2}/libbz2.a"
-        D_USE_BZ2="-DUSE_BZIP2"
-        L_BZ2="${BZLF} -lbz2"
         echo "-- Found bzip2 library - linking in bzip2"
       else
         echo "    ${IZ_BZIP2}/bzlib.h not found"
@@ -658,12 +663,27 @@ else
     echo "-- Found bzip2 source in ${IZ_BZIP2}/ directory"
     echo "-- Will try to build bzip2 library from source and link in"
     LIBBZ2="${IZ_BZIP2}/libbz2.a"
-    D_USE_BZ2="-DUSE_BZIP2"
-    L_BZ2="${BZLF} -lbz2"
   else
     echo "-- bzip2 sources not found - no bzip2 support"
   fi
 fi
+
+if test -n "${LIBBZ2}" ; then
+  CFLAGSR="${CFLAGSR} -DUSE_BZIP2 -I${IZ_BZIP2}"
+  LFLAGS1="${LFLAGS1} -L${IZ_BZIP2}"
+  LFLAGS2="${LFLAGS2} ${BZLF} -lbz2"
+fi
+
+
+# zlib
+
+if test -n "${IZ_ZLIB}"; then
+  echo "Using (expecting) zlib in IZ_ZLIB (${IZ_ZLIB})"
+  CFLAGSR="${CFLAGSR} -DUSE_ZLIB -I${IZ_ZLIB}"
+  LFLAGS1="${LFLAGS1} -L${IZ_ZLIB}"
+  LFLAGS2="${LFLAGS2} ${BZLF} -lz"
+fi
+
 
 # System identification
 UNAME_M=''
@@ -685,11 +705,21 @@ UNAME_V=''
 uname_v=` uname -v 2> /dev/null ` && \
  UNAME_V=" -DUNAME_V='\\\"${uname_v}\\\"'"
 
+if [ -f /usr/sbin/sizer ]; then
+  SIZER_V=''
+  sizer_v=` /usr/sbin/sizer -v 2> /dev/null | \
+   sed -e 's/^[^ ]* [^ ]* [^ ]* \([^ ]*\) .*/\1/' ` && \
+   SIZER_V=" -DSIZER_V='\\\"${sizer_v}\\\"'"
+
+  CFLAGSR="${CFLAGSR} ${SIZER_V}"
+fi
+
 CFLAGSR="${CFLAGSR} ${UNAME_M} ${UNAME_O} ${UNAME_P} ${UNAME_R}"
 CFLAGSR="${CFLAGSR} ${UNAME_S} ${UNAME_V}"
 
-echo CC=\"${CC}\" CF=\"${CFLAGSR} ${D_USE_BZ2}\" CRCA_O=\"${CRC32OA}\" \
+echo CC=\"${CC}\" CF=\"${CFLAGSR}\" CRCA_O=\"${CRC32OA}\" \
        AS=\"${CC} -c\" LFLAGS1=\"${LFLAGS1}\" LF2=\"${LFLAGS2}\" \
        CC_BZ=\"${CC_BZ}\" CFLAGS_BZ=\"${CFLAGS_BZ}\" \
-       IZ_BZIP2=\"${IZ_BZIP2}\" D_USE_BZ2=\"${D_USE_BZ2}\" \
-       L_BZ2=\"${L_BZ2}\" LIBBZ2=\"${LIBBZ2}\"  > flags
+       IZ_BZIP2=\"${IZ_BZIP2}\" LIBBZ2=\"${LIBBZ2}\" \
+       IZ_ZLIB=\"${IZ_ZLIB}\"  > flags
+

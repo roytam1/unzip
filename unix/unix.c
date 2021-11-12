@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2009 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -682,10 +682,12 @@ int mapname(__G__ renamed)
     /* if not saving them, remove VMS version numbers (appended ";###") */
     if (!uO.V_flag && lastsemi) {
         pp = lastsemi + 1;
-        while (isdigit((uch)(*pp)))
-            ++pp;
-        if (*pp == '\0')          /* only digits between ';' and end:  nuke */
-            *lastsemi = '\0';
+        if (*pp != '\0') {        /* At least one digit is required. */
+            while (isdigit((uch)(*pp)))
+                ++pp;
+            if (*pp == '\0')      /* only digits between ';' and end:  nuke */
+                *lastsemi = '\0';
+        }
     }
 
     /* On UNIX (and compatible systems), "." and ".." are reserved for
@@ -1570,6 +1572,9 @@ void version(__G)
       " (Silicon Graphics IRIX)",
 #else
 #ifdef sun
+#  if defined(UNAME_P) && defined(UNAME_R) && defined(UNAME_S) 
+      " ("UNAME_S" "UNAME_R" "UNAME_P")",
+#  else
 #  ifdef sparc
 #    ifdef __SVR4
       " (Sun SPARC/Solaris)",
@@ -1587,15 +1592,28 @@ void version(__G)
 #  endif
 #  endif
 #  endif
-#else
+#  endif
+#else /* def sun */
 #ifdef __hpux
+#  if defined(UNAME_M) && defined(UNAME_R) && defined(UNAME_S) 
+      " ("UNAME_S" "UNAME_R" "UNAME_M")",
+#  else
       " (HP-UX)",
+#  endif
 #else
 #ifdef __osf__
-      " (DEC OSF/1)",
+#  if defined( SIZER_V)
+      " (Tru64 "SIZER_V")"
+#  else /* defined( SIZER_V) */
+      " (Tru64)",
+#  endif /* defined( SIZER_V) [else] */
 #else
 #ifdef _AIX
+#  if defined( UNAME_R) && defined( UNAME_S) && defined( UNAME_V)
+      " ("UNAME_S" "UNAME_V"."UNAME_R")",
+#  else /*  */
       " (IBM AIX)",
+#  endif /* [else] */
 #else
 #ifdef aiws
       " (IBM RT/AIX)",
@@ -1712,19 +1730,23 @@ void version(__G)
       " (LynxOS)",
 #else
 #ifdef __APPLE__
+#  if defined(UNAME_P) && defined(UNAME_R) && defined(UNAME_S) 
+      " ("UNAME_S" "UNAME_R" "UNAME_P")",
+#  else
 #  ifdef __i386__
-      " Mac OS X Intel i32",
+      " (Mac OS X Intel i32)",
 #  else
 #  ifdef __ppc__
-      " Mac OS X PowerPC",
+      " (Mac OS X PowerPC)",
 #  else
 #  ifdef __ppc64__
-      " Mac OS X PowerPC64",
+      " (Mac OS X PowerPC64)",
 #  else
-      " Mac OS X",
+      " (Mac OS X"),
 #  endif /* __ppc64__ */
 #  endif /* __ppc__ */
 #  endif /* __i386__ */
+#  endif
 #else
       "",
 #endif /* Apple */

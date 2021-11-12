@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2009 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -4333,14 +4333,19 @@ static void adj_file_name_ods2(char *dest, char *src)
     char *endp;
     char *versionp;
     char *last_dot;
+    int version_digit = 0;
 
     endp = src + strlen(src);   /* Pointer to the NUL-terminator of src. */
     /* Starting at the end, find the last non-decimal-digit. */
     versionp = endp;
-    while ((--versionp >= src) && isdigit(*versionp));
+    while ((--versionp >= src) && isdigit(*versionp)) version_digit = 1;
 
-    /* Left-most non-digit of a valid version is ";" (or perhaps "."). */
-    if ((*versionp != ';') && ((uO.Y_flag == 0) || (*versionp != '.')))
+    /* Left-most non-digit of a valid version is ";" (or perhaps ".").
+     * Valid version must have at least one digit.  ("name;" is a funny
+     * name, not a name with a version.)
+     */
+    if ((version_digit == 0) ||
+     ((*versionp != ';') && ((uO.Y_flag == 0) || (*versionp != '.'))))
     {
         /* No valid version.  The last dot is the last dot. */
         versionp = endp;
@@ -4404,14 +4409,19 @@ static void adj_file_name_ods5(char *dest, char *src)
     char *endp;
     char *versionp;
     char *last_dot;
+    int version_digit = 0;
 
     endp = src + strlen(src);   /* Pointer to the NUL-terminator of src. */
     /* Starting at the end, find the last non-decimal-digit. */
     versionp = endp;
-    while ((--versionp >= src) && isdigit(*versionp));
+    while ((--versionp >= src) && isdigit(*versionp)) version_digit = 1;
 
-    /* Left-most non-digit of a valid version is ";" (or perhaps "."). */
-    if ((*versionp != ';') && ((uO.Y_flag == 0) || (*versionp != '.')))
+    /* Left-most non-digit of a valid version is ";" (or perhaps ".").
+     * Valid version must have at least one digit.  ("name;" is a funny
+     * name, not a name with a version.)
+     */
+    if ((version_digit == 0) ||
+     ((*versionp != ';') && ((uO.Y_flag == 0) || (*versionp != '.'))))
     {
         /* No valid version.  The last dot is the last dot. */
         versionp = endp;
