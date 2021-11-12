@@ -102,7 +102,7 @@
 */
 #ifdef WINDLL
 # define WriteError(buf,len,strm) \
-   (win_fprintf(pG, (strm), (len), (char far *)(buf)) != (len))
+   (win_fprintf(pG, (strm), (int)(len), (char far *)(buf)) != (len))
 #else /* !WINDLL */
 # ifdef USE_FWRITE
 #  define WriteError(buf,len,strm) \
@@ -2760,7 +2760,7 @@ int do_string(__G__ length, option)   /* return PK-type error code */
 
 #ifdef WINDLL
             /* ran out of local mem -- had to cheat */
-            win_fprintf((zvoid *)&G, stdout, (extent)(q-G.outbuf),
+            win_fprintf((zvoid *)&G, stdout, (int)(q-G.outbuf),
                         (char *)G.outbuf);
             win_fprintf((zvoid *)&G, stdout, 2, (char *)"\n\n");
 #else /* def WINDLL */

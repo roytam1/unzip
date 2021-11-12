@@ -4573,7 +4573,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
   int option_group;
   ZCONST char **args;
   int argnum;
-  size_t *optchar;
+  int *optchar;
   int *negated;
   char **value;
   int *option_num;
@@ -4595,7 +4595,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
   nextchar = arg + (*optchar);
   clen = MB_CLEN(nextchar);
   /* next char in arg */
-  (*optchar) +=  clen;
+  (*optchar) +=  (int)clen;
   /* get first char of short option */
   shortopt = arg + (*optchar);
   /* no value */
@@ -4653,7 +4653,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
       } else {
         *negated = 1;
         /* set up to skip negating dash */
-        (*optchar) += clen;
+        (*optchar) += (int)clen;
         clen = 1;
       }
     }
@@ -4683,7 +4683,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
         }
         (*value)[0] = *(arg + (*optchar) + clen);
         (*value)[1] = '\0';
-        *optchar += clen;
+        *optchar += (int)clen;
         clen = 1;
       } else {
         /* one char values require a value */
