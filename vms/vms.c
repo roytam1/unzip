@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2013 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2014 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -40,6 +40,7 @@
              decc_init()
              get_rms_defaults()
              get_rms_fileprot()
+             name_only()
 
   ---------------------------------------------------------------------------*/
 
@@ -4343,7 +4344,7 @@ int dest_dev_name( char *path)
     nam.NAMX_ESS = sizeof( dest_dev_e_name)- 1;
 
     nam.NAMX_NOP = NAMX_M_SYNCHK;         /* Syntax-only analysis. */
-    sts = sys$parse(&fab);
+    sts = sys$parse( &fab);
 
     if ((sts & STS$M_SUCCESS) == STS$K_SUCCESS)
     {
@@ -5488,6 +5489,54 @@ int check_for_newer(__G__ filenam)   /* return 1 if existing file newer or */
 }
 
 
+
+/* name_only()
+ *
+ *    Extracts the name component from a VMS-style path specification.
+ *    Returns pointer to allocated storage; NULL, if error.
+ */
+char *name_only( path)
+    char *path;
+{
+    char *result = NULL;
+    int sts;
+
+    struct FAB fab;
+    struct NAMX_STRUCT nam;
+    char e_name[ NAMX_MAXRSS + 1];
+
+    fab = cc$rms_fab;                   /* Initialize FAB. */
+    nam = CC_RMS_NAMX;                  /* Initialize NAM[L]. */
+    fab.FAB_NAMX = &nam;                /* Point FAB to NAM[L]. */
+
+    NAMX_DNA_FNA_SET( fab)
+    FAB_OR_NAML( fab, nam).FAB_OR_NAML_DNA = PATH_DEFAULT;
+    FAB_OR_NAML( fab, nam).FAB_OR_NAML_DNS = strlen( PATH_DEFAULT);
+
+    FAB_OR_NAML( fab, nam).FAB_OR_NAML_FNA = path;
+    FAB_OR_NAML( fab, nam).FAB_OR_NAML_FNS = strlen( path);
+
+    nam.NAMX_ESA = e_name;
+    nam.NAMX_ESS = sizeof( e_name)- 1;
+
+    nam.NAMX_NOP = NAMX_M_SYNCHK;         /* Syntax-only analysis. */
+    sts = sys$parse( &fab);
+
+    if ((sts & STS$M_SUCCESS) == STS$K_SUCCESS)
+    {
+        /* Allocate storage, save name component. */
+        result = izu_malloc( nam.NAMX_B_NAME+ 1);
+        if (result != NULL)
+        {
+            strncpy( result, nam.NAMX_L_NAME, nam.NAMX_B_NAME);
+            result[ nam.NAMX_B_NAME] = '\0';
+        }
+    }
+    return result;
+}
+
+
+
 /*
  *  2007-01-29 SMS.
  *
@@ -5552,13 +5601,13 @@ int vms_status( int err)
     int sts;
     int severity;
 
-    severity = (err == PK_OK) ? STS$K_SUCCESS :             /* success */
-               (err == PK_WARN) ? STS$K_WARNING :           /* warning */
-               (err == PK_ERR ||                            /* error */
-                (err >= PK_NOZIP && err <= PK_FIND) ||      /*  ...  */
-                (err >= IZ_CTRLC && err <= IZ_BADPWD)) ?    /*  ...  */
-                STS$K_ERROR :                               /*  ...  */
-                STS$K_SEVERE;                               /* fatal */
+    severity = (err == PK_OK) ? STS$K_SUCCESS :                 /* success */
+               (err == PK_WARN) ? STS$K_WARNING :               /* warning */
+               ((err == PK_ERR) ||                              /* error */
+                ((err >= PK_NOZIP) && (err <= PK_FIND)) ||      /*  ...  */
+                ((err >= IZ_CTRLC) && (err <= IZ_BADPWD)) ||    /*  ...  */
+                (err == IZ_BADDEST)) ? STS$K_ERROR :            /*  ...  */
+                STS$K_SEVERE;                                   /* fatal */
 
     /* 2013-06-13 SMS.
      * Normal behavior is to return SS$_NORMAL for success (PK_OK), or a
@@ -5706,9 +5755,16 @@ void return_VMS(err)
               err));
             break;
 # endif /* DO_SAFECHECK_2GB */
+        case IZ_BADDEST:
+            Info(slide, 1, ((char *)slide,
+              "\n\
+[return-code %d:  Error creating auto destination dir (already exists?)]\n",
+              err));
+            break;
         default:
             Info(slide, 1, ((char *)slide,
-              "\n[return-code %d:  unknown return-code (screw-up)]\n", err));
+              "\n\
+[return-code %d:  unknown return-code  (Please report problem.)]\n", err));
             break;
     }
 #endif /* RETURN_CODES */

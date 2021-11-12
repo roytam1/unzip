@@ -1,8 +1,8 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2013-11-29
+# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2014-01-21
 #
-# Copyright (c) 2004-2013 Info-ZIP.  All rights reserved.
+# Copyright (c) 2004-2014 Info-ZIP.  All rights reserved.
 #
 # See the accompanying file LICENSE, version 2009-Jan-2 or later (the
 # contents of which are also included in zip.h) for terms of use.  If,
@@ -1204,11 +1204,18 @@ $(PROD)/flags_bz: $(PROD)/flags
 #----------------------------------------------------------------------------
 
 clean:
-	rm -f $(PROD)/*.o $(PROD)/*.a $(UNZIP_PPGMS)
-	rm -f $(PROD)/flags $(PROD)/flags_bz
-	rm -rf $(PROD)/manout
-	@# Remove empty $(PROD) directory.
-	if test -d "$(PROD)" ; then \
+	@if unix/unsafe_prod.sh "$(PROD)"; then \
+          echo "Won't clean absolute (/x) or rising (../) PROD: $(PROD)"; \
+        else \
+          echo "rm -f \"$(PROD)\"/*.o \"$(PROD)\"/*.a $(UNZIP_PPGMS)"; \
+          rm -f "$(PROD)"/*.o "$(PROD)"/*.a $(UNZIP_PPGMS); \
+          echo "rm -f \"$(PROD)\"/flags \"$(PROD)\"/flags_bz"; \
+          rm -f "$(PROD)"/flags "$(PROD)"/flags_bz; \
+          echo "rm -f $(PROD)/manout"; \
+          rm -rf "$(PROD)"/manout; \
+        fi
+#       # Remove empty $(PROD) directory.
+	if [ -d "$(PROD)" ]; then \
           ls -1 "${PROD}"/* > /dev/null 2>&1 || \
           rm -r "$(PROD)" ; \
         fi
@@ -1561,7 +1568,7 @@ amdahl: unix_make
 
 # Amdahl UTS 2.1.4 with "extended file types" filesystem (aarrrggghhhh...)
 amdahl_eft: unix_make
-	$(MAKE) unzips
+	$(MAKE) unzips \
          CF="$(CF) -eft -DSYSV -DNO_UID_GID -DNO_LCHOWN -DNO_LCHMOD"
 
 # Apollo Domain/OS machines (added -D...SOURCE options) [Gordon Fox, 960810]
