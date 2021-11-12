@@ -650,6 +650,9 @@ int zi_opts(__G__ pargc, pargv)
                     else
                         uO.lflag = 5;
                     break;
+                case (o_LI):    /* show license */
+                    showhelp = -1;
+                    break;
                 case 'm':      /* medium form of "ls -l" type listing */
                     if (negative)
                         uO.lflag = -2;
@@ -688,7 +691,12 @@ int zi_opts(__G__ pargc, pargv)
                     *pargc = -1;
                     showhelp = -3;
                     break;
-#endif
+
+                case (o_so):   /* show processed command line and exit */
+                    *pargc = -1;
+                    showhelp = -2;
+                    break;
+#endif /* ndef SFX */
                 case 't':      /* totals line */
                     if (negative)
                         tflag_2v = tflag_slm = FALSE;
@@ -718,6 +726,18 @@ int zi_opts(__G__ pargc, pargv)
                     else
                         uO.lflag = 10;
                     break;
+#ifndef SFX
+            case (o_ve):   /* version */
+                if (negative) {
+                    uO.vflag = IZ_MAX( (uO.vflag- negative), 0);
+                    negative = 0;
+                } else if (uO.vflag)
+                    ++uO.vflag;
+                else
+                    uO.vflag = 2;
+                break;
+#endif /* ndef SFX */
+
 #ifdef WILD_STOP_AT_DIR
                 case ('W'):    /* Wildcard interpretation (stop at '/'?) */
                     if (negative)
@@ -822,9 +842,32 @@ int zi_opts(__G__ pargc, pargv)
 
     } /* get_option() */
 
-    if (showhelp == -3) {
+
+    if (showhelp == -1)
+    {
+      *pargc = -1;              /* Tell caller to exit. */
+      show_license(__G);
+      return PK_OK;
+    }
+
+    if (showhelp == -2)
+    {
+      *pargc = -1;              /* Tell caller to exit. */
+      show_options(__G);
+      return PK_OK;
+    }
+
+    if (showhelp == -3)
+    {
+      *pargc = -1;              /* Tell caller to exit. */
       show_commandline( args);
       return PK_OK;
+    }
+
+    if (uO.vflag > 0)
+    {
+      *pargc = -1;              /* Tell caller to exit. */
+      return USAGE(0);
     }
 
     /* convert files and xfiles lists to arrays */
