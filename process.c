@@ -42,9 +42,6 @@
 #if defined(DYNALLOC_CRCTAB) || defined(UNICODE_SUPPORT)
 #  include "crc32.h"
 #endif
-#ifdef UNICODE_SUPPORT
-#  include <wchar.h>
-#endif /* def UNICODE_SUPPORT */
 
 static int    do_seekable        OF((__GPRO__ int lastchance));
 #ifdef DO_SAFECHECK_2GB
@@ -2650,7 +2647,7 @@ zwchar *local_to_wide_string(local_string)
   if ((wide_string = (zwchar *)malloc((wsize + 1) * sizeof(zwchar))) == NULL) {
     return NULL;
   }
-  for (wsize = 0; wide_string[wsize] = (zwchar)wc_string[wsize]; wsize++) ;
+  for (wsize = 0; (wide_string[wsize] = (zwchar)wc_string[wsize]); wsize++) ;
   wide_string[wsize] = (zwchar) 0;
   free(wc_string);
 

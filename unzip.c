@@ -109,6 +109,15 @@ static void  show_version_info  OF((__GPRO));
 # endif
 static void  show_license       OF((__GPRO));
 
+#ifdef ENABLE_USER_PROGRESS
+# ifdef VMS
+#  define USER_PROGRESS_CLASS extern
+# else /* def VMS */
+#  define USER_PROGRESS_CLASS static
+# endif /* def VMS [else] */
+USER_PROGRESS_CLASS void user_progress OF((int));
+#endif /* def ENABLE_USER_PROGRESS */
+
 
 /*************/
 /* Constants */
@@ -811,6 +820,16 @@ int unzip(__G__ argc, argv)
 #  endif
 # endif /* NO_EXCEPT_SIGNALS */
 
+#ifdef ENABLE_USER_PROGRESS
+# ifdef VMS
+  establish_ctrl_t( user_progress);
+# else /* def VMS */
+#  ifdef SIGUSR1
+  signal( SIGUSR1, user_progress);
+#  endif /* def SIGUSR1 */
+# endif /* def VMS [else] */
+#endif /* def ENABLE_USER_PROGRESS */
+
     /* initialize international char support to the current environment */
     SETLOCALE(LC_CTYPE, "");
 
@@ -1380,6 +1399,7 @@ int unzip(__G__ argc, argv)
     G.exdir_attr_ok = vol_attr_ok( (uO.exdir == NULL) ? "." : uO.exdir);
 #endif /* defined( UNIX) && defined( __APPLE__) */
 
+
 /*---------------------------------------------------------------------------
     Okey dokey, we have everything we need to get started.  Let's roll.
   ---------------------------------------------------------------------------*/
@@ -1480,7 +1500,8 @@ static int setsignalhandler(__G__ p_savedhandler_chain, signal_type,
 #define o_hh            0x101
 #define o_LI            0x102
 #define o_sc            0x103
-#define o_so            0x104
+#define o_si            0x104
+#define o_so            0x105
 
 
 /* The below is from the old main command line code with a few changes.
@@ -1528,8 +1549,9 @@ static struct option_struct far options[] = {
        'd',  "extraction root directory"},
 # endif
 # if (!defined(NO_TIMESTAMPS))
+       /* seems the best long option name I can think of */
     {UZO, "D",  "dir-timestamps",  o_NO_VALUE,       o_NEGATABLE,
-       'D',  "don't restore file timestamps (-D-: do dir, too)"},
+       'D',  "restore dir times (-D- = no dir or file)"},
 # endif
     {UZO, "e",  "extract",         o_NO_VALUE,       o_NEGATABLE,
        'e',  "extract (not used?)"},
@@ -1624,6 +1646,10 @@ static struct option_struct far options[] = {
 #ifndef SFX
     {UZO, "",  "commandline",      o_NO_VALUE,       o_NEGATABLE,
        o_sc, "show processed command line and exit"},
+#if !defined( VMS) && defined( ENABLE_USER_PROGRESS)
+    {UZO, "si", "show-pid",        o_NO_VALUE,       o_NEGATABLE,
+       o_si, "show process ID"},
+#endif /* #if !defined( VMS) && defined( ENABLE_USER_PROGRESS) */
     {UZO, "",  "options",          o_NO_VALUE,       o_NEGATABLE,
        o_so, "show available options on this system"},
 #endif /* ndef SFX */
@@ -1665,7 +1691,7 @@ static struct option_struct far options[] = {
        'z',  "display zipfile comment"},
 # ifndef SFX
     {UZO, "Z",  "ZipInfo-mode",    o_NO_VALUE,       o_NOT_NEGATABLE,
-       'Z',  "ZipInfo mode"},
+       'Z',  "ZipInfo mode (must be first option)"},
 # endif
 # ifdef VMS
     {UZO, "2",  "force-ODS2",      o_NO_VALUE,       o_NEGATABLE,
@@ -1768,6 +1794,9 @@ int uz_opts(__G__ pargc, pargv)
 {
     char **args;
     int argc, error=FALSE, showhelp=0;
+#ifdef ENABLE_USER_PROGRESS
+    int show_pid = 0;
+#endif /* def ENABLE_USER_PROGRESS */
 
     /* used by get_option */
     unsigned long option; /* option ID returned by get_option */
@@ -1830,10 +1859,15 @@ int uz_opts(__G__ pargc, pargv)
     argnum = 0;
 
     /* get_option returns the option ID and updates parameters:
-           args    - usually same as argv if no argument file support
-           argcnt  - current argc for args
-           value   - char* to value (free() when done with it) or NULL if none
-           negated - option was negated with trailing -
+           args     - usually same as argv if no argument file support
+           argcnt   - current argc for args
+           value    - char* to value (free() when done with it) or NULL if none
+           negative - option was negated with trailing -
+
+       The first argument, UZO, tells get_option() that these are the UnZip
+       options (not ZipInfo options).
+
+       See the comments for get_option() for the other parameters.
     */
 
     while ((option = get_option(__G__ UZO, &args, &argcnt, &argnum,
@@ -2162,6 +2196,13 @@ int uz_opts(__G__ pargc, pargv)
                 showhelp = -2;
                 break;
 # endif
+
+#if !defined( VMS) && defined( ENABLE_USER_PROGRESS)
+            case (o_si):   /* Show process ID. */
+                show_pid = 1;
+                break;
+#endif /* #if !defined( VMS) && defined( ENABLE_USER_PROGRESS) */
+
 # ifdef VMS
             /* VMS:  extract "text" files in Stream_LF format (-a[a]) */
             case ('S'):
@@ -2625,6 +2666,14 @@ opts_done:  /* yes, very ugly...but only used by UnZipSFX with -x xlist */
     else
         G.extract_flag = TRUE;
 
+  /* Show process ID. */
+#if !defined( VMS) && defined( ENABLE_USER_PROGRESS)
+    if (show_pid)
+    {
+      fprintf( stderr, "PID = %d \n", getpid());
+    }
+#endif /* !defined( VMS) && defined( ENABLE_USER_PROGRESS) */
+
     *pargc = argc;
     *pargv = args;
     return PK_OK;
@@ -2834,10 +2883,13 @@ static void help_extended(__G)
   "options begin with a single dash (-h), while long options start with two",
   "(--help).  Long options can be abbreviated as long as still unique.",
   "",
-  "Option negation now uses trailing dash.  So -B turns on backup and -B-",
-  "turns it off.  Using long options, --backup turns on backup and --backup-",
+  "-------------------------------------------------------------------------",
+  "WARNING:",
+  "Option negation now uses a TRAILING dash.  So -B turns on backup and -B-",
+  "turns it off.  For long options, --backup turns on backup and --backup-",
   "turns it off.  Options later in command line override those earlier.",
   "\"unzip --options\" will show all options and which can be negated.",
+  "-------------------------------------------------------------------------",
   "",
   "UnZip now allows most options to appear anywhere in the command line.",
   "An exception is xfile list, which still must be last unless list is",
@@ -2871,9 +2923,11 @@ static void help_extended(__G)
   "  -B   [UNIXBACKUP compile option enabled] Save a backup copy of each",
   "         overwritten file in foo~ or foo~99999 format.",
   "  -C   Use case-insensitive matching.",
+  "",
   "  -D   Skip restoration of timestamps on all files and directories.",
   "  -D-  Restore timestamps on directories as well as on files.",
-  "       Default is to restore timestamps on files, not on directories.",
+  "       DEFAULT IS NOW to restore timestamps on files, but not directories.",
+  "",
   "  -E   [MacOS (not Unix Apple)]  Display contents of MacOS extra field during",
   "         restore.",
   "  -F   [Acorn] Suppress removal of NFS filetype extension.  [Non-Acorn if",
@@ -2950,9 +3004,10 @@ static void help_extended(__G)
   "    unzip archive -x pattern pattern ...",
   "",
   "Multi-part (split) archives (archives created as a set of split files):",
-  "  Currently split archives are not readable by unzip.  A workaround is",
+  "  Currently split archives are not readable by UnZip.  A workaround is",
   "  to use zip to convert the split archive to a single-file archive and",
   "  use unzip on that.  See the manual page for Zip 3.0 or later.",
+  "  Split support should be added to UnZip 6.10 before release.",
   "",
   "Streaming (piping into unzip):",
   "  Currently unzip does not support streaming.  The funzip utility can be",
@@ -2973,10 +3028,13 @@ static void help_extended(__G)
   "  displays may be limited to a specific code page.  Either way full UTF-8",
   "  paths are generally restored on extraction where OS supports.  Use -U",
   "  to force use of escapes in extracted names.  Use -UU to totally ignore",
-  "  Unicode.  Unicode comments not yet fully supported.",
+  "  Unicode.  Unicode comments are only supported currently if UTF-8 is the",
+  "  native character set.  Full comment support is expected shortly.",
   "",
-  "  \"New\" options -I and -O (from a patch that has been out there awhile)",
-  "  are used on UNIX to set the ISO and OEM code pages used for conversions.",
+  "  Options -I and -O (from a patch that has been out there awhile) are used",
+  "  on UNIX to set the ISO and OEM code pages used for conversions.",
+  "  UnZip now will try to select the correct code page (thanks to yet another",
+  "  donated patch) in some cases.  -I and -O will override this.",
   "",
   "",
   "zipinfo options (these are used in zipinfo mode (unzip -Z ...)):",
@@ -4968,3 +5026,122 @@ unsigned long get_option(__G__ option_group, pargs, argc, argnum, optchar, value
 
   return option_ID;
 }
+
+
+/* Ctrl/T (VMS) AST or SIGUSR1 handler for user-triggered progress
+ * message.
+ * UNIX: arg = signal number. 
+ * VMS:  arg = Out-of-band character mask.
+ */
+#ifdef ENABLE_USER_PROGRESS
+
+# ifndef VMS
+#  include <limits.h>
+#  include <time.h>
+#  include <sys/times.h>
+#  include <sys/utsname.h>
+#  include <unistd.h>
+# endif /* ndef VMS */
+
+USER_PROGRESS_CLASS void user_progress( arg)
+int arg;
+{
+  /* VMS Ctrl/T automatically puts out a line like:
+   * ALP::_FTA24: 07:59:43 ZIP       CPU=00:00:59.08 PF=2320 IO=52406 MEM=333
+   * (host::tty local_time program cpu_time page_faults I/O_ops phys_mem)
+   * We do something vaguely similar on non-VMS systems.
+   */
+# ifndef VMS
+
+#  ifdef CLK_TCK
+#   define clk_tck CLK_TCK
+#  else /* def CLK_TCK */
+  long clk_tck;
+#  endif /* def CLK_TCK [else] */
+#  define U_P_NODENAME_LEN 32
+
+
+  static int not_first = 0;                             /* First time flag. */
+  static char u_p_nodename[ U_P_NODENAME_LEN+ 1];       /* "hoat::tty". */
+  static char u_p_prog_name[] = "unzip";                /* Program name. */
+
+  struct utsname u_p_utsname;
+  struct tm u_p_loc_tm;
+  struct tms u_p_tms;
+  char u_p_intro[ 128];
+  char *cp;
+  char *tty_name;
+  time_t u_p_time;
+  float stime_f;
+  float utime_f;
+
+  /* On the first time through, get the host name and tty name, and form
+   * the "host::tty" string (in u_p_nodename) for the intro line.
+   */
+  if (not_first == 0)
+  {
+    not_first = 1;
+    /* Host name.  (Trim off any domain info.  (Needed on Tru64.)) */
+    uname( &u_p_utsname);
+    if (u_p_utsname.nodename == NULL)
+    {
+      *u_p_nodename = '\0';
+    }
+    else
+    {
+      strncpy( u_p_nodename, u_p_utsname.nodename, (U_P_NODENAME_LEN- 8));
+      u_p_nodename[ 24] = '\0';
+      cp = strchr( u_p_nodename, '.');
+      if (cp != NULL)
+        *cp = '\0';
+    }
+
+    /* Terminal name.  (Trim off any leading "/dev/"). */
+    tty_name = ttyname( 0);
+    if (tty_name != NULL)
+    {
+      cp = strstr( tty_name, "/dev/");
+      if (cp != NULL)
+        tty_name += 5;
+
+      strcat( u_p_nodename, "::");
+      strncat( u_p_nodename, tty_name,
+       (U_P_NODENAME_LEN- strlen( u_p_nodename)));
+    }
+  }
+
+  /* Local time.  (Use reentrant localtime_r().) */
+  u_p_time = time( NULL);
+  localtime_r( &u_p_time, &u_p_loc_tm);
+
+  /* CPU time. */
+  times( &u_p_tms);
+#ifndef CLK_TCK
+  clk_tck = sysconf( _SC_CLK_TCK);
+#endif /* ndef CLK_TCK */
+  utime_f = ((float)u_p_tms.tms_utime)/ clk_tck;
+  stime_f = ((float)u_p_tms.tms_stime)/ clk_tck;
+
+  /* Put out intro line. */
+  fprintf( stderr, "%s %02d:%02d:%02d %s CPU=%.2f\n",
+   u_p_nodename,
+   u_p_loc_tm.tm_hour, u_p_loc_tm.tm_min, u_p_loc_tm.tm_sec,
+   u_p_prog_name,
+   (stime_f+ utime_f));
+
+# endif /* ndef VMS */
+
+  if (G.filename != NULL)
+  {
+    fprintf( stderr, "   %s\n", FnFilter1(G.filename));
+  }
+
+# ifndef VMS
+  /* Re-establish this SIGUSR1 handler.
+   * (On VMS, the Ctrl/T handler persists.) */
+  signal( SIGUSR1, user_progress);
+# endif /* ndef VMS */
+}
+
+#endif /* def ENABLE_USER_PROGRESS */
+

@@ -3,6 +3,10 @@
 
 /* 2011-08-14 SMS for Info-ZIP.
  * Rename 7z*.* to Sz*.*, for IBM compatibility.
+ *
+ * 2011-10-07 SMS for Info-ZIP.
+ * #include <unistd.h> where available.  SunOS 4.x defines SEEK_CUR,
+ * SEEK_END, and SEEK_SET there (only).
  */
 
 #ifndef __SZ_FILE_H
@@ -15,7 +19,10 @@
 #ifdef USE_WINDOWS_FILE
 #include <windows.h>
 #else
-#include <stdio.h>
+# include <stdio.h>
+# ifndef NO_UNISTD_H
+#  include <unistd.h>
+# endif
 #endif
 
 #include "Types.h"

@@ -52,7 +52,17 @@ typedef int WRes;
 #define RINOK(x) { int __result__ = (x); if (__result__ != 0) return __result__; }
 #endif
 
+/* ================================================================== */
+
+/* 2011-09-15 SMS for Info-ZIP.
+ * Avoid conflict with (equivalent) zlib declaration of Byte.
+ */
+#ifndef ZLIB_H
 typedef unsigned char Byte;
+#endif
+
+/* ================================================================== */
+
 typedef short Int16;
 typedef unsigned short UInt16;
 

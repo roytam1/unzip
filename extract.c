@@ -3751,11 +3751,12 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
     int have_overflow = FALSE;
 
     wslen = mbstowcs(NULL, raw, 0 );
-    if ((wstring = malloc((wslen + 1) * sizeof(wchar_t))) == NULL) {
+    if ((wstring = (wchar_t *)malloc((wslen + 1) * sizeof(wchar_t))) == NULL) {
         strcpy( (char *)space, raw);
         return (char *)space;
     }
-    if ((wostring = malloc(2 * (wslen + 1) * sizeof(wchar_t))) == NULL) {
+    if ((wostring = (wchar_t *)malloc(2 * (wslen + 1) * sizeof(wchar_t))) ==
+     NULL) {
         free(wstring);
         strcpy( (char *)space, raw);
         return (char *)space;

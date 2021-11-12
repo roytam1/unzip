@@ -34,6 +34,7 @@
              screensize()
              screenlinewrap()
              version()
+             establish_ctrl_t()
 
   ---------------------------------------------------------------------------*/
 
@@ -54,6 +55,10 @@
 #include <dvidef.h>
 #include <ssdef.h>
 #include <stsdef.h>
+
+#ifdef ENABLE_USER_PROGRESS
+#include <prdef.h>
+#endif /* def ENABLE_USER_PROGRESS */
 
 /* Workaround for broken header files of older DECC distributions
  * that are incompatible with the /NAMES=AS_IS qualifier. */
@@ -5640,6 +5645,85 @@ void version(__G)
 
 #endif /* !SFX */
 
+
+#ifdef ENABLE_USER_PROGRESS
+
+/* 2011-11-17 SMS.
+ *
+ *       establish_ctrl_t().
+ *
+ *    Establish Ctrl/T handler, if SYS$COMMAND is a terminal.
+ */
+
+int establish_ctrl_t( void ctrl_t_ast())
+{
+    int i;
+    int status;
+    short iosb[ 4];
+
+    int access_mode = PR$C_PS_USER;
+    int dev_class;
+
+/*
+ * Mask bits for Ctrl/x characters.
+ *  Z  Y  X  W  V  U  T  S  R  Q  P O N M L K J I H G F E D C B A sp
+ * 1A 19 18 17 16 15 14 13 12 11 10 F E D C B A 9 8 7 6 5 4 3 2 1  0
+ * -------- ----------- ----------- ------- ------- ------- --------
+ *        0           1           0       0       0       0        0
+ */
+    struct
+    {
+        int mask_size;
+        unsigned int mask;
+    } char_mask = { 0, 0x00100000 };    /* Ctrl/T. */
+
+    $DESCRIPTOR( term_name_descr, "SYS$COMMAND");
+    short term_chan;
+
+    status = sys$assign( &term_name_descr, &term_chan, 0, 0);
+    if ((status& STS$M_SEVERITY) != STS$K_SUCCESS)
+    {
+        fprintf( stderr, " ECT $ASSIGN sts =  %%x%08x .\n", status);
+        return status;
+    }
+
+    status = lib$getdvi( &((int)DVI$_DEVCLASS), /* Item code. */
+                         &term_chan,            /* Channel. */
+                         0,                     /* Device name. */
+                         &dev_class,            /* Longword value. */
+                         0,                     /* Result string. */
+                         0,                     /* Result string len. */
+                         0);                    /* Pathname. */
+
+    if ((status& STS$M_SEVERITY) != STS$K_SUCCESS)
+    {
+        fprintf( stderr, " ECT $GETDVI sts =  %%x%08x .\n", status);
+        return status;
+    }
+
+#define FUN_AST_ENA (IO$_SETMODE| IO$M_OUTBAND)
+					
+    status = sys$qiow( 0,               /* Event flag. */
+                       term_chan,       /* Channel. */
+                       FUN_AST_ENA,     /* Function code. */
+                       &iosb,           /* IOSB. */
+                       0,               /* AST address. */
+                       0,               /* AST parameter. */
+                       ctrl_t_ast,      /* P1 = OOB AST addr. */
+                       &char_mask,      /* P2 = Char mask. */
+                       &access_mode,    /* P3 = Access mode. */
+                       0,               /* P4. */
+                       0,               /* P5. */
+                       0);              /* P6. */
+
+    if ((status& STS$M_SEVERITY) != STS$K_SUCCESS)
+    {
+        fprintf( stderr, " ECT $QIOW sts =  %%x%08x .\n", status);
+    }
+    return status;
+}
+
+#endif /* def ENABLE_USER_PROGRESS */
 
 
 #ifdef __DECC

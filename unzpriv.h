@@ -17,7 +17,16 @@
 
   ---------------------------------------------------------------------------*/
 
+/* It has been proposed to replace unzpriv.h by zip-like tailor.h and tree of
+   PORT/osdep.h headers.
+   - This is a result of the effort to synchronize/rationalize the build
+     systems (such as unix/Makefile and unix/configure).
+   - This will ensure that customization is as close as possible between Zip
+     and UnZip.  
+   - This in turn will make it much easier to safely share code between the
+     Zip and UnZip source trees.
 
+   This might get done in the next beta. */
 
 #ifndef __unzpriv_h   /* prevent multiple inclusions */
 #define __unzpriv_h
@@ -139,6 +148,50 @@
 #  endif
 #endif
 
+/* UNICODE */
+#ifdef NO_UNICODE_SUPPORT
+/* NO_UNICODE_SUPPORT override disables Unicode support 
+   - Useful for environments like MS Visual Studio */
+# ifdef UNICODE_SUPPORT
+#   undef UNICODE_SUPPORT
+# endif
+#endif
+
+/* This needs fixing, but currently assume that we don't have full
+   Unicode support unless UNICODE_WCHAR is set.
+
+   What we should do is define three possibilities:
+   UNICODE_WIDE   = we have the wide character support we need for Unicode.
+                    If unix/configure found the port is missing something,
+                    the port needs to provide it and turn Unicode back on.
+                    Check for HAVE_TOWUPPER and so on.
+   UNICODE_ICONV  = we can use iconv for Unicode conversions.  All processing
+                    will be done using 8-bit characters.
+   UNICODE_NATIVE = we don't need to do any conversions.  This flag is needed,
+                    though, so we know to set the UTF-8 bit.  It also means
+                    we somehow have verified the character set as UTF-8.
+                    However, note that if the port has no way to convert
+                    from UTF-8, the code page must be UTF-8 to see paths in
+                    an existing archive.
+
+   I can't see any reason more than one of these should be set in any
+   particular build, so there probably should be some priority order for these
+   set up.  For instance, if UTF-8 is native, then paths coming in are already
+   UTF-8 and the UTF-8 paths in existing archives should be readable, so no
+   conversion code may be needed, just the code to detect if UNICODE_NATIVE
+   really applies.
+
+   This might get done in the next beta. */
+
+#ifdef UNICODE_SUPPORT
+# if !(defined(UNICODE_WCHAR))
+/* UNZIP had the following test (now synced to ZIP):
+# if !(defined(UTF8_MAYBE_NATIVE) || defined(UNICODE_WCHAR))
+*/
+#  undef UNICODE_SUPPORT
+# endif
+#endif
+
 /* bad or (occasionally?) missing stddef.h: */
 #if (defined(M_XENIX) || defined(DNIX))
 #  define NO_STDDEF_H
@@ -195,12 +248,12 @@
 
 #if (defined(ultrix) || defined(__ultrix) || defined(bsd4_2))
 #  if (!defined(BSD) && !defined(SYSV))
-#    define BSD
+#    define BSD 1
 #  endif
 #endif /* ultrix || __ultrix || bsd4_2 */
 #if (defined(sun) || defined(pyr) || defined(CONVEX))
 #  if (!defined(BSD) && !defined(SYSV))
-#    define BSD
+#    define BSD 1
 #  endif
 #endif /* sun || pyr || CONVEX */
 
@@ -1228,63 +1281,110 @@
  */
 #define FILNAMSIZ  PATH_MAX
 
-#ifdef UNICODE_SUPPORT
-# if !(defined(UTF8_MAYBE_NATIVE) || defined(UNICODE_WCHAR))
-#  undef UNICODE_SUPPORT
-# endif
-#endif
+
+/* DBCS support for Info-ZIP's zip  (mainly for japanese (-: )
+ * by Yoshioka Tsuneo (QWF00133@nifty.ne.jp,tsuneo-y@is.aist-nara.ac.jp)
+ * This code is public domain!   Date: 1998/12/20
+ */
+
 /* 2007-09-18 SMS.
  * Include <locale.h> here if it will be needed later for Unicode.
  * Otherwise, SETLOCALE may be defined here, and then defined again
  * (differently) when <locale.h> is read later.
  */
 #ifdef UNICODE_SUPPORT
+# include <stdlib.h>
 # ifdef UNICODE_WCHAR
-#  if !(defined(_WIN32_WCE) || defined(POCKET_UNZIP))
+/* wchar support may be in any of these three headers */
+#  ifdef HAVE_CTYPE_H
+#   include <ctype.h>
+#  endif
+#  ifdef HAVE_WCHAR_H
 #   include <wchar.h>
 #  endif
+#  ifdef HAVE_WCTYPE_H
+#   include <wctype.h>
+#  endif
+# endif /* def UNICODE_WCHAR */
+
+# ifdef HAVE_LANGINFO_H
+#  include <langinfo.h>
 # endif
+
 # ifndef _MBCS  /* no need to include <locale.h> twice, see below */
+#  ifdef HAVE_LOCALE_H
 #   include <locale.h>
+#  endif
 #   ifndef SETLOCALE
 #     define SETLOCALE(category, locale) setlocale(category, locale)
 #   endif
 # endif
 #endif /* UNICODE_SUPPORT */
 
-/* DBCS support for Info-ZIP  (mainly for japanese (-: )
- * by Yoshioka Tsuneo (QWF00133@nifty.ne.jp,tsuneo-y@is.aist-nara.ac.jp)
- */
 #ifdef _MBCS
-#  include <locale.h>
+   /* Multi Byte Character Set support
+      - This section supports a number of mbcs-related functions which
+        will use the OS-provided version (if found by a unix/configure
+        test, or equivalent) or will use a generic minimally-functional
+        version provided as a fileio.c function.
+      - All references to this function UnZip code are via the FUNCTION 
+        name.
+      - If unix/configure finds the OS-provided function, it will define
+        a macro in the form FUNCTION=function. 
+      - If not defined:
+        - A replacement is defined below pointing to the generic version.
+        - The prototype for the generic function will be defined (below).
+        - A NEED_FUNCTION macro will also be defined, to enable compile
+          of the fileio.c code to implement the generic function.
+    */
+   
+#  include <stdlib.h>
+#  ifdef HAVE_LOCALE_H
+#   include <locale.h>
+#  endif
 #  ifdef HAVE_MBSTR_H
-#    include <mbstr.h>
-#  endif /* def HAVE_MBSTR_H */
-   /* Multi Byte Character Set */
+#   include <mbstr.h>
+#  endif
+
 #  define ___MBS_TMP_DEF  char *___tmp_ptr;
 #  define ___TMP_PTR      ___tmp_ptr
+
 #  ifndef CLEN
 #    define NEED_UZMBCLEN
 #    define CLEN(ptr) (int)uzmbclen((ZCONST unsigned char *)(ptr))
+     /* Zip defines as
+#    define CLEN(ptr) mblen((ZCONST char *)ptr, MB_CUR_MAX)
+      */
 #  endif
+
 #  ifndef PREINCSTR
 #    define PREINCSTR(ptr) (ptr += CLEN(ptr))
 #  endif
+
 #  define POSTINCSTR(ptr) (___TMP_PTR=(char *)(ptr), PREINCSTR(ptr),___TMP_PTR)
    char *plastchar OF((ZCONST char *ptr, extent len));
 #  define lastchar(ptr, len) ((int)(unsigned)*plastchar(ptr, len))
+     /* Zip defines as
+#   define POSTINCSTR(ptr) (___tmp_ptr=(char *)ptr,ptr += CLEN(ptr),___tmp_ptr)
+    int lastchar OF((ZCONST char *ptr));
+      */
+
 #  ifndef MBSCHR
 #    define NEED_UZMBSCHR
 #    define MBSCHR(str,c) (char *)uzmbschr((ZCONST unsigned char *)(str), c)
 #  endif
+
 #  ifndef MBSRCHR
 #    define NEED_UZMBSRCHR
 #    define MBSRCHR(str,c) (char *)uzmbsrchr((ZCONST unsigned char *)(str), c)
 #  endif
+
 #  ifndef SETLOCALE
 #    define SETLOCALE(category, locale) setlocale(category, locale)
 #  endif
+
 #else /* !_MBCS */
+   /* Multi Byte Character Set support is not available */
 #  define ___MBS_TMP_DEF
 #  define ___TMP_PTR
 #  define CLEN(ptr) 1
@@ -1298,6 +1398,7 @@
 #    define SETLOCALE(category, locale)
 #  endif
 #endif /* ?_MBCS */
+
 #define INCSTR(ptr) PREINCSTR(ptr)
 
 
@@ -1666,6 +1767,21 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 
 #define FZOFFT_NUM 4            /* Number of chambers. */
 #define FZOFFT_LEN 24           /* Number of characters/chamber. */
+
+
+/* User-triggered (Ctrl/T, SIGUSR1) progress.
+ * ("include <signal.h>" must follow large-file decision.)
+ */
+#ifndef NO_USER_PROGRESS
+# ifndef VMS
+#  include <signal.h>
+# endif /* ndef VMS */
+# if defined(VMS) || defined(SIGUSR1)
+#  if !defined(MACOS) && !defined(WINDLL)
+#   define ENABLE_USER_PROGRESS
+#  endif /* !defined(MACOS) && !defined(WINDLL) */
+# endif /* defined(VMS) || defined(SIGUSR1) */
+#endif /* ndef NO_USER_PROGRESS */
 
 
 #ifdef SHORT_SYMS                   /* Mark Williams C, ...? */
@@ -2696,16 +2812,19 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
 /* int    flush               OF((__GPRO__ uch *rawbuf, unsigned size,
                                   int final_flag));   * (see fileio.c) vms.c */
    char  *vms_msg_text        OF((void));                           /* vms.c */
-#ifdef RETURN_CODES
+# ifdef RETURN_CODES
    void   return_VMS          OF((__GPRO__ int zip_error));         /* vms.c */
-#else
+# else /* def RETURN_CODES */
    void   return_VMS          OF((int zip_error));                  /* vms.c */
-#endif
-#ifdef VMSCLI
+# endif /* def RETURN_CODES [else] */
+# ifdef VMSCLI
    unsigned  vms_unzip_cmdline   OF((int *, char ***));         /* cmdline.c */
    int    VMSCLI_usage        OF((__GPRO__ int error));         /* cmdline.c */
-#endif
-#endif
+# endif /* def VMSCLI */
+# ifdef ENABLE_USER_PROGRESS
+   int establish_ctrl_t       OF((void ctrl_t_ast()));              /* vms.c */
+# endif /* def ENABLE_USER_PROGRESS */
+#endif /* def VMS */
 
 /*---------------------------------------------------------------------------
     WIN32-only functions:
