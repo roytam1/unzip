@@ -41,12 +41,16 @@ static void RangeDec_Decode(CPpmd8 *p, UInt32 start, UInt32 size)
   }
 }
 
-/* 2012-03-27 SMS for Info-ZIP.
- * Old compilers don't like "signed char", and we don't compile with
- * "unsigned char" as the default char type.
+/* 2012-04-10 SMS for Info-ZIP.
+ * Old compilers which don't like "signed char" must have a signed
+ * "char" type.  Originally:
  * #define MASK(sym) ((signed char *)charMask)[sym]
  */
-#define MASK(sym) ((char *)charMask)[sym]
+#ifdef NO_SIGNED_CHAR
+# define MASK(sym) ((char *)charMask)[sym]
+#else
+# define MASK(sym) ((signed char *)charMask)[sym]
+#endif
 
 int Ppmd8_DecodeSymbol(CPpmd8 *p)
 {

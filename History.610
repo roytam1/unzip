@@ -790,6 +790,10 @@ Bugs fixed:
    message on VMS.  (unzip.c) [SMS]
  - Renamed C macro APL_DBL_SFX to APL_DBL_SUFX to reduce confusion with
    self-extracting "SFX".  (extract.c, fileio.c, unix/macosx.h) [SMS]
+ - Added some minimal/lame support in the unix/zipgrep script for (up to
+   four) GNU long-form options for egrep, and fixed some lame error
+   handling (when the "unzip -Z1" command failed, for example).  Many
+   limitations and problems remain.
 
 ==================
 
