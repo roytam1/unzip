@@ -1,6 +1,6 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2014-05-04
+# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2014-05-08
 #
 # Copyright (c) 2004-2014 Info-ZIP.  All rights reserved.
 #
@@ -372,6 +372,7 @@ LF2    = -s
 # Other utility programs
 AR      = ar cq
 CHMOD   = chmod
+COL     = col
 LN      = ln
 RANLIB  = ranlib
 RM      = rm -f
@@ -1093,44 +1094,48 @@ $(PROD)/manout:
 	if [ ! -d "$@" ]; then mkdir "$@"; fi
 
 # UnZip text documentation generation rules
+#
+# SunOS 4.x quirks:
+#    "man -M" requires an absolute path, hence "`pwd`/".
+#    /bin/man does not support "-x".  Specify "COL=/usr/5bin/col".
 
 $(DOC_UNZIP): man/man1/unzip.1
-	man -M man unzip    | col -bx | uniq | expand > $@
+	man -M ` pwd `/man unzip    | $(COL) -bx | uniq | expand > $@
 	@echo ''
 
 $(DOC_SFX):   man/man1/unzipsfx.1
-	man -M man unzipsfx | col -bx | uniq | expand > $@
+	man -M ` pwd `/man unzipsfx | $(COL) -bx | uniq | expand > $@
 	@echo ''
 
 $(DOC_FUZ):   man/man1/funzip.1
-	man -M man funzip   | col -bx | uniq | expand > $@
+	man -M ` pwd `/man funzip   | $(COL) -bx | uniq | expand > $@
 	@echo ''
 
 $(DOC_ZINFO): man/man1/zipinfo.1
-	man -M man zipinfo  | col -bx | uniq | expand > $@
+	man -M ` pwd `/man zipinfo  | $(COL) -bx | uniq | expand > $@
 	@echo ''
 
 $(DOC_ZGREP): man/man1/zipgrep.1
-	man -M man zipgrep  | col -bx | uniq | expand > $@
+	man -M ` pwd `/man zipgrep  | $(COL) -bx | uniq | expand > $@
 	@echo ''
 
 # UnZip man page generation rule
 # - Requires nroff, or GNU groff package
 
 $(PMAN_UNZIP): man/man1/unzip.1
-	nroff -man man/man1/unzip.1    | col -bx | uniq > $@
+	nroff -man man/man1/unzip.1    | $(COL) -bx | uniq > $@
 
 $(PMAN_SFX):   man/man1/unzipsfx.1
-	nroff -man man/man1/unzipsfx.1 | col -bx | uniq > $@
+	nroff -man man/man1/unzipsfx.1 | $(COL) -bx | uniq > $@
 
 $(PMAN_FUZ):   man/man1/funzip.1
-	nroff -man man/man1/funzip.1   | col -bx | uniq > $@
+	nroff -man man/man1/funzip.1   | $(COL) -bx | uniq > $@
 
 $(PMAN_ZINFO): man/man1/zipinfo.1
-	nroff -man man/man1/zipinfo.1  | col -bx | uniq > $@
+	nroff -man man/man1/zipinfo.1  | $(COL) -bx | uniq > $@
 
 $(PMAN_ZGREP): man/man1/zipgrep.1
-	nroff -man man/man1/zipgrep.1  | col -bx | uniq > $@
+	nroff -man man/man1/zipgrep.1  | $(COL) -bx | uniq > $@
 
 #----------------------------------------------------------------------------
 #  Build rules: Standard build targets

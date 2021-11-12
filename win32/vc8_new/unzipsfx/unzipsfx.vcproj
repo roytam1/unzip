@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8.00"
+	Version="9.00"
 	Name="unzipsfx"
 	ProjectGUID="{82DCF679-56F6-4FC7-8896-ACF1D28B6AA2}"
 	RootNamespace="unzipsfx"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform
@@ -114,8 +115,10 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
+				EnableIntrinsicFunctions="true"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;SFX;ASM_CRC;x_BZIP2_SUPPORT;x_BZIP2_SFX;x_CHEAP_SFX_AUTORUN;x_CRYPT_AES_WG;x_CRYPT_AES_WG_SFX;x_CRYPT_TRAD_SFX;x_LZMA_SUPPORT;x_LZMA_SFX;x_PPMD_SUPPORT;x_PPMD_SFX"
 				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"
