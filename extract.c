@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2009 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -2766,30 +2766,100 @@ static void set_deferred_symlink(__G__ slnk_entry)
 /*  Function fnfilter()  */        /* here instead of in list.c for SFX */
 /*************************/
 
+/*
+  If Unicode is supported, assume we have what we need to do this
+  check using wide characters, avoiding MBCS issues.
+ */
+
 char *fnfilter(raw, space, size)   /* convert name to safely printable form */
     ZCONST char *raw;
     uch *space;
     extent size;
 {
+#ifndef UZ_FNFILTER_REPLACECHAR
+    /* A convenient choice for the replacement of unprintable char codes is
+     * the "single char wildcard", as this character is quite unlikely to
+     * appear in filenames by itself.  The following default definition
+     * sets the replacement char to a question mark as the most common
+     * "single char wildcard"; this setting should be overridden in the
+     * appropiate system-specific configuration header when needed.
+     */
+# define UZ_FNFILTER_REPLACECHAR      '?'
+#endif
+
 #ifndef NATIVE   /* ASCII:  filter ANSI escape codes, etc. */
-    ZCONST uch *r=(ZCONST uch *)raw;
+
+# ifdef UNICODE_SUPPORT
+/* If Unicode support is enabled, do the isprint() checks by first
+   converting to wide characters and checking those.  That avoids
+   issues doing checks on multi-byte characters.  After the replacements
+   the wide string is converted back to the local character set. */
+
+    wchar_t *wstring;    /* wchar_t version of raw */
+    size_t wslen;        /* length of wstring */
+    wchar_t *wc;         /* pointer to char in wstring */
+    wchar_t *wostring;   /* wchar_t version of output string */
+    size_t woslen;       /* length of wostring */
+    wchar_t *woc;        /* pointer to char in wostring */
+	char *newraw;        /* new raw */
+	ZCONST uch *r;
     uch *s=space;
     uch *slim=NULL;
     uch *se=NULL;
     int have_overflow = FALSE;
 
-    if (size > 0) {
-        slim = space + size
-#ifdef _MBCS
-                     - (MB_CUR_MAX - 1)
-#endif
-                     - 4;
+    wslen = mbstowcs(NULL, raw, 0 );
+	if ((wstring = malloc((wslen + 1) * sizeof(wchar_t))) == NULL) {
+        strcpy( (char *)space, raw);
+        return (char *)space;
     }
+	if ((wostring = malloc(2 * (wslen + 1) * sizeof(wchar_t))) == NULL) {
+		free(wstring);
+        strcpy( (char *)space, raw);
+        return (char *)space;
+    }
+    wslen = mbstowcs(wstring, raw, wslen + 1);
+	wc = wstring;
+	woc = wostring;
+
+    while (*wc) {
+        if (!iswprint(*wc)) {
+            if (*wc < 32) {
+                /* ASCII control codes are escaped as "^{letter}". */
+                *woc++ = (wchar_t)'^';
+                *woc++ = (wchar_t)(64 + *wc);
+            } else {
+                /* Other unprintable codes are replaced by the
+                 * placeholder character. */
+                *woc++ = (wchar_t)UZ_FNFILTER_REPLACECHAR;
+            }
+        } else {
+            *woc++ = *wc;
+        }
+        *wc++;
+    }
+    *woc = (wchar_t)0;
+
+    /* convert back to local string to work with output buffer */
+    woslen = wcstombs(NULL, wostring, 0 );
+	if ((newraw = malloc(woslen + 1)) == NULL) {
+		free(wstring);
+		free(wostring);
+        strcpy( (char *)space, raw);
+        return (char *)space;
+    }
+    woslen = wcstombs(newraw, wostring, (woslen * MB_CUR_MAX) + 1 );
+
+
+    if (size > 0) {
+        slim = space + size - 4;
+    }
+    r = (ZCONST uch *)newraw;
     while (*r) {
         if (size > 0 && s >= slim && se == NULL) {
             se = s;
         }
-#ifdef QDOS
+#  ifdef QDOS
         if (qlflag & 2) {
             if (*r == '/' || *r == '.') {
                 if (se != NULL && (s > (space + (size-3)))) {
@@ -2801,18 +2871,58 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
                 continue;
             }
         } else
-#endif
-#ifdef HAVE_WORKING_ISPRINT
-# ifndef UZ_FNFILTER_REPLACECHAR
-    /* A convenient choice for the replacement of unprintable char codes is
-     * the "single char wildcard", as this character is quite unlikely to
-     * appear in filenames by itself.  The following default definition
-     * sets the replacement char to a question mark as the most common
-     * "single char wildcard"; this setting should be overridden in the
-     * appropiate system-specific configuration header when needed.
-     */
-#   define UZ_FNFILTER_REPLACECHAR      '?'
-# endif
+#  endif
+        {
+            if (se != NULL && (s > (space + (size-3)))) {
+                have_overflow = TRUE;
+                break;
+            }
+            *s++ = *r++;
+        }
+    }
+    if (have_overflow) {
+        strcpy((char *)se, "...");
+    } else {
+        *s = '\0';
+    }
+
+    free(wstring);
+    free(wostring);
+    free(newraw);
+
+# else /* !UNICODE_SUPPORT */
+
+    ZCONST uch *r=(ZCONST uch *)raw;
+    uch *s=space;
+    uch *slim=NULL;
+    uch *se=NULL;
+    int have_overflow = FALSE;
+
+    if (size > 0) {
+        slim = space + size
+#  ifdef _MBCS
+                     - (MB_CUR_MAX - 1)
+#  endif
+                     - 4;
+    }
+    while (*r) {
+        if (size > 0 && s >= slim && se == NULL) {
+            se = s;
+        }
+#  ifdef QDOS
+        if (qlflag & 2) {
+            if (*r == '/' || *r == '.') {
+                if (se != NULL && (s > (space + (size-3)))) {
+                    have_overflow = TRUE;
+                    break;
+                }
+                ++r;
+                *s++ = '_';
+                continue;
+            }
+        } else
+#  endif
+#  ifdef HAVE_WORKING_ISPRINT
         if (!isprint(*r)) {
             if (*r < 32) {
                 /* ASCII control codes are escaped as "^{letter}". */
@@ -2831,7 +2941,7 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
                 *s++ = UZ_FNFILTER_REPLACECHAR;
                 INCSTR(r);
             }
-#else /* !HAVE_WORKING_ISPRINT */
+#  else /* !HAVE_WORKING_ISPRINT */
         if (*r < 32) {
             /* ASCII control codes are escaped as "^{letter}". */
             if (se != NULL && (s > (space + (size-4)))) {
@@ -2839,9 +2949,9 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
                 break;
             }
             *s++ = '^', *s++ = (uch)(64 + *r++);
-#endif /* ?HAVE_WORKING_ISPRINT */
+#  endif /* ?HAVE_WORKING_ISPRINT */
         } else {
-#ifdef _MBCS
+#  ifdef _MBCS
             unsigned i = CLEN(r);
             if (se != NULL && (s > (space + (size-i-2)))) {
                 have_overflow = TRUE;
@@ -2849,13 +2959,13 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
             }
             for (; i > 0; i--)
                 *s++ = *r++;
-#else
+#  else
             if (se != NULL && (s > (space + (size-3)))) {
                 have_overflow = TRUE;
                 break;
             }
             *s++ = *r++;
-#endif
+#  endif
          }
     }
     if (have_overflow) {
@@ -2863,16 +2973,17 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
     } else {
         *s = '\0';
     }
+# endif /* !UNICODE_SUPPORT */
 
-#ifdef WINDLL
+# ifdef WINDLL
     INTERN_TO_ISO((char *)space, (char *)space);  /* translate to ANSI */
-#else
-#if (defined(WIN32) && !defined(_WIN32_WCE))
+# else
+#  if (defined(WIN32) && !defined(_WIN32_WCE))
     /* Win9x console always uses OEM character coding, and
        WinNT console is set to OEM charset by default, too */
     INTERN_TO_OEM((char *)space, (char *)space);
-#endif /* (WIN32 && !_WIN32_WCE) */
-#endif /* ?WINDLL */
+#  endif /* (WIN32 && !_WIN32_WCE) */
+# endif /* ?WINDLL */
 
     return (char *)space;
 
