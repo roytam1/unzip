@@ -2332,8 +2332,20 @@ int do_string(__G__ length, option)   /* return PK-type error code */
     length of the string:  if zero, we're already done.
   ---------------------------------------------------------------------------*/
 
-    if (!length)
-        return PK_COOL;
+    /* 2012-05-01 SMS.
+     *
+     *     if (!length)
+     *         return PK_COOL;
+     *
+     * Well, no, if "length" is zero, then we're _not_ "already done".
+     * Exiting immediately would leave the destination buffer
+     * unmodified, so it would retain its previous value, instead of
+     * what should be a null string.  (The APPNOTE says, "If input came
+     * from standard input, the file name length is set to zero."  So,
+     * we need to handle that case accordingly.)  Cases DS_FN and DS_FNL
+     * now substitute NULL_NAME_REPL (unzpriv.h) for a null archive
+     * member name.  Other cases must handle a null name appropriately.
+     */
 
     switch (option) {
 
@@ -2498,6 +2510,23 @@ int do_string(__G__ length, option)   /* return PK-type error code */
     case DS_FN:
     case DS_FN_L:
 #ifdef UNICODE_SUPPORT
+        if (length == 0)
+        {
+            /* Replace a null name. */
+            extent fnbufsiz = sizeof( NULL_NAME_REPL);
+
+            if (G.fnfull_bufsize < fnbufsiz)
+            {
+                if (G.filename_full)
+                    free(G.filename_full);
+                G.filename_full = malloc( fnbufsiz);
+                if (G.filename_full == NULL)
+                    return PK_MEM;
+                G.fnfull_bufsize = fnbufsiz;
+            }
+            strcpy( G.filename_full, NULL_NAME_REPL);
+            return PK_COOL;
+        }
         /* get the whole filename as need it for Unicode checksum */
         if (G.fnfull_bufsize <= length) {
             extent fnbufsiz = FILNAMSIZ;
@@ -2527,6 +2556,11 @@ int do_string(__G__ length, option)   /* return PK-type error code */
         strncpy(G.filename, G.filename_full, length);
         G.filename[length] = '\0';      /* terminate w/zero:  ASCIIZ */
 #else /* !UNICODE_SUPPORT */
+        if (length == 0)
+        {
+            strcpy( G.filename, NULL_NAME_REPL);
+            return PK_COOL;
+        }
         if (length >= FILNAMSIZ) {
             Info(slide, 0x401, ((char *)slide,
               LoadFarString(FilenameTooLongTrunc)));
@@ -2544,7 +2578,14 @@ int do_string(__G__ length, option)   /* return PK-type error code */
 
         flag = (option==DS_FN_L)?G.lrec.general_purpose_bit_flag:G.crec.general_purpose_bit_flag;
         /* skip ISO/OEM translation if stored name is UTF-8 */
-        if ((flag & UTF8_BIT) == 0) {
+        /* 2012-05-20 SMS.
+         * Added check for Java "CAFE" extra block, to avoid mistaking
+         * Java's mostly-zero header info for an MS-DOS origin.  A more
+         * rigorous hostnum test might be easier, but might break other
+         * stuff.
+         */
+        if (((flag & UTF8_BIT) == 0) && (uO.java_cafe <= 0))
+        {
           /* translate the Zip entry filename coded in host-dependent "extended
              ASCII" into the compiler's (system's) internal text code page */
           Ext_ASCII_TO_Native(G.filename, G.pInfo->hostnum, G.pInfo->hostver,
@@ -2578,6 +2619,11 @@ int do_string(__G__ length, option)   /* return PK-type error code */
      */
 
     case SKIP:
+        if (length == 0)
+        {
+            return PK_COOL;
+        }
+
         /* cur_zipfile_bufstart already takes account of extra_bytes, so don't
          * correct for it twice: */
         seek_zipf(__G__ G.cur_zipfile_bufstart - G.extra_bytes +
@@ -2590,6 +2636,10 @@ int do_string(__G__ length, option)   /* return PK-type error code */
      */
 
     case EXTRA_FIELD:
+        if (length == 0)
+        {
+            return PK_COOL;
+        }
         if (G.extra_field != (uch *)NULL)
             free(G.extra_field);
         if ((G.extra_field = (uch *)malloc(length)) == (uch *)NULL) {

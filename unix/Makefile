@@ -1,6 +1,6 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo            Last update: 10 Apr 2012
+# - For UnZip, UnZipSFX, fUnZip and ZipInfo            Last update: 21 Apr 2012
 #==============================================================================
 
 #==============================================================================
@@ -387,15 +387,15 @@ H_AES    = aes_wg/aes.h     \
            aes_wg/sha1.h
 
 # C header files: LZMA compression
-H_LZMA   = lzma/SzVersion.h \
-           lzma/LzFind.h    \
-           lzma/LzHash.h    \
-           lzma/LzmaDec.h   \
-           lzma/Types.h
+H_LZMA   = szip/SzVersion.h \
+           szip/LzFind.h    \
+           szip/LzHash.h    \
+           szip/LzmaDec.h   \
+           szip/Types.h
 
 # C header files: PPMd compression
-H_PPMD   = lzma/Ppmd.h      \
-           lzma/Ppmd8.h
+H_PPMD   = szip/Ppmd.h      \
+           szip/Ppmd8.h
 
 #----------------------------------------------------------------------------
 #  Build configuration:  object files
@@ -775,22 +775,22 @@ sha1.o:     aes_wg/sha1.c     $(H_AES)
 
 # C Compile rules: LZMA compression
 
-LzFind.o:  lzma/LzFind.c      $(H_LZMA)
-	$(CC) -c $(CF) -o $@ lzma/LzFind.c
+LzFind.o:  szip/LzFind.c      $(H_LZMA)
+	$(CC) -c $(CF) -o $@ szip/LzFind.c
 
-LzmaDec.o: lzma/LzmaDec.c     $(H_LZMA)
-	$(CC) -c $(CF) -o $@ lzma/LzmaDec.c
+LzmaDec.o: szip/LzmaDec.c     $(H_LZMA)
+	$(CC) -c $(CF) -o $@ szip/LzmaDec.c
 
 
 #----------------------------------------------------------------------------
 
 # C Compile rules: PPMd compression
 
-Ppmd8.o:  lzma/Ppmd8.c          $(H_PPMD)
-	$(CC) -c $(CF) -o $@ lzma/Ppmd8.c
+Ppmd8.o:  szip/Ppmd8.c          $(H_PPMD)
+	$(CC) -c $(CF) -o $@ szip/Ppmd8.c
 
-Ppmd8Dec.o:  lzma/Ppmd8Dec.c    $(H_PPMD)
-	$(CC) -c $(CF) -o $@ lzma/Ppmd8Dec.c
+Ppmd8Dec.o:  szip/Ppmd8Dec.c    $(H_PPMD)
+	$(CC) -c $(CF) -o $@ szip/Ppmd8Dec.c
 
 
 #----------------------------------------------------------------------------

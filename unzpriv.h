@@ -1875,6 +1875,11 @@ struct file_list {
 #  define CHECK_AUTORUN_Q 8             /* copy command, skip remainder */
 #endif
 
+/* Replacement name (default) for null/empty archive member name. */
+#ifndef NULL_NAME_REPL
+#  define NULL_NAME_REPL "-"
+#endif
+
 #define DOES_NOT_EXIST    -1   /* return values for check_for_newer() */
 #define EXISTS_AND_OLDER  0
 #define EXISTS_AND_NEWER  1
@@ -2004,6 +2009,7 @@ struct file_list {
 #define EF_MD5       0x4b46    /* Fred Kantor's MD5 ("FK") */
 #define EF_ASIUNIX   0x756e    /* ASi's Unix ("nu") */
 #define EF_AES_WG    0x9901    /* AES (WinZip/Gladman) encryption ("c^!") */
+#define EF_JAVA      0xcafe    /* Java ("CAFE") */
 
 #define EB_AES_VERS       0    /* AES encryption version. */
 #define EB_AES_VEND       2    /* AES encryption vendor. */
@@ -2828,6 +2834,7 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
 /* int    flush               OF((__GPRO__ uch *rawbuf, unsigned size,
                                   int final_flag));   * (see fileio.c) vms.c */
    char  *vms_msg_text        OF((void));                           /* vms.c */
+   int    vms_status          OF((int));                            /* vms.c */
 # ifdef RETURN_CODES
    void   return_VMS          OF((__GPRO__ int zip_error));         /* vms.c */
 # else /* def RETURN_CODES */

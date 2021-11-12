@@ -235,12 +235,16 @@ void crypthead(passwd, crc)
     uch header[RAND_HEAD_LEN];   /* random header */
     static unsigned calls = 0;   /* ensure different random header each time */
 
-    /* First generate RAND_HEAD_LEN-2 random bytes. We encrypt the
-     * output of rand() to get less predictability, since rand() is
+    /* First generate RAND_HEAD_LEN-2 random bytes.  We encrypt the
+     * output of rand() to get less predictability, because rand() is
      * often poorly implemented.
      */
-    if (++calls == 1) {
+    if (calls == 0)
+    {
+#ifndef CRYPT_SKIP_SRAND
         srand((unsigned)time(NULL) ^ ZCR_SEED2);
+#endif /* ndef CRYPT_SKIP_SRAND */
+        calls = 1;
     }
     init_keys(passwd);
     for (n = 0; n < RAND_HEAD_LEN-2; n++) {

@@ -461,7 +461,7 @@ MODS_OBJS_LIB_UNZIP_AES = \
  SHA1=[.$(DEST)]SHA1.OBJ
 .ENDIF                          # AES_WG
 
-#    Primary object library, [.LZMA].
+#    Primary object library, [.SZIP], LZMA.
 
 .IFDEF LZMA                     # LZMA
 MODS_OBJS_LIB_UNZIP_LZMA = \
@@ -469,7 +469,7 @@ MODS_OBJS_LIB_UNZIP_LZMA = \
  LZMADEC=[.$(DEST)]LZMADEC.OBJ
 .ENDIF                          # LZMA
 
-#    Primary object library, [.PPMD].
+#    Primary object library, [.SZIP], PPMd.
 
 .IFDEF PPMD                     # PPMD
 MODS_OBJS_LIB_UNZIP_PPMD = \
@@ -526,7 +526,7 @@ MODS_OBJS_LIB_UNZIPSFX_AES = \
  SHA1=[.$(DEST)]SHA1.OBJ
 .ENDIF                          # AES_WG
 
-#    Primary object library, [.LZMA].
+#    Primary object library, [.SZIP], LZMA.
 
 .IFDEF LZMA                     # LZMA
 MODS_OBJS_LIB_UNZIPSFX_LZMA = \
@@ -534,7 +534,7 @@ MODS_OBJS_LIB_UNZIPSFX_LZMA = \
  LZMADEC=[.$(DEST)]LZMADEC.OBJ
 .ENDIF                          # LZMA
 
-#    Primary object library, [.PPMD].
+#    Primary object library, [.SZIP], PPMd.
 
 .IFDEF PPMD                     # PPMD
 MODS_OBJS_LIB_UNZIPSFX_PPMD = \

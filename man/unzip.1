@@ -346,6 +346,16 @@ restored, just the file's data.
 [MacOS only] ignore MacOS extra fields.  All Macintosh specific info
 is skipped. Data-fork and resource-fork are restored as separate files.
 .TP
+.TP
+.B \-\-jar
+Treat archive(s) as Java JAR.  Over-simplification in Java JAR archives
+can cause UnZip to transform UTF-8 file names according to inappropriate
+(MS-DOS) rules, yielding corrupt names on extracted files (typically
+those with ASCII codes 128-255).  Archives containing a Java "CAFE"
+extra field should be detected automatically, and handled correctly, but
+not all JAR archives include that extra field.  Specifying \-\-jar tells
+UnZip to expect UTF-8 file names, regardless of whether the archive
+contains a "CAFE" extra field.
 .B \-K
 [AtheOS, BeOS, Unix only] retain SUID/SGID/Tacky file attributes.  Without
 this flag, these attribute bits are cleared for security reasons.

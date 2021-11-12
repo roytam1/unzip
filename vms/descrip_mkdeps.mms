@@ -1,4 +1,4 @@
-#                                               15 March 2012.  SMS.
+#                                               21 April 2012.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS Dependency Description File.
 #
@@ -112,10 +112,10 @@ MODS_LIB_UNZIP_AES = $(FILTER-OUT *], \
  $(PATSUBST *]*.OBJ, *] [.AES_WG]*, $(MODS_OBJS_LIB_UNZIP_AES)))
 
 MODS_LIB_UNZIP_LZMA = $(FILTER-OUT *], \
- $(PATSUBST *]*.OBJ, *] [.LZMA]*, $(MODS_OBJS_LIB_UNZIP_LZMA)))
+ $(PATSUBST *]*.OBJ, *] [.SZIP]*, $(MODS_OBJS_LIB_UNZIP_LZMA)))
 
 MODS_LIB_UNZIP_PPMD = $(FILTER-OUT *], \
- $(PATSUBST *]*.OBJ, *] [.LZMA]*, $(MODS_OBJS_LIB_UNZIP_PPMD)))
+ $(PATSUBST *]*.OBJ, *] [.SZIP]*, $(MODS_OBJS_LIB_UNZIP_PPMD)))
 
 MODS_LIB_UNZIPCLI_V = $(FILTER-OUT *], \
  $(PATSUBST *]*.OBJ, *] [.VMS]*, $(MODS_OBJS_LIB_UNZIPCLI_C_V)))
@@ -170,7 +170,7 @@ $(DEPS_FILE) : $(DEPS) $(COMS)
 #
 	@$(COLLECT_DEPS) "UnZip for VMS" "$(MMS$TARGET)" -
          "[...]*.MMSD" "[.$ (DEST)]" $(MMSDESCRIPTION_FILE) -
-         "[.AES_WG/[.LZMA]C/[.LZMA]P/[.LZMA]S/[.LZMA]T/[.LZMA" -
+         "[.AES_WG/[.SZIP]C/[.SZIP]P/[.SZIP]S/[.SZIP]T/[.SZIP" -
          "AES_WG/LZMA_PPMD/PPMD/LZMA_PPMD/LZMA_PPMD/LZMA"
 	@ write sys$output -
          "Created a new dependency file: $(MMS$TARGET)"
@@ -181,8 +181,8 @@ $(DEPS_FILE) : $(DEPS) $(COMS)
          delete /log *.MMSD;*
 	if (f$search( "[.aes_wg]*.MMSD") .nes. "") then -
          delete /log [.aes_wg]*.MMSD;*
-	if (f$search( "[.lzma]*.MMSD") .nes. "") then -
-         delete /log [.lzma]*.MMSD;*
+	if (f$search( "[.szip]*.MMSD") .nes. "") then -
+         delete /log [.szip]*.MMSD;*
 	if (f$search( "[.VMS]*.MMSD") .nes. "") then -
          delete /log [.VMS]*.MMSD;*
 .ELSE
@@ -192,8 +192,8 @@ $(DEPS_FILE) : $(DEPS) $(COMS)
          purge /log *.MMSD
 	if (f$search( "[.aes_wg]*.MMSD;-1") .nes. "") then -
          purge /log [.aes_wg]*.MMSD
-	if (f$search( "[.lzma]*.MMSD;-1") .nes. "") then -
-         purge /log [.lzma]*.MMSD
+	if (f$search( "[.szip]*.MMSD;-1") .nes. "") then -
+         purge /log [.szip]*.MMSD
 	if (f$search( "[.VMS]*.MMSD;-1") .nes. "") then -
          purge /log [.VMS]*.MMSD
 .ENDIF
@@ -205,8 +205,8 @@ CLEAN :
          delete /log *.MMSD;*
 	if (f$search( "[.aes_wg]*.MMSD") .nes. "") then -
          delete /log [.aes_wg]*.MMSD;*
-	if (f$search( "[.lzma]*.MMSD") .nes. "") then -
-         delete /log [.lzma]*.MMSD;*
+	if (f$search( "[.szip]*.MMSD") .nes. "") then -
+         delete /log [.szip]*.MMSD;*
 	if (f$search( "[.VMS]*.MMSD") .nes. "") then -
          delete /log [.VMS]*.MMSD;*
 
@@ -219,8 +219,8 @@ CLEAN_ALL :
          delete /log *.MMSD;*
 	if (f$search( "[.aes_wg]*.MMSD") .nes. "") then -
          delete /log [.aes_wg]*.MMSD;*
-	if (f$search( "[.lzma]*.MMSD") .nes. "") then -
-         delete /log [.lzma]*.MMSD;*
+	if (f$search( "[.szip]*.MMSD") .nes. "") then -
+         delete /log [.szip]*.MMSD;*
 	if (f$search( "[.VMS]*.MMSD") .nes. "") then -
          delete /log [.VMS]*.MMSD;*
 	if (f$search( "[.VMS]DESCRIP_DEPS.MMS") .nes. "") then -

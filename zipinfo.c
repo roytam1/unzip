@@ -348,6 +348,7 @@ static ZCONST char Far efASiUnix[] = "ASi Unix";
 static ZCONST char Far efTandem[] = "Tandem NSK";
 static ZCONST char Far efTheos[] = "Theos";
 static ZCONST char Far efAES[] = "AES_WG encrypt";
+static ZCONST char Far efJavaCAFE[] = "Java CAFE";
 static ZCONST char Far efUnknown[] = "unknown";
 
 static ZCONST char Far OS2EAs[] = ".\n\
@@ -1747,6 +1748,9 @@ static int zi_long(__G__ pEndprev, error_in_archive)
                     break;
                 case EF_AES_WG:
                     ef_fieldname = efAES;
+                    break;
+                case EF_JAVA:
+                    ef_fieldname = efJavaCAFE;
                     break;
                 default:
                     ef_fieldname = efUnknown;

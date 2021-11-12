@@ -4,7 +4,7 @@
 
 #==============================================================================
 # unix/configure: Detect feature support and pass that information to Makefile.
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo          Last update:   10 Apr 2012
+# - For UnZip, UnZipSFX, fUnZip and ZipInfo          Last update:   17 May 2012
 #==============================================================================
 
 #==============================================================================
@@ -1210,14 +1210,14 @@ fi
 # LZMA compression.  (User must request: "LZMA=1".)
 if [ -n "${LZMA}" ]; then
   echo "Check LZMA compression support"
-  if [ -d "lzma" ]; then
-    echo "  Check for LZMA header file in lzma"
-    if [ -f "lzma/LzmaDec.h" ]; then
+  if [ -d "szip" ]; then
+    echo "  Check for LZMA header file in szip/"
+    if [ -f "szip/LzmaDec.h" ]; then
       cat > conftest.c << _EOF_
 int main()
 {
    typedef int zoff_t;
-#include "lzma/LzmaDec.h"
+#include "szip/LzmaDec.h"
 #ifndef LZMA_SUPPORT
    forget it
 #endif
@@ -1234,15 +1234,15 @@ _EOF_
         echo "-- Including LZMA compression support"
         echo "-- Building liblzma.a in ${PROD}"
       else
-        echo "^^ LZMA test build failed. Check lzma directory"
+        echo "^^ LZMA test build failed. Check szip directory"
         echo "^^ Unable to include LZMA compression support"
       fi
     else
-      echo "^^ LZMA source code not found in lzma directory"
+      echo "^^ LZMA source code not found in szip directory"
       echo "^^ Unable to include LZMA compression support"
     fi
   else
-    echo "^^ Directory lzma not found"
+    echo "^^ Directory szip not found"
     echo "^^ Unable to include LZMA compression support"
   fi
 else
@@ -1255,14 +1255,14 @@ fi
 # PPMd compression.  (User must request: "PPMD=1".)
 if [ -n "${PPMD}" ]; then
   echo "Check PPMd compression support"
-  if [ -d "lzma" ]; then
-    echo "  Check for PPMd header file in lzma"
-    if [ -f "lzma/Ppmd.h" ]; then
+  if [ -d "szip" ]; then
+    echo "  Check for PPMd header file in szip/"
+    if [ -f "szip/Ppmd.h" ]; then
       cat > conftest.c << _EOF_
 int main()
 {
    typedef int zoff_t;
-#include "lzma/Ppmd.h"
+#include "szip/Ppmd.h"
 #ifndef PPMD_SUPPORT
    forget it
 #endif
@@ -1279,15 +1279,15 @@ _EOF_
         echo "-- Including PPMd compression support"
         echo "-- Building libppmd.a in ${PROD}"
       else
-        echo "^^ PPMd test build failed. Check lzma directory"
+        echo "^^ PPMd test build failed. Check szip directory"
         echo "^^ Unable to include PPMd compression support"
       fi
     else
-      echo "^^ PPMD source code not found in lzma directory"
+      echo "^^ PPMd source code not found in szip directory"
       echo "^^ Unable to include PPMd compression support"
     fi
   else
-    echo "^^ Directory lzma not found"
+    echo "^^ Directory szip not found"
     echo "^^ Unable to include PPMd compression support"
   fi
 else
@@ -2285,6 +2285,21 @@ fi
 if [ -n "${SIZER_V}" ]; then
   CFLAGS_TST="${CFLAGS_TST} -DSIZER_V='\\\"${SIZER_V}\\\"'"
 fi
+
+
+#------------------------------------------------------------------------------
+# M) Additional compiler command options.
+#------------------------------------------------------------------------------
+
+# Check validity of -Wno-format-security (for modern GCC).
+echo 'Check -Wno-format-security'
+cat > conftest.c << _EOF_
+int main() { return 0; }
+_EOF_
+CF_TEST='-Wno-format-security'
+${CC_TST} ${CFLAGS} ${CF_TEST} -o conftest conftest.c >/dev/null 2>/dev/null
+status=$?
+[ $status -eq 0 ] && CFLAGS_TST="${CFLAGS_TST} ${CF_TEST}"
 
 
 #------------------------------------------------------------------------------

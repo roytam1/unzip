@@ -4593,6 +4593,22 @@ int mapname(__G__ renamed)
     int killed_ddot = FALSE;        /* Set when skipping "../" pathcomp. */
     int error = MPN_OK;
 
+    /* 2012-05-02 SMS.
+     * Formerly, if a null member name was supplied, then we'd end up
+     * below, returning MPN_INF_SKIP, which meant that we'd silently
+     * skip the null-name entry.  With any luck, someone else will fix a
+     * null name before mapname() gets called.  If we do get here with a
+     * null name, then we'll (now) treat it as an error (as in
+     * unix/unix.c).
+     */
+    if (*G.filename == '\0')
+    {
+        Info( slide, 1, ((char *)slide,
+         "mapname:  conversion of \"%s\" failed\n",
+          FnFilter1(G.filename)));
+        return (error & ~MPN_MASK) | MPN_ERR_SKIP;
+    }
+
     if ( renamed )
     {
         if ( !(error = checkdir(__G__ pathcomp, APPEND_NAME | USE_DEFAULT)) )
@@ -5228,6 +5244,117 @@ int check_for_newer(__G__ filenam)   /* return 1 if existing file newer or */
 }
 
 
+/*
+ *  2007-01-29 SMS.
+ *
+ *  VMS Status Code Summary  (See STSDEF.H for details.)
+ *
+ *      Bits:   31:28    27:16     15:3     2 1 0
+ *      Field:  Control  Facility  Message  Severity
+ *                                          -----
+ *                                          0 0 0  0    Warning
+ *                                          0 0 1  1    Success
+ *                                          0 1 0  2    Error
+ *                                          0 1 1  3    Information
+ *                                          1 0 0  4    Severe (fatal) error
+ *
+ *  In the Control field, bits 31:29 are reserved.  Bit 28 inhibits
+ *  printing the message.  In the Facility field, bit 27 means
+ *  customer-defined (not HP-assigned, like us).  In the Message field,
+ *  bit 15 means facility-specific (which our messages are).
+ *
+ *  Note that the C library translates exit(0) to a $STATUS value of 1
+ *  (i.e., exit is both silent and has a $SEVERITY of "success").
+ *
+ *  Previous versions of Info-ZIP programs used a generic ("chosen (by
+ *  experimentation)") Control+Facility code of 0x7FFF, which included
+ *  some reserved control bits, the inhibit-printing bit, and the
+ *  customer-defined bit.
+ *
+ *  HP has now assigned official Facility names and corresponding
+ *  Facility codes for the Info-ZIP products:
+ *
+ *      Facility Name    Facility Code
+ *      IZ_UNZIP         1954 = 0x7A2
+ *      IZ_ZIP           1955 = 0x7A3
+ *
+ *  Now, unless the CTL_FAC_IZ_UZP macro is defined at build-time, we
+ *  will use the official Facility code.
+ *
+ */
+
+/* Official HP-assigned Info-ZIP UnZip Facility code. */
+#define FAC_IZ_UZP 1954   /* 0x7A2 */
+
+#ifndef CTL_FAC_IZ_UZP
+   /*
+    * Default is inhibit-printing with the official Facility code.
+    */
+#  define CTL_FAC_IZ_UZP ((0x1 << 12) | FAC_IZ_UZP)
+#  define MSG_FAC_SPEC 0x8000   /* Facility-specific code. */
+#else /* ndef CTL_FAC_IZ_UZP */
+   /* Use the user-supplied Control+Facility code for err or warn. */
+#  ifndef MSG_FAC_SPEC          /* Old default is not Facility-specific. */
+#    define MSG_FAC_SPEC 0x0    /* Facility-specific code.  Or 0x8000. */
+#  endif /* ndef MSG_FAC_SPEC */
+#endif /* ndef CTL_FAC_IZ_UZP [else] */
+#define VMS_UZ_FAC_BITS       ((CTL_FAC_IZ_UZP << 16) | MSG_FAC_SPEC)
+
+
+/* Translate a PK_xxx code to the corresponding VMS status value. */
+
+int vms_status( int err)
+{
+    int sts;
+    int severity;
+
+    severity = (err == PK_OK) ? STS$K_SUCCESS :             /* success */
+               (err == PK_WARN) ? STS$K_WARNING :           /* warning */
+               (err == PK_ERR ||                            /* error */
+                (err >= PK_NOZIP && err <= PK_FIND) ||      /*  ...  */
+                (err >= IZ_CTRLC && err <= IZ_BADPWD)) ?    /*  ...  */
+                STS$K_ERROR :                               /*  ...  */
+                STS$K_SEVERE;                               /* fatal */
+
+#ifndef OLD_STATUS
+
+    sts = VMS_UZ_FAC_BITS |                     /* Facility (+) */
+          (err << 4) |                          /* Message code */
+          severity;                             /* Severity */
+
+#else /* ndef OLD_STATUS */
+
+    /* 2007-01-17 SMS.
+     * Defining OLD_STATUS provides the same behavior as in UnZip versions
+     * before an official VMS Facility code had been assigned, which
+     * means that Success (ZE_OK) gives a status value of 1 (SS$_NORMAL)
+     * with no Facility code, while any error or warning gives a status
+     * value which includes a Facility code.  (Curiously, under the old
+     * scheme, message codes were left-shifted by 4 instead of 3,
+     * resulting in all-even message codes.)  I don't like this, but I
+     * was afraid to remove it, as someone, somewhere may be depending
+     * on it.  Define CTL_FAC_IZ_UZP as 0x7FFF to get the old behavior.
+     * Define only OLD_STATUS to get the old behavior for Success
+     * (ZE_OK), but using the official HP-assigned Facility code for an
+     * error or warning.  Define MSG_FAC_SPEC to get the desired
+     * behavior.
+     *
+     * Exit with simple SS$_NORMAL for ZE_OK.  Otherwise, exit with code
+     * comprising Control, Facility, Message, and Severity.
+     */
+    sts = (err == PK_COOL) ? SS$_NORMAL :        /* Success */
+          (VMS_UZ_FAC_BITS |                     /* Facility */
+          (err << 4) |                           /* Message code */
+          severity);                             /* Severity */
+
+#endif /* ndef OLD_STATUS [else] */
+
+    return sts;
+} /* end function vms_status() */
+
+
+/* Exit with an intelligent status/severity code. */
+
 /* Declare __posix_exit() if <stdlib.h> won't, and we use it. */
 
 #if __CRTL_VER >= 70000000 && !defined(_POSIX_EXIT)
@@ -5245,7 +5372,6 @@ void return_VMS(err)
 #endif
     int err;
 {
-    int severity;
 
 #if !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000)
     char *sh_ptr;
@@ -5257,6 +5383,13 @@ void return_VMS(err)
     VMS misinterprets return codes as rather obnoxious system errors ("access
     violation," for example).
   ---------------------------------------------------------------------------*/
+/* 2012-06-10 SMS.
+ * Of course, we normally translate these simple codes to VMS-like
+ * codes, which work with the supplied error message file, so the
+ * utility of this option is unclear.  Also, it doesn't affect the
+ * actual exit status code, it only adds the extra message display.
+ * (And Zip has no such extra message display.)
+ */
 
     switch (err) {
         case PK_COOL:
@@ -5330,47 +5463,6 @@ void return_VMS(err)
     }
 #endif /* RETURN_CODES */
 
-/*---------------------------------------------------------------------------
- *  Return an intelligent status/severity level:
- *
- *  2007-01-29 SMS.
- *
- *  VMS Status Code Summary  (See STSDEF.H for details.)
- *
- *      Bits:   31:28    27:16     15:3     2 1 0
- *      Field:  Control  Facility  Message  Severity
- *                                          -----
- *                                          0 0 0  0    Warning
- *                                          0 0 1  1    Success
- *                                          0 1 0  2    Error
- *                                          0 1 1  3    Information
- *                                          1 0 0  4    Severe (fatal) error
- *
- *  In the Control field, bits 31:29 are reserved.  Bit 28 inhibits
- *  printing the message.  In the Facility field, bit 27 means
- *  customer-defined (not HP-assigned, like us).  In the Message field,
- *  bit 15 means facility-specific (which our messages are).
- *
- *  Note that the C library translates exit(0) to a $STATUS value of 1
- *  (i.e., exit is both silent and has a $SEVERITY of "success").
- *
- *  Previous versions of Info-ZIP programs used a generic ("chosen (by
- *  experimentation)") Control+Facility code of 0x7FFF, which included
- *  some reserved control bits, the inhibit-printing bit, and the
- *  customer-defined bit.
- *
- *  HP has now assigned official Facility names and corresponding
- *  Facility codes for the Info-ZIP products:
- *
- *      Facility Name    Facility Code
- *      IZ_UNZIP         1954 = 0x7A2
- *      IZ_ZIP           1955 = 0x7A3
- *
- *  Now, unless the CTL_FAC_IZ_UZP macro is defined at build-time, we
- *  will use the official Facility code.
- *
-  ---------------------------------------------------------------------------*/
-
 #if !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000)
 
     /* If the environment variable "SHELL" is defined, and not defined
@@ -5387,65 +5479,7 @@ void return_VMS(err)
 #endif /* #if !defined( NO_POSIX_EXIT) && (__CRTL_VER >= 70000000) */
 
     {
-
-/* Official HP-assigned Info-ZIP UnZip Facility code. */
-#define FAC_IZ_UZP 1954   /* 0x7A2 */
-
-#ifndef CTL_FAC_IZ_UZP
-   /*
-    * Default is inhibit-printing with the official Facility code.
-    */
-#  define CTL_FAC_IZ_UZP ((0x1 << 12) | FAC_IZ_UZP)
-#  define MSG_FAC_SPEC 0x8000   /* Facility-specific code. */
-#else /* ndef CTL_FAC_IZ_UZP */
-   /* Use the user-supplied Control+Facility code for err or warn. */
-#  ifndef MSG_FAC_SPEC          /* Old default is not Facility-specific. */
-#    define MSG_FAC_SPEC 0x0    /* Facility-specific code.  Or 0x8000. */
-#  endif /* ndef MSG_FAC_SPEC */
-#endif /* ndef CTL_FAC_IZ_UZP [else] */
-#define VMS_UZ_FAC_BITS       ((CTL_FAC_IZ_UZP << 16) | MSG_FAC_SPEC)
-
-        severity = (err == PK_OK) ? STS$K_SUCCESS :             /* success */
-                   (err == PK_WARN) ? STS$K_WARNING :           /* warning */
-                   (err == PK_ERR ||                            /* error */
-                    (err >= PK_NOZIP && err <= PK_FIND) ||      /*  ...  */
-                    (err >= IZ_CTRLC && err <= IZ_BADPWD)) ?    /*  ...  */
-                    STS$K_ERROR :                               /*  ...  */
-                    STS$K_SEVERE;                               /* fatal */
-
-#ifndef OLD_STATUS
-
-        exit( VMS_UZ_FAC_BITS |                     /* Facility (+) */
-              (err << 4) |                          /* Message code */
-              severity);                            /* Severity */
-
-#else /* ndef OLD_STATUS */
-
-    /* 2007-01-17 SMS.
-     * Defining OLD_STATUS provides the same behavior as in UnZip versions
-     * before an official VMS Facility code had been assigned, which
-     * means that Success (ZE_OK) gives a status value of 1 (SS$_NORMAL)
-     * with no Facility code, while any error or warning gives a status
-     * value which includes a Facility code.  (Curiously, under the old
-     * scheme, message codes were left-shifted by 4 instead of 3,
-     * resulting in all-even message codes.)  I don't like this, but I
-     * was afraid to remove it, as someone, somewhere may be depending
-     * on it.  Define CTL_FAC_IZ_UZP as 0x7FFF to get the old behavior.
-     * Define only OLD_STATUS to get the old behavior for Success
-     * (ZE_OK), but using the official HP-assigned Facility code for an
-     * error or warning.  Define MSG_FAC_SPEC to get the desired
-     * behavior.
-     *
-     * Exit with simple SS$_NORMAL for ZE_OK.  Otherwise, exit with code
-     * comprising Control, Facility, Message, and Severity.
-     */
-        exit( (err == PK_COOL) ? SS$_NORMAL :        /* Success */
-              (VMS_UZ_FAC_BITS |                     /* Facility */
-              (err << 4) |                           /* Message code */
-              severity)                              /* Severity */
-        );
-
-#endif /* ndef OLD_STATUS [else] */
+        exit( vms_status( err));
     }
 } /* end function return_VMS() */
 

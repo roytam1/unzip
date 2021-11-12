@@ -76,7 +76,7 @@
 #endif /* def CRYPT_AES_WG */
 
 #if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
-# include "lzma/SzVersion.h"
+# include "szip/SzVersion.h"
 #endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
 
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
@@ -420,6 +420,23 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
 #  ifdef ACORN_FTYPE_NFS
     static ZCONST char Far AcornFtypeNFS[] = "ACORN_FTYPE_NFS";
 #  endif
+
+#  if defined( UNIX) && defined( __APPLE__)
+#   if defined( __ppc__) || defined( __ppc64__)
+#    if APPLE_NFRSRC
+#     define APPLE_NFRSRC_MSG
+    static ZCONST char Far AppleNFRSRC[] =
+     "APPLE_NFRSRC         (\"/..namedfork/rsrc\" suffix for resource fork)";
+#    endif /* APPLE_NFRSRC */
+#   else /* defined( __ppc__) || defined( __ppc64__) */
+#    if ! APPLE_NFRSRC
+#     define APPLE_NFRSRC_MSG
+    static ZCONST char Far AppleNFRSRC[] =
+     "APPLE_NFRSRC         (NOT!  \"/rsrc\" suffix for resource fork)";
+#    endif /* ! APPLE_NFRSRC */
+#   endif /* defined( __ppc__) || defined( __ppc64__) [else] */
+#  endif /* defined( UNIX) && defined( __APPLE__) */
+
 #  ifdef ASM_CRC
     static ZCONST char Far AsmCRC[] = "ASM_CRC";
 #  endif
@@ -589,7 +606,8 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
     static ZCONST char Far VmsWild[] = "VMSWILD";
 #  endif
 #  ifdef WILD_STOP_AT_DIR
-    static ZCONST char Far WildStopAtDir[] = "WILD_STOP_AT_DIR";
+    static ZCONST char Far WildStopAtDir[] =
+     "WILD_STOP_AT_DIR     (Wildcard \"*\" doesn't span \"/\" dir delimiter)";
 #  endif
 #  ifdef CRYPT_AES_WG
     static ZCONST char Far AesWgEncryptionNotice1[] =
@@ -1514,10 +1532,11 @@ static int setsignalhandler(__G__ p_savedhandler_chain, signal_type,
 /* Most option IDs are set to the shortopt char.  For
    multichar short options set to arbitrary unused constant. */
 #define o_hh            0x101
-#define o_LI            0x102
-#define o_sc            0x103
-#define o_si            0x104
-#define o_so            0x105
+#define o_ja            0x102
+#define o_LI            0x103
+#define o_sc            0x104
+#define o_si            0x105
+#define o_so            0x106
 
 
 /* The below is from the old main command line code with a few changes.
@@ -1601,6 +1620,8 @@ static struct option_struct far options[] = {
     {UZO, "J",  "junk-attrs",      o_NO_VALUE,       o_NEGATABLE,
        'J',  "Junk AtheOS, BeOS or MacOS file attrs"},
 # endif
+    {UZO, "",   "jar",             o_NO_VALUE,       o_NEGATABLE,
+       o_ja, "Treat archive(s) as Java JAR (UTF-8)"},
 # ifdef ATH_BEO_UNX
     {UZO, "K",  "keep-S-attrs",    o_NO_VALUE,       o_NEGATABLE,
        'K',  "retain SUID/SGID/Tacky attrs"},
@@ -2079,6 +2100,13 @@ int uz_opts(__G__ pargc, pargv)
                 }
                 break;
 # endif /* ATH_BEO_UNX */
+            case (o_ja):
+                if (negative) {
+                    --uO.java_cafe;
+                    negative = 0;
+                } else
+                    ++uO.java_cafe;
+                break;
 # ifndef SFX
             case ('l'):
                 if (negative) {
@@ -2957,6 +2985,7 @@ static void help_extended(__G)
 #endif
   "  -j   Junk paths and deposit all files in extraction directory.",
   "  -J   [BeOS] Junk file attributes.  [MacOS] Ignore MacOS specific info.",
+  "  --jar Treat archive(s) as Java JAR (UTF-8 names).",
   "  -K   [AtheOS, BeOS, Unix] Restore SUID/SGID/Tacky file attributes.",
   "  -L   Convert to lowercase any names from uppercase only file system.",
   "  -LL  Convert all files to lowercase.",
@@ -3357,6 +3386,11 @@ static void show_version_info(__G)
           LoadFarStringSmall(AcornFtypeNFS)));
         ++numopts;
 #  endif
+#  ifdef APPLE_NFRSRC_MSG
+        Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
+          LoadFarStringSmall(AppleNFRSRC)));
+        ++numopts;
+#  endif /* def APPLE_NFRSRC */
 #  ifdef ASM_CRC
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           LoadFarStringSmall(AsmCRC)));
@@ -3506,7 +3540,7 @@ static void show_version_info(__G)
 #  endif
 #  ifdef WIN32_WIDE
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_Win32_Wide)));
+          LoadFarStringSmall(Win32_Wide_Sup)));
         ++numopts;
 #  endif
 #  ifdef _MBCS

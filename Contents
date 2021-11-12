@@ -81,7 +81,7 @@ at the end contain their own Contents listings:
 
   aes_wg/       where source code for optional AES WG encryption goes
   bzip2/        where source code for optional bzip2 compression goes
-  lzma/         where source code for optional LZMA and PPMd compression goes
+  szip/         where source code for optional LZMA and PPMd compression goes
 
   man/          nroff man-page sources for the main user documentation
   proginfo/     programming docs, additional technical info, contributor list

@@ -276,8 +276,10 @@ static ZCONST char Far AplDblNameTooLong[] =
      "error:  invalid response [%s]\n";
 #endif /* !WINDLL */
 
+static ZCONST char Far ErrorUnexpectedEOF[] =
+  "error:  Unexpected end-of-file reading %s.\n";
 static ZCONST char Far ErrorInArchive[] =
-  "At least one %serror was detected in %s.\n";
+  "At least one %serror %swas detected in %s.\n";
 static ZCONST char Far ZeroFilesTested[] =
   "Caution:  zero files tested in %s.\n";
 
@@ -374,6 +376,10 @@ static ZCONST char Far InfoMsgLZMA[] =
   "\n     LZMA: dicSize = %u, lc = %u, lp = %u, pb = %u. ";
 static ZCONST char Far InfoMsgPPMd[] =
   "\n     PPMd: flags = 0x%04x.  Order = %d, Mem = %dMB, Restore = %d. ";
+
+/* Inconsistent Java "CAFE" extra fields (local v. central dir.). */
+static ZCONST char Far InfoInconsistentJavaCAFE[] =
+     "Inconsistent cantral-local Java CAFE.  Expect name warnings/problems.\n";
 
 
 
@@ -516,6 +522,8 @@ int extract_or_test_files(__G)    /* return PK-type error code */
             G.pInfo = &G.info[j];
 
             if (readbuf(__G__ G.sig, 4) == 0) {
+                Info(slide, 0x221, ((char *)slide,
+                 LoadFarString( ErrorUnexpectedEOF), G.zipfn));
                 error_in_archive = PK_EOF;
                 reached_end = TRUE;     /* ...so no more left to do */
                 break;
@@ -585,6 +593,55 @@ int extract_or_test_files(__G)    /* return PK-type error code */
                     break;
                 }
             }
+            else if (uO.java_cafe == 0)
+            {
+                /* 2012-05-20 SMS.
+                 * Accommodation for Java "jar" archives whose
+                 * (over-)simplified central header info ("version made
+                 * by") lacks any accurate host-system info.  (Internal
+                 * and external file atributes are zero, high byte of
+                 * "version made by" is zero, so we see "MS-DOS", and
+                 * try to adjust names accordingly, which damages Java's
+                 * UTF-8-encoded names.  See fileio.c:do_string().)
+                 *
+                 * Look for, and remember finding, a Java "CAFE" extra
+                 * field (once).  This affects name processing, so
+                 * waiting for TestExtraField() to detect it in a
+                 * local-header extra field would cause complaints about
+                 * inconsistent file names.  Small-sample evidence
+                 * suggests that if a Java "CAFE" extra field is
+                 * present, then it'll be in the first header, and
+                 * alone, so most of the robustness here is probably
+                 * wasted.  Also, if uO.java_cafe is not set once before
+                 * the first file name is processed, then we'll be
+                 * handling names inconsistently, so this had better be
+                 * adequate.
+                 */
+                ush ebID;
+                unsigned ebLen;
+                unsigned ef_len = G.crec.extra_field_length;
+                uch *ef = G.extra_field;
+
+                while (ef_len >= EB_HEADSIZE)
+                {
+                    ebID = makeword( ef);
+                    if (ebID == EF_JAVA)
+                    {
+                        /* Found one. */
+                        uO.java_cafe = 1;
+                    }
+
+                    ebLen = (unsigned)makeword( ef+ EB_LEN);
+                    ef_len -= (ebLen + EB_HEADSIZE);
+                    ef += (ebLen + EB_HEADSIZE);
+                }
+                if (uO.java_cafe == 0)
+                {
+                    /* None found in the first extra field.  Quit looking. */
+                    uO.java_cafe = -1;
+                }
+            }
+
 #ifdef AMIGA
             G.filenote_slot = j;
             if ((error = do_string(__G__ G.crec.file_comment_length,
@@ -903,8 +960,18 @@ int extract_or_test_files(__G)    /* return PK-type error code */
 
         if (uO.qflag < 2) {        /* GRR 930710:  was (uO.qflag == 1) */
             if (error_in_archive)
+            {
+                char errnrstr[ 16];
+
+                if (uO.vflag)
+                    sprintf( errnrstr, "(%d) ", error_in_archive);
+                else
+                    *errnrstr = '\0';
+
                 Info(slide, 0, ((char *)slide, LoadFarString(ErrorInArchive),
-                  (error_in_archive == PK_WARN)? "warning-" : "", G.zipfn));
+                  (error_in_archive == PK_WARN)? "warning-" : "",
+                  errnrstr, G.zipfn));
+            }
             else if (num == 0L)
                 Info(slide, 0, ((char *)slide, LoadFarString(ZeroFilesTested),
                   G.zipfn));
@@ -3365,6 +3432,23 @@ static int TestExtraField(__G__ ef, ef_len)
                     Info(slide, 1, ((char *)slide,
                       LoadFarString(BadCRC_EAs)));
                 break;
+            case EF_JAVA:
+                /* 2012-05-20 SMS.
+                 * Setting java_cafe here may be too late to be useful. 
+                 * If it wasn't done when the central directory was
+                 * processed, then now may be too late.  Perhaps it
+                 * would make some sense not to set the flag here, if
+                 * we're just now seeing a "CAFE" extra block here, than
+                 * to set the flag now, and risk inconsistency with
+                 * previous name processing.
+                 */
+                if (uO.java_cafe <= 0)
+                {
+                   Info( slide, 1, ((char *)slide,
+                     LoadFarString( InfoInconsistentJavaCAFE)));
+                }
+                uO.java_cafe = 1;
+                break;
             case EF_PKW32:
             case EF_PKUNIX:
             case EF_ASIUNIX:
@@ -4180,19 +4264,19 @@ uzbunzip_cleanup_exit:
 
 #if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
 
-#include "lzma/Types.h"
+#include "szip/Types.h"
 
 /* 2011-12-24  SMS.
  * 7-ZIP offers memory allocation functions with diagnostics conditional
- * on _SZ_ALLOC_DEBUG: lzma/Alloc.c: MyAlloc(), MyFree().  Using these
+ * on _SZ_ALLOC_DEBUG: szip/Alloc.c: MyAlloc(), MyFree().  Using these
  * functions complicates linking with separately conditional LZMA and
  * PPMd support, so it's easier to use plain malloc() and free() here,
  * or else add the diagnostic messages to these Sz* functions, rather
- * than drag lzma/Alloc.c into the picture.  To use the lzma/Alloc.c
+ * than drag szip/Alloc.c into the picture.  To use the szip/Alloc.c
  * functions, add
- *    #include "lzma/Alloc.h"
+ *    #include "szip/Alloc.h"
  * above, change malloc() and free() below to MyAlloc() and MyFree(),
- * and add lzma/Alloc.* back to the builders.  (And then solve the other
+ * and add szip/Alloc.* back to the builders.  (And then solve the other
  * problems.)
  */
 void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
@@ -4202,7 +4286,7 @@ void SzFree(void *p, void *address) { p = p; free(address); }
 
 #ifdef LZMA_SUPPORT
 
-#include "lzma/LzmaDec.h"
+#include "szip/LzmaDec.h"
 
 /***********************/
 /*  Function UZlzma()  */
@@ -4388,7 +4472,7 @@ uzlzma_cleanup_exit:
 
 #ifdef PPMD_SUPPORT
 
-#include "lzma/Ppmd8.h"
+#include "szip/Ppmd8.h"
 
 /* 7-Zip-compatible I/O Read function. */
 static Byte ppmd_read_byte( void *pp)

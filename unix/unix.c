@@ -725,7 +725,8 @@ int mapname(__G__ renamed)
 #endif /* ACORN_FTYPE_NFS */
 
     if (*pathcomp == '\0') {
-        Info(slide, 1, ((char *)slide, "mapname:  conversion of %s failed\n",
+        Info(slide, 1, ((char *)slide,
+         "mapname:  conversion of \"%s\" failed\n",
           FnFilter1(G.filename)));
         return (error & ~MPN_MASK) | MPN_ERR_SKIP;
     }

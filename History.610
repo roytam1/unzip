@@ -729,10 +729,10 @@ Bugs fixed:
  - Add compiler identification for NeXT DevKit, MinGW 64, MinGW 32, LLVM
    Clang, LLVM Apple GCC, LLVM GCC, Portable C, EKOPath C, Intel C, GCC, and
    SunPro C.  Ignore case of "CRAY" define.  Reformat IBM version.  Reformat
-   sprintf() lines for specific compiler versions.  Fix " (Mac OS X").
-   (unix/unix.c) [AD]
+   sprintf() lines for specific compiler versions.  Change (bad) Mac OS X
+   message string '" (Mac OS X")' to '" (Mac OS X)"'.  (unix/unix.c) [AD]
 
-6.10c09 (xx Xxx 201x):
+6.10c09 (23 May 2012):
  - Minor code tidying: UZbunzip2() and UZlzma() are now static.  (extract.c,
    unzpriv.h) [SMS]
  - A bare "#if" directive embedded in a multi-line comment block confused
@@ -757,6 +757,10 @@ Bugs fixed:
  - "make clean" missed some spots.  (unix/Makefile) [SMS]
  - A user-specified CFLAGS value for UNIX(-like) builds no longer needs
    to include "-I.".  (unix/configure) [SMS]
+ - Some GCC versions would emit many "warning: format string is not a
+   string literal" diagnostics.  The Unix builders now add a compiler
+   option, "-Wno-format-security", to suppress these, where appropriate.
+   (unix/configure) [SMS]
  _ Changed C macros USE_BZIP2, USE_DEFLATE64, USE_LZMA, USE_PPMD, and
    USE_UNSHRINK to BZIP2_SUPPORT, DEFLATE64_SUPPORT, LZMA_SUPPORT,
    PPMD_SUPPORT, and UNSHRINK_SUPPORT, respectively, for clarity and
@@ -794,6 +798,42 @@ Bugs fixed:
    four) GNU long-form options for egrep, and fixed some lame error
    handling (when the "unzip -Z1" command failed, for example).  Many
    limitations and problems remain.
+ - Renamed "lzma" directory to "szip".  (Contents, INSTALL, extract.c,
+   globals.h, unzip.c, unix/configure, unix/Makefile, vms/build_unzip.com,
+   vms/descrip_deps.mms, vms/descrip_mkdeps.mms, vms/descrip_src.mms) [SMS]
+ - Changed Mac OS X system-specific code to use "/..namedfork/rsrc" as
+   the suffix for resource fork access on Intel, staying with "/rsrc" on
+   PowerPC.  Define the C Macro APPLE_NFRSRC as 0 (on Intel) or 1 (on
+   PowerPC) at build time to override the automatic decision.  (We believe
+   that all PowerPC-compatible OS versions accept "/rsrc", and all
+   Intel-compatible OS versions accept "/..namedfork/rsrc".)  Using "/rsrc"
+   on Mac OS X 10.7 (Lion, Intel-only) caused spurious "Not a directory"
+   messages, and resource forks were not properly restored.   (unzip.c,
+   unix/macosx.h) [SMS]
+ - UnZip failed to extract an archive member with a null name (silently
+   on VMS, with a "mapname:  conversion of  failed" message on UNIX).
+   Spurious error messages like ":  mismatching "local" filename (fred)"
+   (where "fred" was some previously processed member name) were also
+   possible.  (Info-ZIP Zip uses "-" as the name for an archive member
+   created from standard input, but the .ZIP standard allows a null name
+   for this case.)  Now, UnZip extracts a null-name archive member as
+   "-" (C macro NULL_NAME_REPL).  On VMS, an error message was added,
+   similar to the one on UNIX, and on UNIX, the message was clarified.
+   (fileio.c, unzpriv.h, unix/unix.c, vms/vms.c) [SMS]
+ - "unzip -t" silently detected an unexpected end-of-file condition when
+   reading an archive, leading to an unexplained "At least one error was
+   detected" message.  An "Unexpected end-of-file" message has been
+   added to reduce the mystery in this case.  (extract.c) [SMS]
+ - Java "jar" archives with over-simplified header info were interpreted
+   as coming from MS-DOS, causing UTF-8-encoded file names to be damaged.
+   A Java "CAFE" extra block is now detected, and inhibits this
+   inappropriate name conversion.  A new "--jar" option lets the user
+   force this behavior when an archive lacks a "CAFE" extra block.
+   https://sourceforge.net/tracker/index.php?func=detail&aid=3526936\
+   &group_id=118012&atid=679787  (extract.c, fileio.c, unzip.c, unzip.h) [SMS]
+ - Added Java "CAFE" extra field type to ZipInfo reports.  (zipinfo.c) [SMS]
+ - Changed some declarations to accommodate a type change in zlib
+   version 1.2.7.  (globals.h) [SMS]
 
 ==================
 

@@ -510,6 +510,7 @@ typedef struct _UzpOpts {
 #ifdef J_FLAG
     int J_flag;         /* -J: ignore AtheOS/BeOS/MacOS e. f. info (unzip) */
 #endif
+    int java_cafe;      /* Java CAFE extra block assumed/detected. */
 #if (defined(__ATHEOS__) || defined(__BEOS__) || defined(UNIX))
     int K_flag;         /* -K: keep setuid/setgid/tacky permissions */
 #endif

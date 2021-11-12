@@ -151,15 +151,15 @@
 #endif /* def BZIP2_SUPPORT */
 
 #if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
-#  include "lzma/Types.h"
+#  include "szip/Types.h"
 #endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
 
 #ifdef LZMA_SUPPORT
-#  include "lzma/LzmaDec.h"
+#  include "szip/LzmaDec.h"
 #endif /* def LZMA_SUPPORT */
 
 #ifdef PPMD_SUPPORT
-#  include "lzma/Ppmd8.h"
+#  include "szip/Ppmd8.h"
 
 struct Globals;         /* Early (vacant) declaration. */
 
@@ -269,7 +269,19 @@ typedef struct Globals {
 #if (!defined(USE_ZLIB) || defined(USE_OWN_CRCTAB))
     ZCONST ulg near *crc_32_tab;
 #else
-    ZCONST ulg Far *crc_32_tab;
+/* 2012-05-31 SMS.
+ * Zlib 1.2.7 changed the type of *get_crc_table() from uLongf to
+ * z_crc_t (to get a 32-bit type on systems with a 64-bit long).  To
+ * avoid complaints about mismatched (int-long) pointers (such as
+ * %CC-W-PTRMISMATCH on VMS, for example), we need to match the type
+ * zlib uses.  At zlib version 1.2.7, the only indicator available to
+ * CPP seems to be the Z_U4 macro.
+ */
+# ifdef Z_U4
+    ZCONST z_crc_t Far *crc_32_tab;
+# else /* def Z_U4 */
+    ZCONST uLongf Far *crc_32_tab;
+# endif /* def Z_U4 [else] */
 #endif
     ulg       crc32val;             /* CRC shift reg. (was static in funzip) */
 

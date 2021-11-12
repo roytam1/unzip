@@ -2,7 +2,7 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2012-03-28  SMS.
+$!     Last revised:  2012-06-07  SMS.
 $!
 $!     Command arguments:
 $!     - suppress C compilation (re-link): "NOCOMPILE"
@@ -126,6 +126,10 @@ $ unzx_unx = "UNZIP"
 $ unzx_cli = "UNZIP_CLI"
 $ unzsfx_unx = "UNZIPSFX"
 $ unzsfx_cli = "UNZIPSFX_CLI"
+$ lib_unzip_name = "UNZIP.OLB"
+$ lib_unzipcli_name = "UNZIPCLI.OLB"
+$ lib_unzipsfx_name = "UNZIPSFX.OLB"
+$ lib_unzipsfxcli_name = "UNZSFXCLI.OLB"
 $!
 $ AES_WG = ""
 $ CCOPTS = ""
@@ -424,10 +428,6 @@ $     if (arch .eqs. "VAX")
 $     then
 $         defs = defs+ ", _SZ_NO_INT_64"
 $     endif
-$     if (f$locate( "[.VMS]", cc_incl) .ge. f$length( cc_incl))
-$     then
-$         cc_incl = cc_incl+ ", [.VMS]"
-$     endif
 $ endif
 $!
 $! Set PPMD-related data.
@@ -439,10 +439,6 @@ $     if ((arch .eqs. "VAX") .and. (LZMA .eq. 0))
 $     then
 $         defs = defs+ ", _SZ_NO_INT_64"
 $     endif
-$     if (f$locate( "[.VMS]", cc_incl) .ge. f$length( cc_incl))
-$     then
-$         cc_incl = cc_incl+ ", [.VMS]"
-$     endif
 $ endif
 $!
 $! Change the destination directory, if the large-file option is enabled.
@@ -452,6 +448,12 @@ $ if (LARGE_FILE .ne. 0)
 $ then
 $     dest = "''dest'L"
 $ endif
+$!
+$ lib_unzip = "SYS$DISK:[.''dest']''lib_unzip_name'"
+$ lib_unzipcli = "SYS$DISK:[.''dest']''lib_unzipcli_name'"
+$ lib_unzipsfx = "SYS$DISK:[.''dest']''lib_unzipsfx_name'"
+$ lib_unzipsfxcli = "SYS$DISK:[.''dest']''lib_unzipsfxcli_name'"
+$ unzip_lib_opt = "[.''dest']UNZIP_LIB.OPT"
 $!
 $! If TEST was requested, then run the basic tests (and exit).
 $!
@@ -504,7 +506,7 @@ $!
 $! If BZIP2 support was selected, find the header file and object
 $! library.  Complain if things fail.
 $!
-$ cc_incl = "[]"
+$ cc_incl = "[], [.VMS]"
 $ lib_bzip2_opts = ""
 $ if (IZ_BZIP2 .nes. "")
 $ then
@@ -528,8 +530,7 @@ $         then
 $             say "Can't find BZIP2 object library.  Can't link."
 $             goto error
 $         else
-$             lib_bzip2_opts = "lib_bzip2:''bz2_olb' /library,"
-$             cc_incl = cc_incl+ ", [.VMS]"
+$             lib_bzip2_opts = "LIB_BZIP2:''bz2_olb' /library,"
 $         endif
 $     endif
 $ endif
@@ -549,11 +550,7 @@ $     then
 $         say "Can't find ZLIB object library.  Can't link."
 $         goto error
 $     else
-$         lib_zlib_opts = "lib_zlib:''zlib_olb' /library, "
-$         if (f$locate( "[.VMS]", cc_incl) .ge. f$length( cc_incl))
-$         then
-$             cc_incl = cc_incl+ ", [.VMS]"
-$         endif
+$         lib_zlib_opts = "LIB_ZLIB:''zlib_olb' /library, "
 $         @ [.VMS]FIND_BZIP2_LIB.COM 'IZ_ZLIB' -
            contrib.infback9 infback9.h'zlib_olb' incl_zlib_contrib_infback9
 $     endif
@@ -711,23 +708,22 @@ $     endif
 $!
 $     if (LZMA .ne. 0)
 $     then
-$         cc 'DEF_UNX' /object = [.'dest']7ZFILE.OBJ [.LZMA]7ZFILE.C
-$         cc 'DEF_UNX' /object = [.'dest']LZFIND.OBJ [.LZMA]LZFIND.C
-$         cc 'DEF_UNX' /object = [.'dest']LZMADEC.OBJ [.LZMA]LZMADEC.C
+$         cc 'DEF_UNX' /object = [.'dest']LZFIND.OBJ [.SZIP]LZFIND.C
+$         cc 'DEF_UNX' /object = [.'dest']LZMADEC.OBJ [.SZIP]LZMADEC.C
 $     endif
 $!
 $     if (PPMD .ne. 0)
 $     then
-$         cc 'DEF_UNX' /object = [.'dest']PPMD8.OBJ [.LZMA]PPMD8.C
-$         cc 'DEF_UNX' /object = [.'dest']PPMD8DEC.OBJ [.LZMA]PPMD8DEC.C
+$         cc 'DEF_UNX' /object = [.'dest']PPMD8.OBJ [.SZIP]PPMD8.C
+$         cc 'DEF_UNX' /object = [.'dest']PPMD8DEC.OBJ [.SZIP]PPMD8DEC.C
 $     endif
 $!
 $! Create the object library.
 $!
-$     if (f$search( "[.''dest']UNZIP.OLB") .eqs. "") then -
-       libr /object /create [.'dest']UNZIP.OLB
+$     if (f$search( lib_unzip) .eqs. "") then -
+       libr /object /create 'lib_unzip'
 $!
-$     libr /object /replace [.'dest']UNZIP.OLB -
+$     libr /object /replace 'lib_unzip' -
        [.'dest']CRC32.OBJ, -
        [.'dest']CRYPT.OBJ, -
        [.'dest']ENVARGS.OBJ, -
@@ -748,7 +744,7 @@ $     libr /object /replace [.'dest']UNZIP.OLB -
 $!
 $     if (AES_WG .ne. 0)
 $     then
-$         libr /object /replace [.'dest']UNZIP.OLB -
+$         libr /object /replace 'lib_unzip' -
            [.'dest']AESCRYPT.OBJ, -
            [.'dest']AESKEY.OBJ, -
            [.'dest']AESTAB.OBJ, -
@@ -761,15 +757,14 @@ $     endif
 $!
 $     if (LZMA .ne. 0)
 $     then
-$         libr /object /replace [.'dest']UNZIP.OLB -
-           [.'dest']7ZFILE.OBJ, -
+$         libr /object /replace 'lib_unzip' -
            [.'dest']LZFIND.OBJ, -
            [.'dest']LZMADEC.OBJ
 $     endif
 $!
 $     if (PPMD .ne. 0)
 $     then
-$         libr /object /replace [.'dest']UNZIP.OLB -
+$         libr /object /replace 'lib_unzip' -
            [.'dest']PPMD8.OBJ, -
            [.'dest']PPMD8DEC.OBJ
 $     endif
@@ -793,9 +788,9 @@ $! Link the executable.
 $!
 $     link /executable = [.'dest']'unzx_unx'.EXE -
        SYS$DISK:[.'dest']UNZIP.OBJ, -
-       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_unzip' /library, -
        'lib_bzip2_opts' -
-       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_unzip' /library, -
        'lib_zlib_opts' -
        'opts' -
        SYS$DISK:[.'dest']UNZIP.OPT /options
@@ -830,10 +825,10 @@ $     set command /object = [.'dest']UNZ_CLI.OBJ [.VMS]UNZ_CLI.CLD
 $!
 $! Create the CLI object library.
 $!
-$     if (f$search( "[.''dest']UNZIPCLI.OLB") .eqs. "") then -
-       libr /object /create [.'dest']UNZIPCLI.OLB
+$     if (f$search( lib_unzipcli) .eqs. "") then -
+       libr /object /create 'lib_unzipcli'
 $!
-$     libr /object /replace [.'dest']UNZIPCLI.OLB -
+$     libr /object /replace 'lib_unzipcli' -
        [.'dest']CMDLINE.OBJ, -
        [.'dest']UNZ_CLI.OBJ
 $!
@@ -846,10 +841,10 @@ $! Link the CLI executable.
 $!
 $     link /executable = [.'dest']'unzx_cli'.EXE -
        SYS$DISK:[.'dest']UNZIPCLI.OBJ, -
-       SYS$DISK:[.'dest']UNZIPCLI.OLB /library, -
-       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_unzipcli' /library, -
+       'lib_unzip' /library, -
        'lib_bzip2_opts' -
-       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_unzip' /library, -
        'lib_zlib_opts' -
        'opts' -
        SYS$DISK:[.'dest']UNZIP.OPT /options
@@ -878,10 +873,10 @@ $     cc 'DEF_SXUNX' /object = [.'dest']VMS_.OBJ [.VMS]VMS.C
 $!
 $! Create the SFX object library.
 $!
-$     if (f$search( "[.''dest']UNZIPSFX.OLB") .eqs. "") then -
-       libr /object /create [.'dest']UNZIPSFX.OLB
+$     if (f$search( lib_unzipsfx) .eqs. "") then -
+       libr /object /create 'lib_unzipsfx'
 $!
-$     libr /object /replace [.'dest']UNZIPSFX.OLB -
+$     libr /object /replace 'lib_unzipsfx' -
        [.'dest']CRC32_.OBJ, -
        [.'dest']CRYPT_.OBJ, -
        [.'dest']EXTRACT_.OBJ, -
@@ -896,7 +891,7 @@ $     libr /object /replace [.'dest']UNZIPSFX.OLB -
 $!
 $     if (AES_WG .ne. 0)
 $     then
-$         libr /object /replace [.'dest']UNZIPSFX.OLB -
+$         libr /object /replace 'lib_unzipsfx' -
            [.'dest']AESCRYPT.OBJ, -
            [.'dest']AESKEY.OBJ, -
            [.'dest']AESTAB.OBJ, -
@@ -909,15 +904,14 @@ $     endif
 $!
 $     if (LZMA .ne. 0)
 $     then
-$         libr /object /replace [.'dest']UNZIP.OLB -
-           [.'dest']7ZFILE.OBJ, -
+$         libr /object /replace 'lib_unzipsfx' -
            [.'dest']LZFIND.OBJ, -
            [.'dest']LZMADEC.OBJ
 $     endif
 $!
 $     if (PPMD .ne. 0)
 $     then
-$         libr /object /replace [.'dest']UNZIP.OLB -
+$         libr /object /replace 'lib_unzipsfx' -
            [.'dest']PPMD8.OBJ, -
            [.'dest']PPMD8DEC.OBJ
 $     endif
@@ -941,9 +935,9 @@ $! Link the SFX executable.
 $!
 $     link /executable = [.'dest']'unzsfx_unx'.EXE -
        SYS$DISK:[.'dest']UNZIPSFX.OBJ, -
-       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_unzipsfx' /library, -
        'lib_bzip2_opts' -
-       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_unzipsfx' /library, -
        'lib_zlib_opts' -
        'opts' -
        SYS$DISK:[.'dest']UNZIPSFX.OPT /options
@@ -963,10 +957,10 @@ $     cc 'DEF_SXCLI' /object = [.'dest']CMDLINE_.OBJ -
 $!
 $! Create the SFX CLI object library.
 $!
-$     if (f$search( "[.''dest']UNZSXCLI.OLB") .eqs. "") then -
-       libr /object /create [.'dest']UNZSXCLI.OLB
+$     if (f$search( lib_unzipsfxcli) .eqs. "") then -
+       libr /object /create 'lib_unzipsfxcli'
 $!
-$     libr /object /replace [.'dest']UNZSXCLI.OLB -
+$     libr /object /replace 'lib_unzipsfxcli' -
        [.'dest']CMDLINE_.OBJ, -
        [.'dest']UNZ_CLI.OBJ
 $!
@@ -979,10 +973,10 @@ $! Link the SFX CLI executable.
 $!
 $     link /executable = [.'dest']'unzsfx_cli'.EXE -
        SYS$DISK:[.'dest']UNZSXCLI.OBJ, -
-       SYS$DISK:[.'dest']UNZSXCLI.OLB /library, -
-       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_unzipsfxcli' /library, -
+       'lib_unzipsfx' /library, -
        'lib_bzip2_opts' -
-       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_unzipsfx' /library, -
        'lib_zlib_opts' -
        'opts' -
        SYS$DISK:[.'dest']UNZIPSFX.OPT /options
