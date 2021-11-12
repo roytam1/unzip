@@ -4015,7 +4015,7 @@ __GDEF
     while (err != BZ_STREAM_END) {
 #else /* !FUNZIP */
     while (G.csize > 0) {
-        Trace((stderr, "first loop:  G.csize = %ld\n", G.csize));
+        Trace((stderr, "first loop:  G.csize = %lld\n", G.csize));
 #endif /* ?FUNZIP */
         while (bstrm.avail_out > 0) {
             err = BZ2_bzDecompress(&bstrm);
@@ -4169,7 +4169,7 @@ __GDEF
     lzma_props_len = makeword( lzma_props);
 
     /* LZMA properties length must match, or we're in big trouble. */
-    if ((lzma_props_len != LZMA_PROPS_SIZE) || (G.incnt < LZMA_PROPS_SIZE+ 4))
+    if (lzma_props_len != LZMA_PROPS_SIZE)
         return PK_ERR;
 
     /* Save the actual LZMA properties. */

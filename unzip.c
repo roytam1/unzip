@@ -76,7 +76,7 @@
 #endif /* def CRYPT_AES_WG */
 
 #ifdef USE_LZMA
-# include "lzma/7zVersion.h"
+# include "lzma/SzVersion.h"
 #endif /* def USE_LZMA */
 
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
@@ -569,12 +569,29 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
      static ZCONST char Far WildStopAtDir[] = "WILD_STOP_AT_DIR";
 #  endif
 #  ifdef CRYPT_AES_WG
+    static ZCONST char Far AesWgEncryptionNotice1[] =
+     "\nAES Strong Encryption notice:\n";
+    static ZCONST char Far AesWgEncryptionNotice2[] =
+     "\
+        This executable includes 256-bit AES strong encryption and may be\n\
+        subject to export restrictions in many countries, including the USA.\n";
+
      static ZCONST char Far AesWgDecryption[] =
        "        CRYPT_AES_WG (AES encryption (WinZip/Gladman), ver %d.%d%s)\n";
 #  endif
 #  if CRYPT
+    static ZCONST char Far TraditionalEncryptionNotice1[] =
+     "\nTraditional Zip Encryption notice:\n";
+    static ZCONST char Far TraditionalEncryptionNotice2[] =
+     "\
+        The traditional zip encryption code of this program is not\n\
+        copyrighted, and is put in the public domain.  It was originally\n\
+        written in Europe, and, to the best of our knowledge, can be freely\n\
+        distributed in both source and object forms from any country,\n\
+        including the USA under License Exception TSU of the U.S. Export\n\
+        Administration Regulations (section 740.13(e)) of 6 June 2002.\n";
 #   ifdef PASSWD_FROM_STDIN
-       static ZCONST char Far PasswdStdin[] = "PASSWD_FROM_STDIN";
+     static ZCONST char Far PasswdStdin[] = "PASSWD_FROM_STDIN";
 #   endif
      static ZCONST char Far Decryption[] =
        "        CRYPT (traditional (weak) encryption, ver %d.%d%s)\n";
@@ -3143,7 +3160,10 @@ static void show_options(__G)
                                errors */
 #endif
 
-    sprintf(optiontext, "Available options on this system");
+    sprintf(optiontext, "%s\n\n%s\n%s",
+      "Available options on this system",
+      "UNZ = UnZip option, INF = ZipInfo option",
+      "n = Negatable");
     Info(slide, 0, ((char *)slide, "%s\n\n", optiontext));
 
     sprintf(optiontext, "grp  sh   long             val   n  description");
@@ -3509,6 +3529,20 @@ static void show_version_info(__G)
             Info(slide, 0, ((char *)slide,
               LoadFarString(CompileOptFormat),
               LoadFarStringSmall(None)));
+
+#  if CRYPT
+        Info(slide, 0, ((char *)slide,
+         LoadFarString(TraditionalEncryptionNotice1)));
+        Info(slide, 0, ((char *)slide,
+         LoadFarString(TraditionalEncryptionNotice2)));
+#  endif /* CRYPT */
+
+#  if CRYPT_AES_WG
+        Info(slide, 0, ((char *)slide,
+         LoadFarString(AesWgEncryptionNotice1)));
+        Info(slide, 0, ((char *)slide,
+         LoadFarString(AesWgEncryptionNotice2)));
+#  endif /* CRYPT_AES_WG */
 
 #  ifndef _WIN32_WCE /* Win CE does not support environment variables */
         Info(slide, 0, ((char *)slide, LoadFarString(EnvOptions)));

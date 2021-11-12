@@ -126,7 +126,7 @@ OBJS2 = extract$O fileio$O globals$O inflate$O list$O match$O
 OBJS3 = process$O ttyio$O ubz2err$O unreduce$O unshrink$O zipinfo$O
 OBJAES = aescrypt$O aeskey$O aestab$O fileenc$O hmac$O prng$O pwd2key$O \
          sha1$O
-OBJLZMA = 7zFile$O Alloc$O LzFind$O LzmaDec$O
+OBJLZMA = SzFile$O Alloc$O LzFind$O LzmaDec$O
 OBJS = $(OBJS1) $(OBJS2) $(OBJS3) $M$O
 LOBJS = $(OBJS)
 OBJSDLL = $(OBJS:.o=.pic.o) api.pic.o
@@ -139,7 +139,7 @@ OBJF = funzip$O crc32$O $(CRCA_O) cryptf$O globalsf$O inflatef$O ttyiof$O
 UNZIP_H = unzip.h unzpriv.h globals.h $(OSDEP_H) $(ACONF_DEP)
 AES_H = aes_wg/aes.h aes_wg/aesopt.h aes_wg/fileenc.h aes_wg/hmac.h \
         aes_wg/prng.h aes_wg/pwd2key.h aes_wg/sha1.h
-LZMA_H = lzma/7zFile.h lzma/7zVersion.h lzma/Alloc.h lzma/LzFind.h \
+LZMA_H = lzma/SzFile.h lzma/SzVersion.h lzma/Alloc.h lzma/LzFind.h \
          lzma/LzHash.h lzma/LzmaDec.h lzma/Types.h
 
 # installation
@@ -381,8 +381,8 @@ liblzma.a : $(OBJLZMA)
 	$(AR) cq liblzma.a $(OBJLZMA)
 	-$(RANLIB) liblzma.a
 
-7zFile$O: lzma/7zFile.c
-	$(CC) -c $(CF) lzma/7zFile.c
+SzFile$O: lzma/SzFile.c
+	$(CC) -c $(CF) lzma/SzFile.c
 
 Alloc$O: lzma/Alloc.c
 	$(CC) -c $(CF) lzma/Alloc.c

@@ -54,10 +54,10 @@
      found.  For example:
 
           @ [.VMS]BUILD_UNZIP LARGE -
-           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_4B_VMS]
+           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_6A_VMS]
      or:
           MMS /DESC = [.VMS] /MACRO = (LARGE=1, -
-           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_4B_VMS])
+           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_6A_VMS])
 
      Note that historically, UnZip has been built with the default
      compiler option, /NAMES = UPPERCASE, while bzip2 is normally built
@@ -71,10 +71,10 @@
      UPPERCASE, or else build UnZip with /NAMES = AS_IS.  For example:
 
           @ [.VMS]BUILD_UNZIP LARGE "CCOPTS=/NAMES=AS_IS" -
-           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_4B_VMS]
+           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_6A_VMS]
      or:
           MMS /DESC = [.VMS] /MACRO = (LARGE=1, "CCOPTS=/NAMES=AS_IS", -
-           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_4B_VMS])
+           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_6A_VMS])
 
      Instructions on how to enable additional optional compression
      and/or encryption methods may be found in the main builder files.
@@ -176,7 +176,7 @@
 
   Self-extracting archives:
 
-     The UnZip kit includes a DCL procedure, [.vms]makesfx.com, which is
+     The UnZip kit includes a DCL procedure, [.VMS]MAKESFX.COM, which is
      intended to help make a self-extracting archive from a normal Zip
      archive.  Comments in the procedure explain its use.  It uses a DCL
      symbol, "UNZIPSFX", to locate the appropriate UNZIPSFX.EXE (or
@@ -184,7 +184,7 @@
      symbols for the normal UnZip or Zip programs, this is not a foreign
      command symbol, and does not include the "$" prefix.  For example:
 
-          unzipsfx == "dev:[dir]unzipsfx.exe"
+          UNZIPSFX == "dev:[dir]UNZIPSFX.EXE"
 
      The user must define "UNZIPSFX" to point to an UNZIPSFX.EXE program
      which is one appropriate for the destination architecture, which
@@ -193,11 +193,11 @@
      system, one might create a self-extracting archive for use on an
      IA64 system:
 
-          zip new_archive.zip [...]
-          unzipsfx == "utility_root:[ia64l]unzipsfx.exe"
+          ZIP new_archive.zip [...]
+          UNZIPSFX == "utility_root:[ia64l]unzipsfx.exe"
           @ utility:makesfx.com new_archive
 
-     In some cases, the COPY command in makesfx.com may have trouble
+     In some cases, the COPY command in MAKESFX.COM may have trouble
      ("%COPY-W-INCOMPAT, [...] incompatible attributes") if the
      UNZIPSFX.EXE program and the Zip archive have different record
      formats.  SET FILE /ATTRIBUTES should be able to adjust the record
