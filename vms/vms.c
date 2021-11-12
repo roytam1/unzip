@@ -4148,6 +4148,20 @@ int mapattr(__G)
 
         /* all remaining cases:  expand MSDOS read-only bit into write perms */
         case FS_FAT_:
+#if 0
+            /* this is handled generically now */
+            /* 2010-11-27 SMS.
+             * But uxattr needs to be set set for these cases.  The
+             * 2010-09-22 code set it only conditionally, which was
+             * wrong, but disabling the whole thing leaves uxattr always
+             * unset, causing bad G.pInfo->symlink values (and who knows
+             * what else?).  So, that "uxattr =" assignment below must
+             * still exist.  It's just unconditional here, now.  Code in
+             * process.c:process_cdir_file_hdr() clears any undesirable
+             * bits in G.crec.external_file_attributes ("tmp") before we
+             * see them ("handled generically now").
+             */
+
             /* PKWARE's PKZip for Unix marks entries as FS_FAT_, but stores the
              * Unix attributes in the upper 16 bits of the external attributes
              * field, just like Info-ZIP's Zip for Unix.  We try to use that
@@ -4163,12 +4177,15 @@ int mapattr(__G)
             if ((G.crec.internal_file_attributes & 0xfc) == 0) {
                 uxattr = (unsigned)(tmp >> 16);
             }
+#endif
             /* fall through! */
         case FS_HPFS_:
         case FS_NTFS_:
         case MAC_:
         case TOPS20_:
         default:
+            uxattr = (unsigned)(tmp >> 16);     /* drwxrwxrwx (?) */
+
             /* Ensure that DOS subdir bit is set when the entry's name ends
              * in a '/'.  Some third-party Zip programs fail to set the subdir
              * bit for directory entries.
