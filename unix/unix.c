@@ -2451,8 +2451,16 @@ void charset_to_intern(char *string, char *from_charset)
     if (d)
     {
         memset( buf, 0, buflen);
-        if(iconv(cd, &s, &slen, &d, &dlen) != (size_t)-1)
+
+        /* 2015-02-12 William Robinet, SMS.  CVE-2015-1315.
+         * Added FILNAMSIZ check to avoid buffer overflow.  Better would
+         * be to pass in an actual destination buffer size.
+         */
+        if ((iconv(cd, &s, &slen, &d, &dlen) != (size_t)-1) &&
+         (strlen(buf) < FILNAMSIZ))
+        {
             strncpy(string, buf, buflen);
+        }
         izu_free(buf);
     }
     iconv_close(cd);

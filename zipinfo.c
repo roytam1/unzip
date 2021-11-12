@@ -1226,7 +1226,7 @@ int zipinform(__G)   /* return PK-type error code */
 
     if ((error_in_archive <= PK_WARN) && uO.tflag) {
         char *sgn = "";
-        int cfactor = ratio(tot_ucsize, tot_csize);
+        int cfactor = compr_fract(tot_ucsize, tot_csize);
 
         if (cfactor < 0) {
             sgn = "-";
@@ -2727,7 +2727,7 @@ static int zi_short(__G)   /* return PK-type error code */
         if (G.crec.general_purpose_bit_flag & 1)
             csiz -= 12;    /* if encrypted, don't count encryption header */
         Info(slide, 0, ((char *)slide, "%3d%%",
-          (ratio(G.crec.ucsize,csiz)+5)/10));
+          (compr_fract(G.crec.ucsize,csiz)+5)/10));
     } else if (uO.lflag == 5)
         Info(slide, 0, ((char *)slide, " %s",
           FmZofft(G.crec.csize, "8", "u")));

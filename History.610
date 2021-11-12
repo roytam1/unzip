@@ -585,7 +585,7 @@ Features added (or removed):
    support using the copyrighted Unreduce code, define the C macro
    USE_UNREDUCE_SMITH (or, for compatibility with old code and
    documentation, USE_SMITH_CODE), and supply the source file
-   unreduce_full.c.  See INSTALL for details.  The C macro 
+   unreduce_full.c.  See INSTALL for details.  The C macro
    COPYRIGHT_CLEAN has been removed from the code and from the "UnZip
    special compilation options" ("-v") report.  The new USE_UNREDUCE_xxx
    macros appear instead.
@@ -593,6 +593,9 @@ Features added (or removed):
    (api.c, COPYING.OLD, expand.c (new), extract.c, INSTALL,
    unix/Makefile, unreduce.c, unzip.c, unzpriv.h, vms/descrip_deps.mms,
    vms/descrip_mkdeps.mms) [Peter Backes, SMS]
+
+6.10c16 (21 Jan 2015):
+ - No news.
 
 
 Bugs fixed:
@@ -1559,16 +1562,16 @@ Bugs fixed:
    (zipinfo.c) [Wojtek Michalski]
  - A corrupt (or crafted) archive could cause memory access problems.
    Forum topic: http://www.info-zip.org/phpBB3/viewtopic.php?f=7&t=450
-   (extract.c) [Michal Zalewski, SMS]
+   CVE-2014-9636.  (extract.c) [Michal Zalewski, SMS]
 
 6.10c12 (11 Nov 2014):
  - No news.
 
 6.10c13 (26 Dec 2014):
  - Fixed some buffer-overflow problems reported by oCERT (oCERT.org),
-   involving corrupt/malicious archives.  Added some warning messages
-   where corruption was detected.  (extract.c, fileio.c, process.c)
-   [SMS]
+   involving corrupt/malicious archives.  CVE-2014-8139, CVE-2014-8140,
+   and CVE-2014-8141.  Added some warning messages where corruption was
+   detected.  (extract.c, fileio.c, process.c) [SMS]
  - Unix builder was using the wrong linker flags variable names, which
    could cause user-specified values to be ignored.  (unix/Makefile)
    [SMS]
@@ -1599,3 +1602,25 @@ Bugs fixed:
 6.10c15 (10 Jan 2015)
  - Spelling changes.  (COPYING.OLD, tandem/README) [SMS]
  - Removed some dead code.  (unzip.c) [SMS]
+
+6.10c16 (26 Feb 2015)
+ - VMS MMS/MMK builder problems:
+    - Faulty CLEAN_TEST rule could cause failure to remove all test
+      files/directories.
+    - Missing dependency caused failure to rebuild UNZIP_CLI.EXE when
+      UNZIP.OLB changed.
+   (vms/descrip.mms) [SMS]
+ - Re-fixed a bad "fix" from 6.10c13 for one of the buffer-overflow
+   problems reported by oCERT (oCERT.org), CVE-2014-8139.  Symptom was a
+   spurious error message like, "bad extra-field entry: EF block length
+   (0 bytes) invalid (< 4)".
+   Forum topic: http://www.info-zip.org/phpBB3/viewtopic.php?f=7&t=454
+   (extract.c, unzpriv.h) [SMS]
+ - Fixed a buffer-overflow problem reported by William Robinet, in
+   ICONV_MAPPING character-set conversion on BeOS and Unix systems.
+   CVE-2015-1315.  (beos/beos.c, unix/unix.c) [William Robinet, SMS]
+ - Fixed a buffer-overflow problem reported by William Robinet, in
+   listings ("unzip -l[l]") with unrealistic compression ratios.  Also,
+   the overflow occurred even in short-format (-l) listings when the
+   string involved was actually used only in long-format (-ll) listings.
+   (list.c, unzpriv.h, zipinfo.c) [William Robinet, SMS]

@@ -370,7 +370,7 @@ ZCONST char Far TruncNTSD[] =
 #ifndef SFX
    static ZCONST char Far InconsistEFlength[] = "bad extra-field entry:\n\
      EF block length (%ld bytes) exceeds remaining EF data (%ld bytes)\n";
-   static ZCONST char Far TooSmallEFlength[] = "bad extra-field entry:\n\
+   static ZCONST char Far TooSmallEBlength[] = "bad extra-field entry:\n\
      EF block length (%lu bytes) invalid (< %d)\n";
    static ZCONST char Far InvalidComprDataEAs[] =
      " invalid compressed data for EAs\n";
@@ -3712,22 +3712,12 @@ static int TestExtraField(__G__ ef, ef_len)
 
         if (eb_len > (ef_len - EB_HEADSIZE))
         {
-           /* Discovered some extra field inconsistency! */
+            /* Extra block length > remaining size of extra field. */
             if (uO.qflag)
                 Info(slide, 1, ((char *)slide, "%-22s ",
                   FnFilter1(G.filename)));
             Info(slide, 1, ((char *)slide, LoadFarString(InconsistEFlength),
               eb_len, (ef_len - EB_HEADSIZE)));
-            return PK_ERR;
-        }
-        else if (eb_len < EB_HEADSIZE)
-        {
-            /* Extra block length smaller than header length. */
-            if (uO.qflag)
-                Info(slide, 1, ((char *)slide, "%-22s ",
-                  FnFilter1(G.filename)));
-            Info(slide, 1, ((char *)slide, LoadFarString(TooSmallEFlength),
-              eb_len, EB_HEADSIZE));
             return PK_ERR;
         }
 
@@ -3856,11 +3846,29 @@ static int TestExtraField(__G__ ef, ef_len)
                 }
                 break;
             case EF_PKVMS:
-                if (makelong(ef+EB_HEADSIZE) !=
-                    crc32(CRCVAL_INITIAL, ef+(EB_HEADSIZE+4),
-                          (extent)(eb_len-4)))
+                /* 2015-01-30 SMS.  Added sufficient-bytes test/message
+                 * here.  (Removed defective eb_len test above.)
+                 *
+                 * If sufficient bytes (EB_PKVMS_MINLEN) are available,
+                 * then compare the stored CRC value with the calculated
+                 * CRC for the remainder of the data (and complain about
+                 * a mismatch).
+                 */
+                if (eb_len < EB_PKVMS_MINLEN)
+                {
+                    /* Insufficient bytes available. */
+                    Info( slide, 1,
+                     ((char *)slide, LoadFarString( TooSmallEBlength),
+                     eb_len, EB_PKVMS_MINLEN));
+                }
+                else if (makelong( ef+ EB_HEADSIZE) !=
+                 crc32( CRCVAL_INITIAL,
+                 (ef+ EB_HEADSIZE+ EB_PKVMS_MINLEN),
+                 (extent)(eb_len- EB_PKVMS_MINLEN)))
+                {
                     Info(slide, 1, ((char *)slide,
                       LoadFarString(BadCRC_EAs)));
+                }
                 break;
             case EF_JAVA:
                 /* 2012-05-20 SMS.
@@ -3949,12 +3957,13 @@ static int test_compr_eb(__G__ eb, eb_size, compr_offset, test_uc_ebdata)
      ((eb_ucsize > 0L) && (eb_size <= (compr_offset + EB_CMPRHEADLEN))))
         return IZ_EF_TRUNC;             /* no/bad compressed data! */
 
-    /* 2014-11-03 Michal Zalewski, SMS.
+    /* 2015-02-10 Mancha(?), Michal Zalewski, Tomas Hoger, SMS.
      * For STORE method, compressed and uncompressed sizes must agree.
      * http://www.info-zip.org/phpBB3/viewtopic.php?f=7&t=450
      */
     eb_compr_method = makeword( eb + (EB_HEADSIZE + compr_offset));
-    if ((eb_compr_method == STORED) && (eb_size - compr_offset != eb_ucsize))
+    if ((eb_compr_method == STORED) &&
+     (eb_size != compr_offset + EB_CMPRHEADLEN + eb_ucsize))
         return PK_ERR;
 
     if (
