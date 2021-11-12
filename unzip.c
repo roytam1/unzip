@@ -82,7 +82,9 @@
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
 
 # ifdef DLL
-#  define NO_EXCEPT_SIGNALS
+#  ifndef NO_EXCEPT_SIGNALS
+#   define NO_EXCEPT_SIGNALS
+#  endif /* ndef NO_EXCEPT_SIGNALS */
 # endif /* def DLL */
 
 /***************************/
@@ -181,6 +183,8 @@ static ZCONST char Far InvalidOptionsMsg[] = "error:\
   -fn or any combination of -c, -l, -p, -t, -u and -v options invalid\n";
 static ZCONST char Far IgnoreOOptionMsg[] =
   "caution:  both -n and -o specified; ignoring -o\n";
+static ZCONST char Far BadJunkDirsValue[] =
+   "error:  option -j/--junk-dirs value must be numeric\n";
 
 /* usage() strings */
 # ifndef SFX
@@ -443,7 +447,7 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
 
 #  ifdef ASM_CRC
     static ZCONST char Far AsmCRC[] =
-     "ASM_CRC              (Assembly code used for CRC)";
+     "ASM_CRC              (Assembly code used for CRC calculation)";
 #  endif
 #  ifdef ASM_INFLATECODES
     static ZCONST char Far AsmInflateCodes[] =
@@ -858,6 +862,7 @@ int unzip(__G__ argc, argv)
     int i;
 # endif
     int retcode, error=FALSE;
+
 # ifndef NO_EXCEPT_SIGNALS
 #  ifdef REENTRANT
     savsigs_info *oldsighandlers = NULL;
@@ -870,6 +875,15 @@ int unzip(__G__ argc, argv)
       signal((sigtype), (newsighandler))
 #  endif
 # endif /* NO_EXCEPT_SIGNALS */
+
+# ifdef DLL
+  /* Verify NULL termination of (user-supplied) argv[]. */
+  if (argv[ argc] != NULL)
+  {
+    retcode = PK_PARAM;
+    goto cleanup_and_exit;
+  }
+# endif /* def DLL */
 
 #ifdef ENABLE_USER_PROGRESS
 # ifdef VMS
@@ -1640,7 +1654,7 @@ static struct option_struct far options[] = {
        'I',  "ISO char set to use"},
 # endif
 #endif
-    {UZO, "j",  "junk-dirs",       o_NO_VALUE,       o_NEGATABLE,
+    {UZO, "j",  "junk-dirs",       o_OPT_EQ_VALUE,   o_NEGATABLE,
        'j',  "junk directories, extract names only"},
 # ifdef J_FLAG
     {UZO, "J",  "junk-attrs",      o_NO_VALUE,       o_NEGATABLE,
@@ -1842,6 +1856,7 @@ static struct option_struct far options[] = {
     {0,   NULL, NULL,                   o_NO_VALUE,       o_NOT_NEGATABLE,
        0,    NULL} /* end has option_ID = 0 */
   };
+
 
 
 
@@ -2104,9 +2119,39 @@ int uz_opts(__G__ pargc, pargv)
 # endif
             case ('j'):    /* junk pathnames/directory structure */
                 if (negative)
-                    uO.jflag = FALSE;
+                {
+                    /* "-j-".  Junk nothing.  Keep all directories. */
+                    uO.jflag = 0;
+                }
                 else
-                    uO.jflag = TRUE;
+                {
+                    /* Analyze any option value (junk depth). */
+                    if (value == NULL)
+                    {
+                        /* No value specified.  Junk all directories. */
+                        uO.jflag = -1;  /* "-j", or equivalent. */
+                    }
+                    else
+                    {
+                        /* Some value specified.  Decode it. */
+                        long val;
+                        char *ep;
+
+                        val = strtol( value, &ep, 10);
+                        if (ep < value+ strlen( value))
+                        {
+                            /* Some non-numeric character found. */
+                            Info( slide, 0x401, ((char *)slide,
+                             LoadFarString( BadJunkDirsValue)));
+                            return PK_PARAM;
+                        }
+                        else
+                        {
+                            /* "-j=N".  Junk specified number of dirs. */
+                            uO.jflag = val;
+                        }
+                    }
+                }
                 break;
 #ifdef J_FLAG
                 case ('J'):    /* Junk AtheOS, BeOS or MacOS file attributes */
@@ -3801,6 +3846,7 @@ static void show_version_info(__G)
 
 
 /* message output - char casts are needed to handle constants */
+#define oERR(err, message) Info(slide, 0x401, ((char *)slide, (char *)message))
 #define oWARN(message) Info(slide, 0x401, ((char *)slide, (char *)message))
 
 
@@ -3829,15 +3875,15 @@ static void show_version_info(__G)
 /* function get_args_from_arg_file() can return this in depth parameter */
 #define ARG_FILE_ERR -1
 
-/* internal settings for optchar */
-#define SKIP_VALUE_ARG   -1
-#define THIS_ARG_DONE    -2
-#define START_VALUE_LIST -3
-#define IN_VALUE_LIST    -4
-#define NON_OPTION_ARG   -5
-#define STOP_VALUE_LIST  -6
-/* 7/25/04 EG */
-#define READ_REST_ARGS_VERBATIM -7
+/* Symbolic values for optchar. */
+#define SKIP_VALUE_ARG           -1
+#define SKIP_VALUE_ARG2          -2     /* 2012-03-08 SMS. */
+#define THIS_ARG_DONE            -3
+#define START_VALUE_LIST         -4
+#define IN_VALUE_LIST            -5
+#define NON_OPTION_ARG           -6
+#define STOP_VALUE_LIST          -7
+#define READ_REST_ARGS_VERBATIM  -8     /* 7/25/04 EG */
 
 
 /* global veriables */
@@ -4215,7 +4261,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
           }
         }
         if ((*value = (char *) malloc(2)) == NULL) {
-          oWARN("memory - gso");
+          oWARN("memory - gso-1");
           return o_BAD_ERR;
         }
         (*value)[0] = *(arg + (*optchar) + clen);
@@ -4254,7 +4300,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
       }
       start = arg + (*optchar) + clen;
       if ((*value = (char *) malloc((int)(s - start) + 1)) == NULL) {
-        oWARN("memory - gso");
+        oWARN("memory - gso-2");
         return o_BAD_ERR;
       }
       *optchar += (int)(s - start);
@@ -4276,7 +4322,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
         if (arg[(*optchar) + clen]) {
           if ((*value = (char *)malloc(strlen(arg + (*optchar) + clen) + 1))
               == NULL) {
-            oWARN("memory - gso");
+            oWARN("memory - gso-3");
             return o_BAD_ERR;
           }
           strcpy(*value, arg + (*optchar) + clen);
@@ -4285,12 +4331,75 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
       } else if (args[argnum + 1] && args[argnum + 1][0] != '-') {
         /* use next arg for value */
         if ((*value = (char *)malloc(strlen(args[argnum + 1]) + 1)) == NULL) {
-          oWARN("memory - gso");
+          oWARN("memory - gso-4");
           return o_BAD_ERR;
         }
         /* using next arg as value */
         strcpy(*value, args[argnum + 1]);
         *optchar = SKIP_VALUE_ARG;
+      }
+    } else if (options[match].value_type == o_OPT_EQ_VALUE) {
+      /* Optional value, but "=" required with detached value. */
+      int have_eq = 0;
+
+      if (arg[(*optchar) + clen]) {
+        /* "-optXXXX".  May have attached value. */
+        if (arg[(*optchar) + clen] == '=') {
+          /* Skip '=' (but remember it). */
+          clen++;
+          have_eq = 1;
+        }
+        if (arg[(*optchar) + clen]) {
+          /* "-opt[=]value".  Have attached value. */
+          if ((*value = (char *)malloc(strlen(arg + (*optchar) + clen) + 1))
+              == NULL) {
+            oWARN("memory - gso-5");
+            return o_BAD_ERR;
+          }
+          strcpy(*value, arg + (*optchar) + clen);
+          *optchar = THIS_ARG_DONE;
+        }
+        else if (have_eq && args[argnum + 1] && args[argnum + 1][0] != '-') {
+          /* "-opt= value".  Have detached value. */
+          if ((*value = (char *)malloc(strlen(args[argnum + 2])+ 1)) == NULL) {
+            oWARN("memory - gso-6");
+            return o_BAD_ERR;
+          }
+          /* Set value.  Skip value arg. */
+          strcpy(*value, args[argnum + 1]);
+          *optchar = SKIP_VALUE_ARG;
+        } else {
+          /* "-opt[=] -opt".  No "=" or no (non-option) value specified. */
+          *optchar = THIS_ARG_DONE;
+        }
+      } else if (args[argnum + 1] && (strcmp( args[argnum + 1], "=") == 0)) {
+        /* "-opt = ".  Loose "=" token.  Look for detached value. */
+        if (args[argnum + 2] && args[argnum + 2][0] != '-') {
+          /* "-opt = value".  Have detached value. */
+          if ((*value = (char *)malloc(strlen(args[argnum + 2])+ 1)) == NULL) {
+            oWARN("memory - gso-7");
+            return o_BAD_ERR;
+          }
+          /* Set value.  Skip "=" and value args. */
+          strcpy(*value, args[argnum + 2]);
+          *optchar = SKIP_VALUE_ARG2;
+        } else {
+          /* "-opt =", but no (non-option) value.  Skip "=" arg. */
+          *optchar = SKIP_VALUE_ARG;
+        }
+      } else if (args[argnum + 1] && args[argnum + 1][0] == '=') {
+        /* "-opt =[XXXX]".  Have detached "=value".  Skip '='. */
+        if ((*value = (char *)malloc(strlen(args[argnum + 1]))) == NULL)
+        {
+          oWARN("memory - gso-8");
+          return o_BAD_ERR;
+        }
+        /* Using next arg (less '=') as value. */
+        strcpy(*value, args[argnum + 1]+ 1);
+        *optchar = SKIP_VALUE_ARG;
+      } else {
+        /* No "=", therefore no value. */
+        *optchar = THIS_ARG_DONE;
       }
     } else if (options[match].value_type == o_REQUIRED_VALUE ||
                options[match].value_type == o_VALUE_LIST) {
@@ -4304,7 +4413,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
         }
         if ((*value = (char *)malloc(strlen(arg + (*optchar) + clen) + 1))
             == NULL) {
-          oWARN("memory - gso");
+          oWARN("memory - gso-9");
           return o_BAD_ERR;
         }
         strcpy(*value, arg + (*optchar) + clen);
@@ -4314,7 +4423,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
         if (args[argnum + 1]) {
           if ((*value = (char *)malloc(strlen(args[argnum + 1]) + 1))
               == NULL) {
-            oWARN("memory - gso");
+            oWARN("memory - gso-10");
             return o_BAD_ERR;
           }
           strcpy(*value, args[argnum + 1]);
@@ -4388,7 +4497,7 @@ static unsigned long get_longopt(__G__ option_group, args, argnum, optchar,
   }
   /* copy arg so can chop end if value */
   if ((arg = (char *)malloc(strlen(args[argnum]) + 1)) == NULL) {
-    oWARN("memory - glo");
+    oWARN("memory - glo-1");
     return o_BAD_ERR;
   }
   strcpy(arg, args[argnum]);
@@ -4478,13 +4587,51 @@ static unsigned long get_longopt(__G__ option_group, args, argnum, optchar,
     }
   }
   /* get value */
-  if (options[match].value_type == o_OPTIONAL_VALUE) {
+  if (options[match].value_type == o_OPT_EQ_VALUE) {
+    /* Optional value, but "=" required with detached value. */
+    int have_eq = 0;
+    if (valuestart == NULL) {
+      /* "--opt ="? */
+      if (args[ argnum+ 1] != NULL) {
+        /* Next arg exists. */
+        if (*args[ argnum+ 1] == '=') {
+          /* Next arg is "=" or "=val". */
+          if (*(args[ ++argnum]+ 1) == '\0') {
+            /* No attached value.  Use next arg, if any. */
+            if (args[ argnum+ 1] != NULL) {
+              valuestart = (char *)args[ ++argnum];
+              *optchar = SKIP_VALUE_ARG2;
+            }
+          } else {
+            /* "=val". */
+            valuestart = (char *)args[ argnum]+ 1;
+            *optchar = SKIP_VALUE_ARG;
+          }
+        }
+      }
+    } else if (*valuestart == '\0') {
+      /* "--opt= val"? */
+      if (args[ argnum+ 1] != NULL) {
+        valuestart = (char *)args[ ++argnum];
+        *optchar = SKIP_VALUE_ARG;
+      }
+    }
+    if (valuestart) {
+      /* A value was specified somehow.  Save it. */
+      if ((*value = (char *)malloc(strlen(valuestart) + 1)) == NULL) {
+        free(arg);
+        oWARN("memory - glo-2");
+        return o_BAD_ERR;
+      }
+      strcpy(*value, valuestart);
+    }
+  } else if (options[match].value_type == o_OPTIONAL_VALUE) {
     /* optional value in form option=value */
     if (valuestart) {
       /* option=value */
       if ((*value = (char *)malloc(strlen(valuestart) + 1)) == NULL) {
         free(arg);
-        oWARN("memory - glo");
+        oWARN("memory - glo-3");
         return o_BAD_ERR;
       }
       strcpy(*value, valuestart);
@@ -4498,7 +4645,7 @@ static unsigned long get_longopt(__G__ option_group, args, argnum, optchar,
       /* option=value */
       if ((*value = (char *)malloc(strlen(valuestart) + 1)) == NULL) {
         free(arg);
-        oWARN("memory - glo");
+        oWARN("memory - glo-4");
         return o_BAD_ERR;
       }
       strcpy(*value, valuestart);
@@ -4507,7 +4654,7 @@ static unsigned long get_longopt(__G__ option_group, args, argnum, optchar,
       if (args[argnum + 1]) {
         if ((*value = (char *)malloc(strlen(args[argnum + 1]) + 1)) == NULL) {
           free(arg);
-          oWARN("memory - glo");
+          oWARN("memory - glo-5");
           return o_BAD_ERR;
         }
         /* using next arg as value */
@@ -4847,14 +4994,17 @@ unsigned long get_option(__G__ option_group, pargs, argc, argnum, optchar, value
     /* permute non-option args after option args so options are returned
        first */
     } else if (enable_permute) {
-      if (optc == SKIP_VALUE_ARG || optc == THIS_ARG_DONE ||
+      if (optc == SKIP_VALUE_ARG || optc == SKIP_VALUE_ARG2 ||
+          optc == THIS_ARG_DONE ||
           optc == START_VALUE_LIST || optc == IN_VALUE_LIST ||
           optc == STOP_VALUE_LIST) {
         /* moved to new arg */
         if (first_nonoption_arg > -1 && args[first_nonoption_arg]) {
           /* do the permuting - move non-options after this option */
           /* if option and value separate args or starting list skip option */
-          if (optc == SKIP_VALUE_ARG || optc == START_VALUE_LIST) {
+          if (optc == SKIP_VALUE_ARG2) {
+            v = 2;
+          } else if (optc == SKIP_VALUE_ARG || optc == START_VALUE_LIST) {
             v = 1;
           } else {
             v = 0;
@@ -4924,7 +5074,10 @@ unsigned long get_option(__G__ option_group, pargs, argc, argnum, optchar, value
     }
 
     /* move to next arg */
-    if (optc == SKIP_VALUE_ARG) {
+    if (optc == SKIP_VALUE_ARG2) {
+      argn += 3;
+      optc = 0;
+    } else if (optc == SKIP_VALUE_ARG) {
       argn += 2;
       optc = 0;
     } else if (optc == THIS_ARG_DONE) {

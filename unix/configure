@@ -4,7 +4,7 @@
 
 #==============================================================================
 # unix/configure: Detect feature support and pass that information to Makefile.
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo          Last update:   21 Jun 2012
+# - For UnZip, UnZipSFX, fUnZip and ZipInfo          Last update:   06 Jul 2012
 #==============================================================================
 
 #==============================================================================
@@ -1171,26 +1171,42 @@ case "${UNAME_S}" in
    *  )
       # Other UNIX systems.
       # FIX_ME: Need to customize for ports.
-      echo 'Check if we can use assembler CRC code'
-      if eval "$CPP_TST crc_i386.S > _crc_i386.s 2>/dev/null"; then
-        if [ -s _crc_i386.s ]; then
-          :
-        elif [ grep error < _crc_i386.s >/dev/null ]; then
-          :
-        elif eval "$CC -c _crc_i386.s >/dev/null 2>/dev/null" && [ -f _crc_i386.o ]; then
-          echo '-- Using assembler CRC code'
-          CFLAGS_TST="${CFLAGS_TST} -DASM_CRC"
-          OSDEP_OS="${OSDEP_OS} ${PROD}/crc_gcc.o"
-
-          echo 'Check if compiler generates underlines (CPP, for .S)'
-          echo "int foo() { return 0;}" > conftest.c
-          $AS conftest.c >/dev/null 2>/dev/null
-          nm conftest.o | grep "(^|[^_])foo" >/dev/null 2>/dev/null
+      echo 'Check if we can (and want to) use assembly code for CRC'
+      asm_crc=0
+      # CRC.  Fail intentionally, if NO_ASM or NO_ASM_CRC is defined.
+      cat > conftest.S << _EOF_
+#if defined( NO_ASM) || defined( NO_ASM_CRC)
+    bad code
+#else
+# include "crc_i386.S"
+#endif
+_EOF_
+      ${CPP_TST} ${CFLAGS} conftest.S > _crc_i386.s 2> /dev/null
+      status=$?
+      if [ $status -eq 0 -a -s _crc_i386.s ]; then
+        grep error _crc_i386.s > /dev/null
+        status=$?
+        if [ $status -ne 0 ]; then
+          $CC -c _crc_i386.s > /dev/null 2> /dev/null
           status=$?
-          [ $status -eq 0 ] && CPP="${CPP} -DNO_UNDERLINE"
+          if [ $status -eq 0 -a -f _crc_i386.o ]; then
+            echo '-- Using assembly code for CRC'
+            asm_crc=1
+            CFLAGS_TST="${CFLAGS_TST} -DASM_CRC"
+            OSDEP_OS="${OSDEP_OS} ${PROD}/crc_gcc.o"
+          fi
         fi
       fi
-      rm -f _crc_i386.s _crc_i386.o
+      # If using assembler for anything, then check for "_" name prefix.
+      if [ $asm_crc -ne 0 ]; then
+        echo 'Check if compiler generates underlines (CPP, for .S)'
+        echo "int foo() { return 0;}" > conftest.c
+        $AS conftest.c >/dev/null 2>/dev/null
+        nm conftest.o | grep "(^|[^_])foo" >/dev/null 2>/dev/null
+        status=$?
+        [ $status -eq 0 ] && CPP="${CPP} -DNO_UNDERLINE"
+      fi
+      rm -f conftest.S _crc_i386.s _crc_i386.o
       ;;
 esac
 

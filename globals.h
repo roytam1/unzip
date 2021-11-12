@@ -347,6 +347,7 @@ typedef struct Globals {
     ulg      outcnt;               /* number of chars stored in outbuf */
 #ifndef FUNZIP
     char     filename[FILNAMSIZ];  /* also used by NT for temporary SFX path */
+    char     *jdir_filename;       /* Ptr (in filename[]) to non-junk path. */
 #ifdef UNICODE_SUPPORT
     char     *filename_full;       /* the full path so Unicode checks work */
     extent   fnfull_bufsize;       /* size of allocated filename buffer */
@@ -361,6 +362,7 @@ typedef struct Globals {
     char     *unipath_filename;    /* UTF-8 path */
 # ifdef WIN32_WIDE
     wchar_t  *unipath_widefilename;     /* wide character filename */
+    wchar_t  *unipath_jdir_widefilename;    /* Ptr to non-junk path. */
     int      has_win32_wide;       /* true if Win32 W calls work */
 # endif
 #endif /* UNICODE_SUPPORT */
