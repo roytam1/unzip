@@ -1258,8 +1258,11 @@ static int ef_scan_for_stream( ef_ptr, ef_len, btmp_siz, btmp, xlhdr, cmnt)
       /* Loop through (and save) the bitmap bytes. */
       data_byte = 0;
       do
-      {
-        if (bitmap_byte_max >= eb_len)          /* Stay within the block. */
+      { /* Stay within the block (and whole field). */
+        /* 2017-11-29 Rene Freingruber, SMS.
+         * Added check for end of extra field (ef_len).
+         */
+        if ((bitmap_byte_max >= eb_len) || (data_byte >= ef_len))
         {
           /* Out of data before end-of-bitmap. */
           TTrace((stderr,
@@ -1269,6 +1272,7 @@ static int ef_scan_for_stream( ef_ptr, ef_len, btmp_siz, btmp, xlhdr, cmnt)
         }
 
         /* If the user has space for another, then return a bitmap byte. */
+
         bitmap = *(ef_ptr+ (data_byte++));
         if (bitmap_byte_max < *btmp_siz)
         {

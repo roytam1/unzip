@@ -14,7 +14,10 @@
   output, file-related sorts of things, plus some miscellaneous stuff.  Most
   of the stuff has to do with opening, closing, reading and/or writing files.
 
-  Contains:  open_input_file()
+  Contains:  open_infile()
+             close_infile()
+             set_zipfn_sgmnt_name()
+             open_infile_sgmnt()
              open_outfile()           (not: VMS, AOS/VS, CMSMVS, MACOS, TANDEM)
              undefer_input()
              defer_leftover_input()
@@ -24,6 +27,7 @@
              seek_zipf()
              fgets_ans()
              flush()                  (non-VMS)
+             partflush() 
              is_vms_varlen_txt()      (non-VMS, VMS_TEXT_CONV only)
              disk_error()             (non-VMS)
              UzpMessagePrnt()
@@ -43,7 +47,9 @@
              str2iso()                (CRYPT && NEED_STR2ISO, only)
              str2oem()                (CRYPT && NEED_STR2OEM, only)
              memset()                 (ZMEM only)
+             memcmp()                 (ZMEM only)
              memcpy()                 (ZMEM only)
+             labs()
              zstrnicmp()              (NO_STRNICMP only)
              zstat()                  (REGULUS only)
              plastchar()              (_MBCS only)
@@ -347,8 +353,9 @@ int set_zipfn_sgmnt_name( __G__ sgmnt_nr)
   zuvl_t sgmnt_nr;
 #endif /* def PROTO [else] */
 {
-  char *suffix;
-  int sufx_len;
+  int dgt_ndx;
+  int sufx_ndx;
+  size_t zipfn_len;
 
 /* sizeof( ".z65535") == 8 should be safe. */
 #define SGMNT_NAME_BOOST 8
@@ -361,10 +368,12 @@ int set_zipfn_sgmnt_name( __G__ sgmnt_nr)
     return 1;
   }
 
+  zipfn_len = strlen( G.zipfn);
+
   if (G.zipfn_sgmnt == NULL)
-  {
-    G.zipfn_sgmnt_size = (int)strlen(G.zipfn)+ SGMNT_NAME_BOOST;
-    if ((G.zipfn_sgmnt = izu_malloc(G.zipfn_sgmnt_size)) == NULL)
+  { /* Allocate new space. */
+    G.zipfn_sgmnt_size = (int)zipfn_len+ SGMNT_NAME_BOOST;
+    if ((G.zipfn_sgmnt = izu_malloc( G.zipfn_sgmnt_size)) == NULL)
     {
       G.zipfn_sgmnt_size = -1;
       return 1;
@@ -372,11 +381,11 @@ int set_zipfn_sgmnt_name( __G__ sgmnt_nr)
   }
   else
   {
-    if (G.zipfn_sgmnt_size < (int)strlen(G.zipfn)+ SGMNT_NAME_BOOST)
-    {
-      G.zipfn_sgmnt_size = (int)strlen(G.zipfn)+ SGMNT_NAME_BOOST;
-      izu_free(G.zipfn_sgmnt);
-      if ((G.zipfn_sgmnt = izu_malloc(G.zipfn_sgmnt_size)) == NULL)
+    if (G.zipfn_sgmnt_size < (int)zipfn_len+ SGMNT_NAME_BOOST)
+    { /* Allocated space could be too small.  Reallocate. */
+      G.zipfn_sgmnt_size = (int)zipfn_len+ SGMNT_NAME_BOOST;
+      G.zipfn_sgmnt = izu_realloc( G.zipfn_sgmnt, G.zipfn_sgmnt_size);
+      if (G.zipfn_sgmnt == NULL)
       {
         G.zipfn_sgmnt_size = -1;
         return 1;
@@ -384,11 +393,10 @@ int set_zipfn_sgmnt_name( __G__ sgmnt_nr)
     }
   }
 
-
   if (sgmnt_nr == G.ecrec.number_this_disk)
   {
-    zfstrcpy(G.zipfn_sgmnt, G.zipfn);
-    return 0;           /* Last segment.  Name already ".zip." */
+    zfstrcpy( G.zipfn_sgmnt, G.zipfn);
+    return 0;           /* Last segment.  Leave archive name as-is. */
   }
 
 #ifdef VMS
@@ -402,30 +410,33 @@ int set_zipfn_sgmnt_name( __G__ sgmnt_nr)
 
 #else /* def VMS */
 
-  zfstrcpy(G.zipfn_sgmnt, G.zipfn);
-  /* Expect to find ".zXX" at the end of the segment file name. */
-  sufx_len = IZ_MAX( 0, ((int)strlen(G.zipfn_sgmnt)- 4));
-  suffix = G.zipfn_sgmnt+ sufx_len;
-
-  /* try find filename extension and set right position for add number */
-  if (zfstrcmp(suffix, ZSUFX) == 0)
+  dgt_ndx = -1;                         /* Suffix not found. */
+  zfstrcpy( G.zipfn_sgmnt, G.zipfn);    /* Copy whole archive name. */
+  /* Expect ".zip", or similar suffix, at the end of the segment file name. */
+  sufx_ndx = IZ_MAX( 0, ((int)strlen( G.zipfn_sgmnt)- strlen( ZSUFX)));
+  if (zfstrcmp( (G.zipfn+ sufx_ndx), ZSUFX) == 0)       /* Case-insens? */
   {
-    suffix += 2;        /* Point to digits after ".z". */
+    dgt_ndx = strlen( G.zipfn_sgmnt)- 2;
+  }
 # ifdef ZSUFX2
-  }
-  else if (zfstrcmp(suffix, ZSUFX2) == 0)       /* Check alternate suffix. */
-  {
-    suffix[1] = 'z';    /* Should be always lowercase??? */
-    suffix += 2;        /* Point to digits after ".z". */
-# endif
-  }
   else
   {
-    zfstrcpy( (suffix+ sufx_len), ZSUFX);
-    suffix += sufx_len+ 2;
+    sufx_ndx = IZ_MAX( 0, ((int)strlen( G.zipfn_sgmnt)- strlen( ZSUFX2)));
+    if (zfstrcmp( (G.zipfn+ sufx_ndx), ZSUFX2) == 0)    /* Case-insens? */
+    {
+      dgt_ndx = strlen( G.zipfn_sgmnt)- 2;
+    }
   }
-  /* Insert the next segment number into the file name (G.zipfn_sgmnt). */
-  sprintf(suffix, "%02d", (sgmnt_nr+ 1));
+# endif /* def ZSUFX2 */
+
+  if (dgt_ndx < 0)
+  { /* No suffix detected.  Append the (local) standard suffix. */
+    strcpy( (G.zipfn_sgmnt+ zipfn_len), ZSUFX);
+    dgt_ndx = zipfn_len+ strlen( ZSUFX)- 2;
+  }
+
+  /* Overwrite the last two suffix characters with the next segment number. */
+  sprintf( (G.zipfn_sgmnt+ dgt_ndx), "%02d", (sgmnt_nr+ 1));
 
 #endif /* def VMS [else] */
 
@@ -2396,6 +2407,8 @@ int UZ_EXP UzpPassword (pG, rcnt, pwbuf, size, zfn, efn)
     int r = IZ_PW_ENTERED;
     char *m;
     char *prompt;
+    char *ep;
+    char *zp;
 
 #  ifndef REENTRANT
     /* tell picky compilers to shut up about "unused variable" warnings */
@@ -2404,9 +2417,12 @@ int UZ_EXP UzpPassword (pG, rcnt, pwbuf, size, zfn, efn)
 
     if (*rcnt == 0) {           /* First call for current entry */
         *rcnt = 2;
-        if ((prompt = (char *)izu_malloc(2*FILNAMSIZ + 15)) != (char *)NULL) {
-            sprintf(prompt, LoadFarString(PasswPrompt),
-                    FnFilter1(zfn), FnFilter2(efn));
+        zp = FnFilter1( zfn);
+        ep = FnFilter2( efn);
+        prompt = (char *)izu_malloc(    /* Slightly too long (2* "%s"). */
+         sizeof( PasswPrompt)+ strlen( zp)+ strlen( ep));
+        if (prompt != (char *)NULL) {
+            sprintf(prompt, LoadFarString(PasswPrompt), zp, ep);
             m = prompt;
         } else
             m = (char *)LoadFarString(PasswPrompt2);
