@@ -65,6 +65,8 @@
 .!              Added /CASE_MATCH qualifier, replacing
 .!              /[NO]CASE_INSENSITIVE (with something less confusing,
 .!              and more like existing DCL).
+.!      03-005          S. Schweda              06-AUG-2011 15:00
+.!              Added /LICENSE qualifier.
 .!
 <INIT>
 <MAIN>
@@ -289,6 +291,12 @@ Displays a one-page brief help screen and exits quietly.
 
 Junk the stored paths (don't recreated the archive's directory
 structure.
+<QUALIFIER>
+/LICENSE
+
+/LICENSE
+
+Show the Info-ZIP license text.
 <QUALIFIER>
 /LIST
 
@@ -558,6 +566,7 @@ options and modifiers can be provided:
 |  -u   update existing files; create new ones if needed
 |  -v   list archive files (verbose format)
 |  -z   display only the archive comment
+!  --license  show Info-ZIP license text
 |
 |MODIFIERS
 |  -a   extract text files in standard VMS text file format

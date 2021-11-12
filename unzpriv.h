@@ -77,6 +77,11 @@
 #  undef USE_BZIP2
 #endif
 
+/* Disable LZMA support for SFX stub, unless explicitly requested. */
+#if (defined(SFX) && !defined(LZMA_SFX) && defined(USE_LZMA))
+#  undef USE_LZMA
+#endif
+
 #if (defined(NO_VMS_TEXT_CONV) || defined(VMS))
 #  ifdef VMS_TEXT_CONV
 #    undef VMS_TEXT_CONV
@@ -635,8 +640,10 @@
 #  define Z_STAT_DEFINED
 #endif
 
-#ifndef MINIX            /* Minix needs it after all the other includes (?) */
-#  include <stdio.h>
+#ifdef MINIX
+#  include <unistd.h>   /* For _POSIX_VERSION. */ 
+#else
+#  include <stdio.h>    /* Minix needs it after all the other includes (?) */
 #endif
 
 #include <ctype.h>       /* skip for VMS, to use tolower() function? */
@@ -685,7 +692,6 @@
 /*  Defines  */
 /*************/
 
-#define UNZIP_AESVERS   51
 #define UNZIP_BZ2VERS   46
 #ifdef ZIP64_SUPPORT
 # ifdef USE_BZIP2
@@ -2066,9 +2072,9 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
   typedef  z_uint4              zuvl_t;     /* multivolume numbers */
 # define MASK_ZUCN64            (~(zucn_t)0)
 /* In case we ever get to support an environment where z_uint8 may be WIDER
-   than 64 bit wide, we will have to apply a construct similar to
-     #define MASK_ZUCN64        (~(zucn_t)0 & (zucn_t)0xffffffffffffffffULL)
-   for the 64-bit mask.
+ * than 64 bit wide, we will have to apply a construct similar to
+ *   #define MASK_ZUCN64        (~(zucn_t)0 & (zucn_t)0xffffffffffffffffULL)
+ * for the 64-bit mask.
  */
 #else
   typedef  ulg                  zusz_t;     /* zipentry sizes & offsets */
@@ -2156,6 +2162,7 @@ typedef struct min_info {
 #endif
 #ifdef CRYPT_AES_WG
        ush cmpr_mthd_aes;
+       ush cmpr_vers_aes;
        char cmpr_mode_aes;
 #endif /* def CRYPT_AES_WG */
 } min_info;
@@ -2493,12 +2500,12 @@ char    *fzofft               OF((__GPRO__ zoff_t val,
    char *fLoadFarString       OF((__GPRO__ const char Far *sz));
    char *fLoadFarStringSmall  OF((__GPRO__ const char Far *sz));
    char *fLoadFarStringSmall2 OF((__GPRO__ const char Far *sz));
-   #ifndef zfstrcpy
+#  ifndef zfstrcpy
      char Far * Far zfstrcpy  OF((char Far *s1, const char Far *s2));
-   #endif
-   #if (!defined(SFX) && !defined(zfstrcmp))
+#  endif
+#  if (!defined(SFX) && !defined(zfstrcmp))
      int Far zfstrcmp         OF((const char Far *s1, const char Far *s2));
-   #endif
+#  endif
 #endif
 
 
@@ -2558,6 +2565,10 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
 #ifdef USE_BZIP2
    int    UZbunzip2              OF((__GPRO));                  /* extract.c */
    void   bz_internal_error      OF((int bzerrcode));           /* ubz2err.c */
+#endif
+
+#ifdef USE_LZMA
+   int    UZlzma                 OF((__GPRO));                  /* extract.c */
 #endif
 
 /*---------------------------------------------------------------------------

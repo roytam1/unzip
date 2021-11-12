@@ -718,7 +718,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
         {
             int n;
 
-            n = IZ_MIN( G.incnt, G.ucsize_aes);
+            n = (int)(IZ_MIN( G.incnt, G.ucsize_aes));
             fcrypt_decrypt( G.inptr, n, G.zcx);
             G.ucsize_aes -= n;
         }
@@ -747,7 +747,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
 
 
 
-#if defined(USE_ZLIB) || defined(USE_BZIP2)
+#if defined(USE_ZLIB) || defined(USE_BZIP2) || defined(USE_LZMA)
 
 /************************/
 /* Function fillinbuf() */
@@ -968,7 +968,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
             if (size < G.apl_dbl_hdr_bytes)
             {
                 /* Fewer bytes than needed to complete the AppleDouble
-                 * header.  (Unlikely?)  Move them to the AppleDouble 
+                 * header.  (Unlikely?)  Move them to the AppleDouble
                  * header buffer, adjust the byte counts, and resume
                  * extraction.
                  */

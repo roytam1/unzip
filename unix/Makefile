@@ -1,6 +1,6 @@
 #==============================================================================
 # Makefile for UnZip, UnZipSFX and fUnZip:  Unix and MS-DOS ("real" makes only)
-# Version:  6.1                                                     05 May 2011
+# Version:  6.1                                                     05 Aug 2011
 #==============================================================================
 
 
@@ -24,10 +24,12 @@
 # well tested, and may need considerable help from the user to get optimal
 # results (or any success at all).
 #
-# The "generic" target should find bzip2 source code in the local ./bzip2
-# subdirectory, or the user can set the "make" macro IZ_BZIP2 to a directory
-# containing suitable bzip2 header and object/shared library files.
-# Similarly, to use zlib compress-expand code instead of UnZip's built-in code,
+# If you want bzip2 support included, the "generic" target should find bzip2
+# source code in the local ./bzip2 subdirectory, or the user can set the
+# "make" macro IZ_BZIP2 to a directory containing suitable bzip2 header and
+# object/shared library files.
+#
+# Similarly, to use zlib for uncompressing instead of UnZip's built-in code,
 # set the "make" macro IZ_ZLIB to a directory containing suitable zlib header
 # and object/shared library files.  For example:
 #     make -f unix/Makefile IZ_BZIP2=../../bzip2/bzip2-1.0.6 \
@@ -69,6 +71,8 @@ RANLIB = ranlib
 RM = rm -f
 SHELL = /bin/sh
 STRIP = strip
+ZIP = zip
+ZIP = zip
 
 # UnZip flags
 LOC = $(D_USE_BZ2) $(D_USE_ZLIB) $(LOCAL_UNZIP)
@@ -123,6 +127,7 @@ OBJS2 = extract$O fileio$O globals$O inflate$O list$O match$O
 OBJS3 = process$O ttyio$O ubz2err$O unreduce$O unshrink$O zipinfo$O
 OBJAES = aescrypt$O aeskey$O aestab$O fileenc$O hmac$O prng$O pwd2key$O \
          sha1$O
+OBJLZMA = 7zFile$O Alloc$O LzFind$O LzmaDec$O
 OBJS = $(OBJS1) $(OBJS2) $(OBJS3) $M$O
 LOBJS = $(OBJS)
 OBJSDLL = $(OBJS:.o=.pic.o) api.pic.o
@@ -133,8 +138,10 @@ OBJF = funzip$O crc32$O $(CRCA_O) cryptf$O globalsf$O inflatef$O ttyiof$O
 #OBJS_OS2 = $(OBJS1:.o=.obj) $(OBJS2:.o=.obj) os2.obj
 #OBJF_OS2 = $(OBJF:.o=.obj)
 UNZIP_H = unzip.h unzpriv.h globals.h $(OSDEP_H) $(ACONF_DEP)
-AES_H = aes/aes.h aes/aesopt.h aes/fileenc.h aes/hmac.h aes/prng.h \
-        aes/pwd2key.h aes/sha1.h
+AES_H = aes_wg/aes.h aes_wg/aesopt.h aes_wg/fileenc.h aes_wg/hmac.h \
+        aes_wg/prng.h aes_wg/pwd2key.h aes_wg/sha1.h
+LZMA_H = lzma/7zFile.h lzma/7zVersion.h lzma/Alloc.h lzma/LzFind.h \
+         lzma/LzHash.h lzma/LzmaDec.h lzma/Types.h
 
 # installation
 # (probably can change next two to `install' and `install -d' if you have it)
@@ -188,32 +195,35 @@ help:
 	@echo '  target "generic".  For example: "make generic" (cc) or'
 	@echo '  "make generic CC=gcc" (gcc).  Other (older) targets are less'
 	@echo '  well tested, and may need considerable help from the user to'
-	@echo '  get optimal results (or any success at all).  Use "make liat"'
+	@echo '  get optimal results (or any success at all).  Use "make list"'
 	@echo '  to get a list of valid targets.'
+	@echo ''
 	@echo '  Add "CC=gcc" to the "make" command to use "gcc" instead of'
 	@echo '  "cc".  First try "make -f unix/Makefile generic" (to use "cc")'
 	@echo '  (or "make -f unix/Makefile generic CC=gcc" (to use "gcc")), as'
 	@echo '  "generic" should autodetect and set the proper flags.'
-	@echo '  To make the manuals use "make unzipsman" after UnZip is made.'
-	@echo '  See the files INSTALL and unzip.txt for more information.'
 	@echo ''
-	@echo '  If "generic" fails, then you might try the original generic'
-	@echo '  which is now "generic1".  Always do "make clean" before trying'
-	@echo '  a different target.'
+	@echo '  If the "generic" target fails, then you might try an older'
+	@echo '  generic target which is now called "generic1".  Always do'
+	@echo '  "make clean" before trying a different target.'
 	@echo ''
 	@echo '  If the compiler complains about "timezone redefined", then the'
 	@echo '  "generic2" target may work better.  If the linker complains'
 	@echo '  about an undefined symbol, "_ftime", then the "generic3"'
 	@echo '  target may work better.'
+	@echo ''
 	@echo '  One of these actions should produce working UnZip programs on'
 	@echo '  most UNIX(-like) systems.  If you know a bit more about the'
 	@echo '  system on which you work, then you might try "make list" for'
 	@echo '  a list of the system-specific targets supported herein.  (Many'
-	@echo '  of them do exactly the same thing, so don't agonize too much'
+	@echo "  of them do exactly the same thing, so don't agonize too much"
 	@echo '  over which to pick if two or more sound equally likely.)'
 	@echo '  The comments in unix/Makefile and the INSTALL file may offer'
 	@echo '  some useful information for building on various target'
 	@echo '  systems.'
+	@echo ''
+	@echo '  To make the manuals use "make unzipsman" after UnZip is made.'
+	@echo '  See the files INSTALL and unzip.txt for more information.'
 	@echo ''
 
 list:
@@ -311,16 +321,19 @@ unzipsdocs:	unzips docs
 # EDIT HERE FOR PARALLEL MAKES on Sequent (and others?)--screws up MS-DOS
 # make utilities if default:  change "unzip$E:" to "unzip$E:&"
 
-unzip$E:	$(OBJS) $(LIBBZ2) $(LIB_AES)    # add `&' for parallel makes
+unzip$E:	$(OBJS) $(LIBBZ2) \
+                 $(LIB_AES_WG) $(LIB_LZMA)      # add `&' for parallel makes
 	$(LD) $(LF) $(LOBJS) $(LF2)
 
-unzipsfx$E:	$(OBJX) $(LIB_AES)              # add `&' for parallel makes
+unzipsfx$E:	$(OBJX) $(LIBBZ2) \
+                 $(LIB_AES_WG) $(LIB_LZMA)      # add `&' for parallel makes
 	$(LD) $(SL) $(LOBJX) $(SL2)
 
-funzip$E:	$(OBJF)                         # add `&' for parallel makes
+funzip$E:	$(OBJF) $(LIBBZ2) \
+                 $(LIB_AES_WG) $(LIB_LZMA)      # add `&' for parallel makes
 	$(LD) $(FL) $(OBJF) $(FL2)
 
-zipinfo$E:	unzip$E $(LIB_AES)              # `&' is pointless here...
+zipinfo$E:	unzip$E $(LIB_AES_WG)           # `&' is pointless here...
 	@echo\
  '  This is a Unix-specific target.  ZipInfo is not enabled in some MS-DOS'
 	@echo\
@@ -329,6 +342,7 @@ zipinfo$E:	unzip$E $(LIB_AES)              # `&' is pointless here...
  '  or else invoke as "unzip -Z" (in a batch file, for example).'
 	$(LN) unzip$E zipinfo$E
 
+
 # AES object library.
 
 libaes.a : $(OBJAES)
@@ -336,29 +350,49 @@ libaes.a : $(OBJAES)
 	$(AR) cq libaes.a $(OBJAES)
 	-$(RANLIB) libaes.a
 
-aescrypt.o: aes/aescrypt.c
-	$(CC) -c $(CF) aes/aescrypt.c
+aescrypt$O: aes_wg/aescrypt.c
+	$(CC) -c $(CF) aes_wg/aescrypt.c
 
-aeskey.o: aes/aeskey.c
-	$(CC) -c $(CF) aes/aeskey.c
+aeskey$O: aes_wg/aeskey.c
+	$(CC) -c $(CF) aes_wg/aeskey.c
 
-aestab.o: aes/aestab.c
-	$(CC) -c $(CF) aes/aestab.c
+aestab$O: aes_wg/aestab.c
+	$(CC) -c $(CF) aes_wg/aestab.c
 
-fileenc.o: aes/fileenc.c
-	$(CC) -c $(CF) aes/fileenc.c
+fileenc$O: aes_wg/fileenc.c
+	$(CC) -c $(CF) aes_wg/fileenc.c
 
-hmac.o: aes/hmac.c
-	$(CC) -c $(CF) aes/hmac.c
+hmac$O: aes_wg/hmac.c
+	$(CC) -c $(CF) aes_wg/hmac.c
 
-prng.o: aes/prng.c
-	$(CC) -c $(CF) aes/prng.c
+prng$O: aes_wg/prng.c
+	$(CC) -c $(CF) aes_wg/prng.c
 
-pwd2key.o: aes/pwd2key.c
-	$(CC) -c $(CF) aes/pwd2key.c
+pwd2key$O: aes_wg/pwd2key.c
+	$(CC) -c $(CF) aes_wg/pwd2key.c
 
-sha1.o: aes/sha1.c
-	$(CC) -c $(CF) aes/sha1.c
+sha1$O: aes_wg/sha1.c
+	$(CC) -c $(CF) aes_wg/sha1.c
+
+
+# LZMA object library.
+
+liblzma.a : $(OBJLZMA)
+	-@$(RM) liblzma.a
+	$(AR) cq liblzma.a $(OBJLZMA)
+	-$(RANLIB) liblzma.a
+
+7zFile$O: lzma/7zFile.c
+	$(CC) -c $(CF) lzma/7zFile.c
+
+Alloc$O: lzma/Alloc.c
+	$(CC) -c $(CF) lzma/Alloc.c
+
+LzFind$O: lzma/LzFind.c
+	$(CC) -c $(CF) lzma/LzFind.c
+
+LzmaDec$O: lzma/LzmaDec.c
+	$(CC) -c $(CF) lzma/LzmaDec.c
 
 
 # when the optional bzip2 support is provided (as recommended) by sources
@@ -389,6 +423,7 @@ unzip$O:	unzip.c $(UNZIP_H) crypt.h unzvers.h consts.h
 zipinfo$O:	zipinfo.c $(UNZIP_H)
 
 $(OBJAES):	$(AES_H)
+$(OBJLZMA):	$(LZMA_H)
 
 # unzipsfx compilation section
 unzipsfx$O:	unzip.c $(UNZIP_H) crypt.h unzvers.h consts.h
@@ -532,71 +567,61 @@ uninstall:
 	$(RM) $(INSTALLEDBIN) $(INSTALLEDMAN)
 
 flags:  unix/configure
-	sh unix/configure "AES=${AES}" \
+	sh unix/configure "AES_WG=${AES_WG}" \
          "CC=${CC}" "CFLAGS=${CF_NOOPT}" \
-         "IZ_BZIP2=${IZ_BZIP2}" "IZ_ZLIB=${IZ_ZLIB}"
+         "IZ_BZIP2=${IZ_BZIP2}" "IZ_ZLIB=${IZ_ZLIB}" \
+         "LZMA=${LZMA}"
 
 
 # the test zipfile
 TESTZIP = testmake.zip
 
 # test some basic features of the build
-test:		check
+check:		test
 
-check:
-	@echo '#####  This is a Unix-specific target.  (Just so you know.)'
-	@echo '#####     Make sure unzip, funzip and unzipsfx are compiled and'
-	@echo '#####     in this directory.'
-	@if test ! -f ./unzip; then \
-	    echo '#####  ERROR:  can't find ./unzip'; exit 1; fi
-	@if test ! -f ./funzip; then \
-	    echo '#####  ERROR:  can't find ./funzip'; exit 1; fi
-	@if test ! -f ./unzipsfx; then \
-	    echo '#####  ERROR:  can't find ./unzipsfx'; exit 1; fi
+test:
+	unix/test_unzip.sh $(TESTZIP)
+
+
+# Create a new testmake.zip.
 #
-	@if test ! -f $(TESTZIP); then \
-	    echo "#####  ERROR:  can't find test file $(TESTZIP)"; exit 1; fi
+# This target is intended for use by UnZip developers, not by normal
+# users.  The method used relies on an existing testmake.zip file to
+# provide "notes", which historically has non-UNIX line endings.
 #
-	@echo '#####  testing extraction'
-	@./unzip -bo $(TESTZIP) testmake.zipinfo
-	@if test ! -f testmake.zipinfo ; then \
-	    echo "#####  ERROR:  file extraction from $(TESTZIP) failed"; \
-	    exit 1; fi
+# Note that this is typically an iterative process, because the test
+# archive includes an "unzip -Z" report on itself, which often results
+# in mismatches on date-time and file size data.  If the results don't
+# converge within a few iterations, then it may help to wait a minute (to
+# get a different date-time), or to replace the current testmake.zip with
+# the original (or some other old version).
 #
-	@echo '#####  testing zipinfo (unzip -Z)'
-	@./unzip -Z $(TESTZIP) > testmake.unzip-Z
-	@if diff testmake.unzip-Z testmake.zipinfo; then echo 'OK.'; else \
-	    echo '#####  WARNING:  zipinfo output doesn't match stored version'; \
-	    echo '#####     (If the only difference is the file times, compare your'; \
-	    echo '#####      timezone with the Central European timezone, which is one'; \
-	    echo '#####      hour east of Greenwich but effectively 2 hours east'; \
-	    echo '#####      during summer Daylight Savings Time.  The upper two'; \
-	    echo '#####      lines should correspond to your local time when the'; \
-	    echo '#####      files were created, on 19 November 1998 at 10:46pm CET.'; \
-	    echo '#####      If the times are consistent, please ignore this warning.)'; \
-	    fi
-	@$(RM) testmake.unzip-Z testmake.zipinfo
-#
-	@echo '#####  testing unzip -d exdir option'
-	@./unzip -bo $(TESTZIP) -d testun notes
-	@cat testun/notes
-#
-	@echo '#####  testing unzip -o and funzip (ignore funzip warning)'
-	@./unzip -boq $(TESTZIP) notes -d testun
-	@./funzip < $(TESTZIP) > testun/notes2
-	@if diff testun/notes testun/notes2; then true; else \
-	    echo '#####  ERROR:  funzip output disagrees with unzip'; fi
-#
-	@echo '#####  testing unzipsfx (self-extractor)'
-	@cat unzipsfx $(TESTZIP) > testsfx
-	@$(CHMOD) 0700 testsfx
-	@./testsfx -bo notes
-	@if diff notes testun/notes; then true; else \
-	    echo '#####  ERROR:  unzipsfx file disagrees with unzip'; fi
-	@$(RM) testsfx notes testun/notes testun/notes2
-	@rmdir testun
-#
-	@echo '#####  testing complete.'
+# While crude, the method used here does try to save the original
+# testmake.zip file as testmake.zip_orig, which is deleted only if the
+# "diff" succeeds, which normally allows a manual restoration to the
+# original state, if success remains elusive.
+
+testmake_zip:
+	if test ! -f testmake.zip_orig ; then \
+	    cp -p testmake.zip testmake.zip_orig ; \
+	fi
+	@mkdir testmake
+	@( cd testmake ; \
+	../unzip ../testmake.zip > /dev/null ; \
+	touch testmake.zipinfo ; \
+	$(ZIP) testmake.zip notes testmake.zipinfo > /dev/null ; \
+	../unzip -Z testmake.zip > testmake.zipinfo ; \
+	$(ZIP) testmake.zip notes testmake.zipinfo > /dev/null ; \
+	../unzip -Z testmake.zip > testmake.zipinfo_new ; \
+	mv testmake.zip ../testmake.zip )
+	@if diff testmake/testmake.zipinfo \
+	 testmake/testmake.zipinfo_new 2> /dev/null ; then \
+	    echo '' ; echo "   It's a miracle!" ; echo '' ;\
+	    rm testmake.zip_orig ; \
+	else \
+	    echo '' ; echo '   Try again?' ; echo '' ; \
+	fi
+	@rm -r testmake
 
 
 ################################

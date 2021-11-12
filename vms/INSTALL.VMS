@@ -91,6 +91,34 @@
      with BUILD_UNZIP.COM can keep it from making the same help files
      repeatedly.)  Building the help files is detailed below.
 
+  Testing:
+
+     A set of basic UnZip tests can be run using the builders:
+
+          @ [.VMS]BUILD_UNZIP LARGE TEST
+     or:
+          MMS /DESC = [.VMS] /MACRO = (LARGE=1) TEST
+
+     Specify "LARGE" or not, the same as when building the programs. 
+     (On VAX, also specify same the compiler option: VAXC, ...)  Other
+     normal build options are allowed, but not required.  The builders
+     use a DCL procedure, [.vms]test_unzip.com, to do this job.  This
+     procedure may be run directly, but it needs to be told where to
+     find the program executables, so it's normally easier to use one of
+     the builders to run it, because they know where the executables are
+     stored.  (Which is why those options which affect the destination
+     directory are required for TEST.)
+
+     The test procedure leaves its results files in place (for
+     inspection, as desired).  To clean up after running the tests, use
+     the CLEAN_TEST target in the MMS/MMK builder, or do the job
+     manually:
+
+          MMS /DESC = [.VMS] CLEAN_TEST
+     or:
+          DELETE [.TEST_DIR_*...]*.*;*  ! Repeat as needed.
+          DELETE TEST_DIR_*.DIR;*
+
   Completing installation:
 
      To complete the installation, the executables may be left in place,

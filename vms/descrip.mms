@@ -1,4 +1,4 @@
-#                                               17 June 2011.  SMS.
+#                                               5 August 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
@@ -53,6 +53,8 @@
 #                   example:
 #                   "LOCAL_UNZIP=NO_EXCEPT_SIGNALS=1, NO_SYMLINKS=1"
 #
+#    LZMA=1         Enable LZMA compression support.
+#
 #    NOSHARE=1      Link /NOSYSSHR (not using shareable images).
 #    NOSHARE=OLDVAX Link /NOSYSSHR on VAX for:
 #                      DEC C with VMS before V7.3.
@@ -91,6 +93,10 @@
 #
 #    CLEAN_EXE  deletes only the architecture-specific executables.
 #               Handy if all you wish to do is re-link the executables.
+#
+#    CLEAN_TEST deletes all test directories.
+#
+#    TEST       Runs a brief test.
 #
 # Example commands:
 #
@@ -164,6 +170,7 @@ CLEAN :
 #    The [.$(DEST)] directories and everything in them.
 #    All help-related derived files,
 #    All individual C dependency files.
+#    All test_dir_* directories.
 # Also mention:
 #    Comprehensive dependency file.
 #
@@ -192,6 +199,16 @@ CLEAN_ALL :
 	 delete UNZIP_CLI.HLP;*
 	if (f$search( "UNZIP.HLP") .nes. "") then -
 	 delete UNZIP.HLP;*
+	if (f$search( "test_dir_*.dir;*") .nes. "") then -
+	 set protection = w:d [.test_dir_*...]*.*;*
+	if (f$search( "test_dir_*.dir;*") .nes. "") then -
+	 set protection = w:d test_dir_*.dir;*
+	if (f$search( "[.test_dir_*.*]*.*") .nes. "") then -
+	 delete [.test_dir_*.*]*.*;*
+	if (f$search( "[.test_dir_*]*.*") .nes. "") then -
+	 delete [.test_dir_*]*.*;*
+	if (f$search( "test_dir_*.dir;*") .nes. "") then -
+	 delete test_dir_*.dir;*
 	if (f$search( "*.MMSD") .nes. "") then -
 	 delete *.MMSD;*
 	if (f$search( "[.VMS]*.MMSD") .nes. "") then -
@@ -215,6 +232,25 @@ CLEAN_EXE :
         if (f$search( "[.$(DEST)]*.EXE") .nes. "") then -
          delete [.$(DEST)]*.EXE;*
 
+# CLEAN_TEST target.  Delete the test directories, [.test_dir_*...].
+
+CLEAN_TEST :
+	if (f$search( "test_dir_*.dir;*") .nes. "") then -
+	 set protection = w:d [.test_dir_*...]*.*;*
+	if (f$search( "test_dir_*.dir;*") .nes. "") then -
+	 set protection = w:d test_dir_*.dir;*
+	if (f$search( "[.test_dir_*.*]*.*") .nes. "") then -
+	 delete [.test_dir_*.*]*.*;*
+	if (f$search( "[.test_dir_*]*.*") .nes. "") then -
+	 delete [.test_dir_*]*.*;*
+	if (f$search( "test_dir_*.dir;*") .nes. "") then -
+	 delete test_dir_*.dir;*
+
+# TEST target.  Runs a test procedure.
+
+TEST :
+	@[.vms]test_unzip.com "" [.$(DEST)]
+
 
 # Object library module dependencies.
 
@@ -233,8 +269,8 @@ $(LIB_UNZIPSFX_CLI) : $(LIB_UNZIPSFX_CLI)($(MODS_OBJS_LIB_UNZIPSFX_CLI))
 
 # Module ID options files.
 
-OPT_ID = SYS$DISK:[.VMS]UNZIP.OPT
-OPT_ID_SFX = SYS$DISK:[.VMS]UNZIPSFX.OPT
+OPT_ID = SYS$DISK:[.$(DEST)]UNZIP.OPT
+OPT_ID_SFX = SYS$DISK:[.$(DEST)]UNZIPSFX.OPT
 
 # Default C compile rule.
 
@@ -306,10 +342,24 @@ OPT_ID_SFX = SYS$DISK:[.VMS]UNZIPSFX.OPT
 
 .IFDEF OPT_FILE
 $(OPT_FILE) :
-	open /write opt_file_ln  $(OPT_FILE)
+	open /write opt_file_ln $(OPT_FILE)
 	write opt_file_ln "SYS$SHARE:VAXCRTL.EXE /SHARE"
 	close opt_file_ln
 .ENDIF
+
+# Module ID options files.
+
+$(OPT_ID) :
+	@[.vms]optgen.com UnZip iz_unzip_versn
+	open /write opt_file_ln $(OPT_ID)
+	write opt_file_ln "Ident = ""UnZip ''f$trnlnm( "iz_unzip_versn")'"""
+	close opt_file_ln
+
+$(OPT_ID_SFX) :
+	@[.vms]optgen.com UnZip iz_unzip_versn
+	open /write opt_file_ln $(OPT_ID_SFX)
+	write opt_file_ln "Ident = ""UnZipSFX ''f$trnlnm( "iz_unzip_versn")'"""
+	close opt_file_ln
 
 # Local BZIP2 object library.
 

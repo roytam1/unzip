@@ -1,5 +1,5 @@
-/*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+/* 
+  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -212,7 +212,7 @@ static ZCONST char Far MthdTerse[] = "tersed (IBM)";
 static ZCONST char Far MthdLZ77[] = "LZ77-compressed (IBM)";
 static ZCONST char Far MthdWavPack[] = "WavPacked";
 static ZCONST char Far MthdPPMd[] = "PPMd-ed";
-static ZCONST char Far MthdAES[] = "AES-ed";
+static ZCONST char Far MthdAES_WG[] = "AES_WG-ed";
 
 static ZCONST char Far DeflNorm[] = "normal";
 static ZCONST char Far DeflMax[] = "maximum";
@@ -279,7 +279,7 @@ static ZCONST char Far FileCommentLength[] =
 static ZCONST char Far FileDiskNum[] =
   "  disk number on which file begins:               disk %lu\n";
 static ZCONST char Far ApparentFileType[] =
-  "  apparent file type:                             %s\n";
+  "  apparent file type (%02x hex):                    %s%s\n";
 static ZCONST char Far VMSFileAttributes[] =
   "  VMS file attributes (%06o octal):             %s\n";
 static ZCONST char Far AmigaFileAttributes[] =
@@ -346,7 +346,7 @@ static ZCONST char Far efMD5[] = "Fred Kantor MD5";
 static ZCONST char Far efASiUnix[] = "ASi Unix";
 static ZCONST char Far efTandem[] = "Tandem NSK";
 static ZCONST char Far efTheos[] = "Theos";
-static ZCONST char Far efAES[] = "AES encrypt";
+static ZCONST char Far efAES[] = "AES_WG encrypt";
 static ZCONST char Far efUnknown[] = "unknown";
 
 static ZCONST char Far OS2EAs[] = ".\n\
@@ -420,7 +420,7 @@ static ZCONST char Far ColonIndent[] = ":\n   ";
 static ZCONST char Far efFormat[] = " %02x";
 
 static ZCONST char Far AesExtraField[] = ".\n\
-    Vers: 0x%04x, Vend ID: %c%c, AES mode: 0x%02x, Cmpr mthd: %s";
+    Vers: %s, Vend ID: %c%c, Mode: %s, Cmpr mthd: %s";
 
 static ZCONST char Far lExtraFieldType[] = "\n\
   There %s a local extra field with ID 0x%04x (%s) and\n\
@@ -449,7 +449,7 @@ static ZCONST char Far *method[NUM_METHODS] = {
     MthdNone, MthdShrunk, MthdRedF1, MthdRedF2, MthdRedF3, MthdRedF4,
     MthdImplode, MthdToken, MthdDeflate, MthdDeflat64, MthdDCLImplode,
     MthdBZip2, MthdLZMA, MthdTerse, MthdLZ77, MthdWavPack, MthdPPMd,
-    MthdAES
+    MthdAES_WG
 };
 
 
@@ -466,7 +466,13 @@ int zi_opts(__G__ pargc, pargv)
     char ***pargv;
     __GDEF
 {
-    int    argc, error=FALSE;
+    int argc;
+    int error = FALSE;
+    int non_opt_argc;
+
+    /* Variant option processing.
+     *  "2slmv" suffixes refer to "-2", "-s", "-m", -l", and/or "-v".
+     */
     int    hflag_slmv=TRUE, hflag_2=FALSE;  /* diff options => diff defaults */
     int    tflag_slm=TRUE, tflag_2v=FALSE;
     int    explicit_h=FALSE, explicit_t=FALSE;
@@ -807,6 +813,8 @@ int zi_opts(__G__ pargc, pargv)
         return USAGE(error);
     }
 
+    non_opt_argc = in_files_count+ in_xfiles_count;
+
 #ifdef MORE
     if (G.M_flag && !isatty(1))  /* stdout redirected: "more" func useless */
         G.M_flag = 0;
@@ -814,7 +822,7 @@ int zi_opts(__G__ pargc, pargv)
 
     /* if no listing options given (or all negated), or if only -h/-t given
      * with individual files specified, use default listing format */
-    if ((uO.lflag < 0) || ((argc > 0) && (uO.lflag == 0)))
+    if ((uO.lflag < 0) || ((non_opt_argc > 0) && (uO.lflag == 0)))
         uO.lflag = LFLAG;
 
     /* set header and totals flags to default or specified values */
@@ -832,8 +840,8 @@ int zi_opts(__G__ pargc, pargv)
         case 3:
         case 4:
         case 5:
-            uO.hflag = ((argc > 0) && !explicit_h)? FALSE : hflag_slmv;
-            uO.tflag = ((argc > 0) && !explicit_t)? FALSE : tflag_slm;
+            uO.hflag = ((non_opt_argc > 0) && !explicit_h)? FALSE : hflag_slmv;
+            uO.tflag = ((non_opt_argc > 0) && !explicit_t)? FALSE : tflag_slm;
             break;
         case 10:
             uO.hflag = hflag_slmv;
@@ -1396,9 +1404,11 @@ static int zi_long(__G__ pEndprev, error_in_archive)
     Info(slide, 0, ((char *)slide, LoadFarString(FileDiskNum),
       (ulg)(G.crec.disk_number_start + 1)));
     Info(slide, 0, ((char *)slide, LoadFarString(ApparentFileType),
-      (G.crec.internal_file_attributes & 1)? "text"
+      G.crec.internal_file_attributes,
+      ((G.crec.internal_file_attributes & 1)? "text"
          : (G.crec.internal_file_attributes & 2)? "ebcdic"
-              : "binary"));             /* changed to accept EBCDIC */
+              : "binary"),             /* changed to accept EBCDIC */
+      ((G.crec.internal_file_attributes & 0xfc)? "+" : "")));
 #ifdef ATARI
     printf("  external file attributes (hex):                   %.8lx\n",
       G.crec.external_file_attributes);
@@ -1748,13 +1758,44 @@ static int zi_long(__G__ pEndprev, error_in_archive)
             /* additional, field-specific information: */
             switch (eb_id) {
                 case EF_AES_WG:
+                {
+                    char *aes_strngth_p;        /* Strngth/key-size ptr. */
+                    char aes_strngth_s[ 8];     /* Strngth/key-size buffer. */
+                    char *vend_vers_p;          /* Vendor version ptr. */
+                    char vend_vers_s[ 8];       /* Vendor version buffer. */
+                    ush vend_vers;              /* Vendor version value. */
+
+                    vend_vers = makeword( ef_ptr);  /* Vendor version. */
+                    if (vend_vers == 1)
+                        vend_vers_p = "AE-1";
+                    else if (vend_vers == 2)
+                        vend_vers_p = "AE-2";
+                    else
+                    {
+                        vend_vers_p = vend_vers_s;
+                        sprintf( vend_vers_s, "0x%04x", vend_vers);
+                    }
+
+                    if (ef_ptr[ 4] == 1)
+                        aes_strngth_p = "AES128";
+                    else if (ef_ptr[ 4] == 2)
+                        aes_strngth_p = "AES192";
+                    else if (ef_ptr[ 4] == 3)
+                        aes_strngth_p = "AES256";
+                    else
+                    {
+                        aes_strngth_p = aes_strngth_s;
+                        sprintf( aes_strngth_s, "0x%02x", ef_ptr[ 4]);
+                    }
+
                     Info(slide, 0, ((char *)slide,
                      LoadFarString( AesExtraField),
-                     makeword( ef_ptr),                     /* Version. */
+                     vend_vers_p,                           /* Vendor versn. */
                      ef_ptr[ 2], ef_ptr[ 3],                /* Vendor ID. */
-                     ef_ptr[ 4],                            /* AES mode. */
+                     aes_strngth_p,                         /* AES mode. */
                      cmpr_mthd( makeword( &ef_ptr[ 5]))));  /* Cmpr mthd. */
                     break;
+                }
                 case EF_OS2:
                 case EF_ACL:
                     if (eb_datalen >= EB_OS2_HLEN) {

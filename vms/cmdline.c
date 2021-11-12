@@ -212,6 +212,7 @@ $DESCRIPTOR(cli_help_normal,    "HELP.NORMAL");         /* -h */
 $DESCRIPTOR(cli_help_extended,  "HELP.EXTENDED");       /* -hh */
 $DESCRIPTOR(cli_junk,           "JUNK");                /* -j */
 $DESCRIPTOR(cli_lowercase,      "LOWERCASE");           /* -L */
+$DESCRIPTOR(cli_license,        "LICENSE");             /* --license */
 $DESCRIPTOR(cli_list,           "LIST");                /* -l */
 $DESCRIPTOR(cli_brief,          "BRIEF");               /* -l */
 $DESCRIPTOR(cli_full,           "FULL");                /* -v */
@@ -254,7 +255,7 @@ $DESCRIPTOR(cli_totals,         "TOTALS");              /* -Zt */
 $DESCRIPTOR(cli_noverbose,      "NOVERBOSE");           /* -v-, -Zv- */
 $DESCRIPTOR(cli_verbose,        "VERBOSE");             /* -v, -Zv */
 $DESCRIPTOR(cli_verbose_normal, "VERBOSE.NORMAL");      /* -v, -Zv */
-$DESCRIPTOR(cli_verbose_command, "VERBOSE");            /* (none) */
+$DESCRIPTOR(cli_verbose_command, "VERBOSE.COMMAND");    /* (none) */
 
 $DESCRIPTOR(cli_yyz,            "YYZ_UNZIP");
 
@@ -722,12 +723,10 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
 
         /*
          * Help.
-         * Clear any existing "-h" option with "-h-h-", then add
-         * the desired "h" value.
+         * "-h" is not negatable, so simply put out the the desired "h" value.
          */
-#define OPT_H   "-h-h-h"        /* "-h"  Normal help. */
-#define OPT_HH  "-h-h-hh"       /* "-hh" Extended help. */
-#define OPT_HN  "-h-h-"         /* ""    Normal extract.  (default). */
+#define OPT_H   "-h"        /* "-h"  Normal help. */
+#define OPT_HH  "-hh"       /* "-hh" Extended help. */
 
         status = cli$present( &cli_help);
         if (status & 1)
@@ -793,6 +792,17 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
                 }
             }
             ADD_ARG( opt);
+        }
+
+        /*
+         * Show license text.
+         */
+#define OPT_LI   "--license"    /* "--license  Show license text. */
+
+        status = cli$present( &cli_license);
+        if (status & 1)
+        {
+            ADD_ARG( OPT_LI);
         }
 
         /*

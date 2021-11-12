@@ -1,4 +1,4 @@
-Contents of the UnZip 6.00 source archive.  The OS-specific subdirectories
+Contents of the UnZip 6.10 source archive.  The OS-specific subdirectories
 at the end contain their own Contents listings:
 
   Contents      this file
@@ -16,7 +16,7 @@ at the end contain their own Contents listings:
   zipgrep.txt   ZipGrep manual page, human-readable format
   funzip.txt    fUnZip manual page, human-readable format
   file_id.diz   BBS-oriented file describing this archive
-  testmake.zip  test archive for checking whether newly compiled UnZip works
+  testmake.zip  test archive for checking whether newly built UnZip works
   api.c         generic DLL entry points, support functions (required for DLLs)
   apihelp.c     API help text for DLL versions (currently OS/2 only)
   consts.h      global, initialized variables that never change (required)
@@ -75,7 +75,8 @@ at the end contain their own Contents listings:
   win32/        support files for compiling under Windows 9x and Windows NT
   wince/        support files for compiling under Windows CE (GUI version)
   windll/       support files for compiling Windows 3.x/9x/NT DLLs
-  bzip2/        subfolder for source of externally supplied bzip2 extension
+  bzip2/        source of optional, externally supplied bzip2 extension
+  lzma/         source of optional LZMA compression
   man/          nroff man-page sources for the main user documentation
   proginfo/     programming docs, additional technical info, contributor list
 

@@ -12,6 +12,7 @@ Define	Verb		UNZIP
 	Qualifier	HELP, NonNegatable, VALUE(type=HELP_OPTS)
 	Qualifier	JUNK, Negatable
 	Qualifier	LIST, Nonnegatable
+	Qualifier	LICENSE, Nonnegatable
 	Qualifier	BRIEF, Nonnegatable, Default
 	Qualifier	FULL, VALUE(TYPE=FULL_MODIFIER), Nonnegatable
 	Qualifier	EXISTING, VALUE(REQUIRED, TYPE=EXISTING_KEYWORDS),

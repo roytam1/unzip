@@ -2,12 +2,13 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2011-06-17  SMS.
+$!     Last revised:  2011-08-05  SMS.
 $!
 $!     Command arguments:
+$!     - suppress C compilation (re-link): "NOCOMPILE"
+$!     - suppress linking executables: "NOLINK"
 $!     - suppress help file processing: "NOHELP"
 $!     - suppress message file processing: "NOMSG"
-$!     - select link-only: "LINK"
 $!     - select compiler environment: "VAXC", "DECC", "GNUC"
 $!     - select AES (WinZip/Gladman) encryption support: "AES_WG"
 $!     - select BZIP2 support: "USEBZ2"
@@ -21,6 +22,7 @@ $!       example), or in that directory itself.
 $!       By default, the SFX programs are built without BZIP2 support.
 $!       Add "BZIP2_SFX=1" to the LOCAL_UNZIP C macros to enable it.
 $!       (See LOCAL_UNZIP, below.)
+$!     - select LZMA compression support: "LZMA"
 $!     - use ZLIB compression library: "IZ_ZLIB=dev:[dir]", where
 $!       "dev:[dir]" (or a suitable logical name) tells where to find
 $!       "zlib.h".  The ZLIB object library (LIBZ.OLB) is expected to be
@@ -46,6 +48,7 @@ $!     - select installation of CLI interface version of UnZip:
 $!       "VMSCLI" or "CLI"
 $!     - force installation of UNIX interface version of UnZip
 $!       (override LOCAL_UNZIP environment): "NOVMSCLI" or "NOCLI"
+$!     - run basic UnZip tests: TEST
 $!
 $!     To specify additional options, define the symbol LOCAL_UNZIP
 $!     as a comma-separated list of the C macros to be defined, and
@@ -120,13 +123,16 @@ $ IZ_BZIP2 = ""
 $ BUILD_BZIP2 = 0
 $ IZ_ZLIB = ""
 $ LINKOPTS = "/notraceback"
-$ LINK_ONLY = 0
 $ LISTING = " /nolist"
 $ LARGE_FILE = 0
+$ LZMA = 0
+$ MAKE_EXE = 1
 $ MAKE_HELP = 1
 $ MAKE_MSG = 1
+$ MAKE_OBJ = 1
 $ MAY_USE_DECC = 1
 $ MAY_USE_GNUC = 0
+$ TEST = 0
 $!
 $! Process command line parameters requesting optional features.
 $!
@@ -190,17 +196,27 @@ $         LINKOPTS = f$extract( (eq+ 1), 1000, opts)
 $         goto argloop_end
 $     endif
 $!
-$! Note: LINK test must follow LINKOPTS test.
-$!
-$     if (f$extract( 0, 4, curr_arg) .eqs. "LINK")
-$     then
-$         LINK_ONLY = 1
-$         goto argloop_end
-$     endif
-$!
 $     if (f$extract( 0, 4, curr_arg) .eqs. "LIST")
 $     then
 $         LISTING = "/''curr_arg'"      ! But see below for mods.
+$         goto argloop_end
+$     endif
+$!
+$     if (f$extract( 0, 4, curr_arg) .eqs. "LZMA")
+$     then
+$         LZMA = 1
+$         goto argloop_end
+$     endif
+$!
+$     if (curr_arg .eqs. "NOCOMPILE")
+$     then
+$         MAKE_OBJ = 0
+$         goto argloop_end
+$     endif
+$!
+$     if (curr_arg .eqs. "NOEXE")
+$     then
+$         MAKE_EXE = 0
 $         goto argloop_end
 $     endif
 $!
@@ -246,6 +262,12 @@ $!
 $     if ((curr_arg .eqs. "NOVMSCLI") .or. (curr_arg .eqs. "NOCLI"))
 $     then
 $         CLI_IS_DEFAULT = 0
+$         goto argloop_end
+$     endif
+$!
+$     if (curr_arg .eqs. "TEST")
+$     then
+$         TEST = 1
 $         goto argloop_end
 $     endif
 $!
@@ -369,18 +391,48 @@ $ then
 $     defs = defs+ ", CRYPT_AES_WG"
 $ endif
 $!
+$! Set LZMA-related data.
+$!
+$ if (LZMA .ne. 0)
+$ then
+$     defs = defs+ ", USE_LZMA, _7ZIP_ST"
+$     if (arch .eqs. "VAX")
+$     then
+$         defs = defs+ ", _SZ_NO_INT_64"
+$     endif
+$ endif
+$!
+$! Change the destination directory, if the large-file option is enabled.
+$!
+$ destb = dest
+$ if (LARGE_FILE .ne. 0)
+$ then
+$     dest = "''dest'L"
+$ endif
+$!
+$! If TEST was requested, then run the tests (and exit).
+$!
+$ if (test)
+$ then
+$     @ [.vms]test_unzip.com "" [.'dest']
+$     goto error
+$ endif
+$!
 $! Reveal the plan.  If compiling, set some compiler options.
 $!
-$ if (LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
-$     say "Linking on ''arch' for ''cmpl'."
-$ else
 $     say "Compiling on ''arch' using ''cmpl'."
 $!
 $     DEF_UNX = "/define = (''defs')"
 $     DEF_CLI = "/define = (''defs', VMSCLI)"
 $     DEF_SXUNX = "/define = (''defs', SFX)"
 $     DEF_SXCLI = "/define = (''defs', VMSCLI, SFX)"
+$ else
+$     if (MAKE_EXE .or. MAKE_MSG)
+$     then
+$         say "Linking on ''arch' for ''cmpl'."
+$     endif
 $ endif
 $!
 $! Search directory for BZIP2.
@@ -388,7 +440,7 @@ $!
 $ if (BUILD_BZIP2)
 $ then
 $!    Our own BZIP2 directory.
-$     seek_bz = dest
+$     seek_bz = destb
 $ else
 $!    User-specified BZIP2 directory.
 $     seek_bz = arch
@@ -398,13 +450,6 @@ $! Search directory for ZLIB.
 $!
 $ seek_zl = arch
 $!
-$! Change the destination directory, if the large-file option is enabled.
-$!
-$ if (LARGE_FILE .ne. 0)
-$ then
-$     dest = "''dest'L"
-$ endif
-$!
 $! If BZIP2 support was selected, find the header file and object
 $! library.  Complain if things fail.
 $!
@@ -413,7 +458,7 @@ $ lib_bzip2_opts = ""
 $ if (IZ_BZIP2 .nes. "")
 $ then
 $     bz2_olb = "LIBBZ2_NS.OLB"
-$     if (.not. LINK_ONLY)
+$     if (MAKE_OBJ .or. MAKE_EXE)
 $     then
 $         define incl_bzip2 'IZ_BZIP2'
 $         if (BUILD_BZIP2 .and. (IZ_BZIP2 .eqs. "SYS$DISK:[.BZIP2]"))
@@ -424,14 +469,17 @@ $             set def [-]
 $         endif
 $     endif
 $!
-$     @ [.VMS]FIND_BZIP2_LIB.COM 'IZ_BZIP2' 'seek_bz' 'bz2_olb' lib_bzip2
-$     if (f$trnlnm( "lib_bzip2") .eqs. "")
+$     if (MAKE_EXE)
 $     then
-$         say "Can't find BZIP2 object library.  Can't link."
-$         goto error
-$     else
-$         lib_bzip2_opts = "lib_bzip2:''bz2_olb' /library,"
-$         cc_incl = cc_incl+ ", [.VMS]"
+$         @ [.VMS]FIND_BZIP2_LIB.COM 'IZ_BZIP2' 'seek_bz' 'bz2_olb' lib_bzip2
+$         if (f$trnlnm( "lib_bzip2") .eqs. "")
+$         then
+$             say "Can't find BZIP2 object library.  Can't link."
+$             goto error
+$         else
+$             lib_bzip2_opts = "lib_bzip2:''bz2_olb' /library,"
+$             cc_incl = cc_incl+ ", [.VMS]"
+$         endif
 $     endif
 $ endif
 $!
@@ -462,18 +510,21 @@ $ endif
 $!
 $! If [.'dest'] does not exist, either complain (link-only) or make it.
 $!
-$ if (f$search( "''dest'.dir;1") .eqs. "")
+$ if (f$search( "''dest'.DIR;1") .eqs. "")
 $ then
-$     if (LINK_ONLY)
+$     if (MAKE_OBJ)
 $     then
-$         say "Can't find directory ""[.''dest']"".  Can't link."
-$         goto error
-$     else
 $         create /directory [.'dest']
+$     else
+$         if (MAKE_EXE .or. MAKE_MSG)
+$         then
+$             say "Can't find directory ""[.''dest']"".  Can't link."
+$             goto error
+$         endif
 $     endif
 $ endif
 $!
-$ if (.not. LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
 $!
 $! Arrange to get arch-specific list file placement, if listing, and if
@@ -509,10 +560,32 @@ $ endif
 $!
 $! Show interesting facts.
 $!
+$ say ""
 $ say "   architecture = ''arch' (destination = [.''dest'])"
+$!
+$ if (MAKE_OBJ)
+$ then
+$     say "   cc = ''cc'"
+$ endif
+$!
+$ if (MAKE_EXE)
+$ then
+$     say "   link = ''link'"
+$ endif
+$!
+$ if (.not. MAKE_HELP)
+$ then
+$     say "   Not making new help files."
+$ endif
+$!
+$ if (.not. MAKE_MSG)
+$ then
+$     say "   Not making new message files."
+$ endif
+$!
 $ if (IZ_BZIP2 .nes. "")
 $ then
-$     if (.not. LINK_ONLY)
+$     if (MAKE_EXE)
 $     then
 $         say "   BZIP2 include dir: ''f$trnlnm( "incl_bzip2")'"
 $     endif
@@ -520,24 +593,11 @@ $     say "   BZIP2 library dir: ''f$trnlnm( "lib_bzip2")'"
 $ endif
 $ if (IZ_ZLIB .nes. "")
 $ then
-$     if (.not. LINK_ONLY)
+$     if (MAKE_EXE)
 $     then
 $         say "   ZLIB include dir:  ''f$trnlnm( "incl_zlib")'"
 $     endif
 $     say "   ZLIB library dir:  ''f$trnlnm( "lib_zlib")'"
-$ endif
-$ if (.not. LINK_ONLY)
-$ then
-$     say "   cc = ''cc'"
-$ endif
-$ say "   link = ''link'"
-$ if (.not. MAKE_HELP)
-$ then
-$     say "   Not making new help files."
-$ endif
-$ if (.not. MAKE_MSG)
-$ then
-$     say "   Not making new message files."
 $ endif
 $ say ""
 $!
@@ -545,24 +605,25 @@ $ tmp = f$verify( 1)    ! Turn echo on to see what's happening.
 $!
 $!------------------------------- UnZip section ------------------------------
 $!
-$ if (.not. LINK_ONLY)
-$ then
 $!
 $! Process the help file, if desired.
 $!
-$     if (MAKE_HELP)
-$     then
-$         runoff /out = UNZIP.HLP [.VMS]UNZIP_DEF.RNH
-$     endif
+$ if (MAKE_HELP)
+$ then
+$     runoff /out = UNZIP.HLP [.VMS]UNZIP_DEF.RNH
+$ endif
 $!
 $! Process the message file, if desired.
 $!
-$     if (MAKE_MSG)
-$     then
-$         message /object = [.'dest']UNZIP_MSG.OBJ /nosymbols -
-           [.VMS]UNZIP_MSG.MSG
-$         link /shareable = [.'dest']UNZIP_MSG.EXE [.'dest']UNZIP_MSG.OBJ
-$     endif
+$ if (MAKE_MSG)
+$ then
+$     message /object = [.'dest']UNZIP_MSG.OBJ /nosymbols -
+       [.VMS]UNZIP_MSG.MSG
+$     link /shareable = [.'dest']UNZIP_MSG.EXE [.'dest']UNZIP_MSG.OBJ
+$ endif
+$!
+$ if (MAKE_OBJ)
+$ then
 $!
 $! Compile the sources.
 $!
@@ -595,6 +656,14 @@ $         cc 'DEF_UNX' /object = [.'dest']HMAC.OBJ [.AES_WG]HMAC.C
 $         cc 'DEF_UNX' /object = [.'dest']PRNG.OBJ [.AES_WG]PRNG.C
 $         cc 'DEF_UNX' /object = [.'dest']PWD2KEY.OBJ [.AES_WG]PWD2KEY.C
 $         cc 'DEF_UNX' /object = [.'dest']SHA1.OBJ [.AES_WG]SHA1.C
+$     endif
+$!
+$     if (LZMA .ne. 0)
+$     then
+$         cc 'DEF_UNX' /object = [.'dest']7ZFILE.OBJ [.LZMA]7ZFILE.C
+$         cc 'DEF_UNX' /object = [.'dest']ALLOC.OBJ [.LZMA]ALLOC.C
+$         cc 'DEF_UNX' /object = [.'dest']LZFIND.OBJ [.LZMA]LZFIND.C
+$         cc 'DEF_UNX' /object = [.'dest']LZMADEC.OBJ [.LZMA]LZMADEC.C
 $     endif
 $!
 $! Create the object library.
@@ -634,34 +703,58 @@ $         libr /object /replace [.'dest']UNZIP.OLB -
            [.'dest']SHA1.OBJ
 $     endif
 $!
+$     if (LZMA .ne. 0)
+$     then
+$         libr /object /replace [.'dest']UNZIP.OLB -
+           [.'dest']7ZFILE.OBJ, -
+           [.'dest']ALLOC.OBJ, -
+           [.'dest']LZFIND.OBJ, -
+           [.'dest']LZMADEC.OBJ
+$     endif
+$!
 $ endif
+$!
+$ if (MAKE_EXE)
+$ then
+$!
+$! Create the module ID options file.
+$!
+$     optgen_verify = f$verify( 0)
+$     @ [.vms]optgen.com UnZip iz_unzip_versn
+$     open /write opt_file_ln SYS$DISK:[.'dest']UNZIP.OPT
+$     write opt_file_ln "Ident = ""UnZip ''f$trnlnm( "iz_unzip_versn")'"""
+$     close opt_file_ln
+$     deassign iz_unzip_versn
+$     tmp = f$verify( optgen_verify)
 $!
 $! Link the executable.
 $!
-$ link /executable = [.'dest']'unzx_unx'.EXE -
-   SYS$DISK:[.'dest']UNZIP.OBJ, -
-   SYS$DISK:[.'dest']UNZIP.OLB /library, -
-   'lib_bzip2_opts' -
-   SYS$DISK:[.'dest']UNZIP.OLB /library, -
-   'lib_zlib_opts' -
-   'opts' -
-   SYS$DISK:[.VMS]UNZIP.OPT /options
+$     link /executable = [.'dest']'unzx_unx'.EXE -
+       SYS$DISK:[.'dest']UNZIP.OBJ, -
+       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_bzip2_opts' -
+       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_zlib_opts' -
+       'opts' -
+       SYS$DISK:[.'dest']UNZIP.OPT /options
+$!
+$ endif
 $!
 $!----------------------- UnZip (CLI interface) section ----------------------
 $!
-$ if (.not. LINK_ONLY)
-$ then
-$!
 $! Process the CLI help file, if desired.
 $!
-$     if (MAKE_HELP)
-$     then
-$         set default [.VMS]
-$         edit /tpu /nosection /nodisplay /command = CVTHELP.TPU -
-           UNZIP_CLI.HELP
-$         set default [-]
-$         runoff /output = UNZIP_CLI.HLP [.VMS]UNZIP_CLI.RNH
-$     endif
+$ if (MAKE_HELP)
+$ then
+$     set default [.VMS]
+$     edit /tpu /nosection /nodisplay /command = CVTHELP.TPU -
+       UNZIP_CLI.HELP
+$     set default [-]
+$     runoff /output = UNZIP_CLI.HLP [.VMS]UNZIP_CLI.RNH
+$ endif
+$!
+$ if (MAKE_OBJ)
+$ then
 $!
 $! Compile the CLI sources.
 $!
@@ -684,21 +777,26 @@ $     libr /object /replace [.'dest']UNZIPCLI.OLB -
 $!
 $ endif
 $!
+$ if (MAKE_EXE)
+$ then
+$!
 $! Link the CLI executable.
 $!
-$ link /executable = [.'dest']'unzx_cli'.EXE -
-   SYS$DISK:[.'dest']UNZIPCLI.OBJ, -
-   SYS$DISK:[.'dest']UNZIPCLI.OLB /library, -
-   SYS$DISK:[.'dest']UNZIP.OLB /library, -
-   'lib_bzip2_opts' -
-   SYS$DISK:[.'dest']UNZIP.OLB /library, -
-   'lib_zlib_opts' -
-   'opts' -
-   SYS$DISK:[.VMS]UNZIP.OPT /options
+$     link /executable = [.'dest']'unzx_cli'.EXE -
+       SYS$DISK:[.'dest']UNZIPCLI.OBJ, -
+       SYS$DISK:[.'dest']UNZIPCLI.OLB /library, -
+       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_bzip2_opts' -
+       SYS$DISK:[.'dest']UNZIP.OLB /library, -
+       'lib_zlib_opts' -
+       'opts' -
+       SYS$DISK:[.'dest']UNZIP.OPT /options
+$!
+$ endif
 $!
 $!-------------------------- UnZipSFX section --------------------------------
 $!
-$ if (.not. LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
 $!
 $! Compile the variant SFX sources.
@@ -747,22 +845,46 @@ $         libr /object /replace [.'dest']UNZIPSFX.OLB -
            [.'dest']SHA1.OBJ
 $     endif
 $!
+$     if (LZMA .ne. 0)
+$     then
+$         libr /object /replace [.'dest']UNZIP.OLB -
+           [.'dest']7ZFILE.OBJ, -
+           [.'dest']ALLOC.OBJ, -
+           [.'dest']LZFIND.OBJ, -
+           [.'dest']LZMADEC.OBJ
+$     endif
+$!
 $ endif
+$!
+$ if (MAKE_EXE)
+$ then
+$!
+$! Create the program ID options file.
+$!
+$     optgen_verify = f$verify( 0)
+$     @ [.vms]optgen.com UnZip iz_unzip_versn
+$     open /write opt_file_ln SYS$DISK:[.'dest']UNZIPSFX.OPT
+$     write opt_file_ln "Ident = ""UnZipSFX ''f$trnlnm( "iz_unzip_versn")'"""
+$     close opt_file_ln
+$     deassign iz_unzip_versn
+$     tmp = f$verify( optgen_verify)
 $!
 $! Link the SFX executable.
 $!
-$ link /executable = [.'dest']'unzsfx_unx'.EXE -
-   SYS$DISK:[.'dest']UNZIPSFX.OBJ, -
-   SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
-   'lib_bzip2_opts' -
-   SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
-   'lib_zlib_opts' -
-   'opts' -
-   SYS$DISK:[.VMS]UNZIPSFX.OPT /options
+$     link /executable = [.'dest']'unzsfx_unx'.EXE -
+       SYS$DISK:[.'dest']UNZIPSFX.OBJ, -
+       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_bzip2_opts' -
+       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_zlib_opts' -
+       'opts' -
+       SYS$DISK:[.'dest']UNZIPSFX.OPT /options
+$!
+$ endif
 $!
 $!--------------------- UnZipSFX (CLI interface) section ---------------------
 $!
-$ if (.not. LINK_ONLY)
+$ if (MAKE_OBJ)
 $ then
 $!
 $! Compile the SFX CLI sources.
@@ -782,17 +904,22 @@ $     libr /object /replace [.'dest']UNZSXCLI.OLB -
 $!
 $ endif
 $!
+$ if (MAKE_EXE)
+$ then
+$!
 $! Link the SFX CLI executable.
 $!
-$ link /executable = [.'dest']'unzsfx_cli'.EXE -
-   SYS$DISK:[.'dest']UNZSXCLI.OBJ, -
-   SYS$DISK:[.'dest']UNZSXCLI.OLB /library, -
-   SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
-   'lib_bzip2_opts' -
-   SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
-   'lib_zlib_opts' -
-   'opts' -
-   SYS$DISK:[.VMS]UNZIPSFX.OPT /options
+$     link /executable = [.'dest']'unzsfx_cli'.EXE -
+       SYS$DISK:[.'dest']UNZSXCLI.OBJ, -
+       SYS$DISK:[.'dest']UNZSXCLI.OLB /library, -
+       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_bzip2_opts' -
+       SYS$DISK:[.'dest']UNZIPSFX.OLB /library, -
+       'lib_zlib_opts' -
+       'opts' -
+       SYS$DISK:[.'dest']UNZIPSFX.OPT /options
+$!
+$ endif
 $!
 $!----------------------------- Symbols section ------------------------------
 $!
@@ -808,6 +935,11 @@ $! Deassign the temporary process logical names, restore the original
 $! default directory, and restore the DCL verify status.
 $!
 $ error:
+$!
+$ if (f$trnlnm( "iz_unzip_versn", "LNM$PROCESS_TABLE") .nes. "")
+$ then
+$     deassign iz_unzip_versn
+$ endif
 $!
 $ if (IZ_BZIP2 .nes. "")
 $ then

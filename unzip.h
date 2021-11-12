@@ -526,12 +526,7 @@ typedef struct _UzpOpts {
     int rflag;          /* -r: remove file extensions */
 #endif
 #ifndef FUNZIP
-#if (defined(MSDOS) || defined(FLEXOS) || defined(OS2) || defined(WIN32))
     int sflag;          /* -s: convert spaces in filenames to underscores */
-#endif
-#if (defined(NLM))
-    int sflag;          /* -s: convert spaces in filenames to underscores */
-#endif
 #ifdef VMS
     int S_flag;         /* -S: use Stream_LF for text files (-a[a]) */
 #endif

@@ -20,7 +20,7 @@ trap "rm -f conftest* core a.out; exit 1" 1 2 3 15
 # Evaluate command-line "make"-macro-like var=value expressions.
 
 # Evaluate only variables in this list.  Complain about others, but continue.
-valid_vars="|AES|CC|CFLAGS|IZ_BZIP2|IZ_ZLIB|LFLAGS1|LFLAGS2|PROD|"
+valid_vars="|AES_WG|CC|CFLAGS|IZ_BZIP2|IZ_ZLIB|LFLAGS1|LFLAGS2|LZMA|PROD|"
 
 argc=$#
 while test ${argc} -gt 0 ; do
@@ -502,7 +502,7 @@ do
 done
 CFLAGSR="${CFLAGSR} ${OPT}"
 
-echo Check for non existent include files
+echo Check for nonexistent include files
 for inc in stdlib.h stddef.h unistd.h fcntl.h string.h langinfo.h
 do
    echo "#include <$inc>" > conftest.c
@@ -644,15 +644,15 @@ ln -s /dev/null null > /dev/null 2>/dev/null || LN=ln
 rm -f a.out conftest.c conftest.o conftest null
 
 
-# AES encryption.  (User must request: "AES=1".)
+# AES (WinZip/Gladman) encryption.  (User must request: "AES_WG=1".)
 
-LIB_AES=''
-if test "${AES}" -ne 0 ; then
-  echo "Check AES encryption support"
+LIB_AES_WG=''
+if test -n "${AES_WG}" ; then
+  echo "Check AES_WG encryption support"
   cat > conftest.c << _EOF_
 int main()
 {
-#include <aes/aes.h>
+#include <aes_wg/aes.h>
 #ifndef CRYPT_AES_WG
    forget it
 #endif
@@ -662,11 +662,40 @@ _EOF_
   $CC $CFLAGSR -DCRYPT_AES_WG -c conftest.c > /dev/null 2>/dev/null
   if [ $? -eq 0 ]; then
     CFLAGSR="${CFLAGSR} -DCRYPT_AES_WG"
-    LIB_AES="libaes.a"
+    LIB_AES_WG="libaes.a"
     LFLAGS2="${LFLAGS2} -L. -laes"
-    echo "  Including AES encryption support"
+    echo "  Including AES_WG encryption support"
   else
-    echo "  Not including AES encryption support  (Check \"aes\" directory?)"
+    echo \
+     "  Not including AES_WG encryption support  (Check \"aes_wg\" directory?)"
+  fi
+fi
+
+
+# LZMA compression.  (User must request: "LZMA=1".)
+
+LIB_LZMA=''
+if test -n "${LZMA}" ; then
+  echo "Check LZMA compression support"
+  cat > conftest.c << _EOF_
+int main()
+{
+#include <lzma/LzmaDec.h>
+#ifndef USE_LZMA
+   forget it
+#endif
+   return 0;
+}
+_EOF_
+  $CC $CFLAGSR -DUSE_LZMA -c conftest.c > /dev/null 2>/dev/null
+  if [ $? -eq 0 ]; then
+    CFLAGSR="${CFLAGSR} -DUSE_LZMA -D_7ZIP_ST"
+    LIB_LZMA="liblzma.a"
+    LFLAGS2="${LFLAGS2} -L. -llzma"
+    echo "  Including LZMA compression support"
+  else
+    echo \
+     "  Not including LZMA compression support  (Check \"lzma\" directory?)"
   fi
 fi
 
@@ -777,5 +806,5 @@ echo CC=\"${CC}\" CF=\"${CFLAGSR}\" CRCA_O=\"${CRC32OA}\" \
        AS=\"${CC} -c\" LFLAGS1=\"${LFLAGS1}\" LF2=\"${LFLAGS2}\" \
        CC_BZ=\"${CC_BZ}\" CFLAGS_BZ=\"${CFLAGS_BZ}\" \
        IZ_BZIP2=\"${IZ_BZIP2}\" LIBBZ2=\"${LIBBZ2}\" \
-       LIB_AES=\"${LIB_AES}\" > "$PROD"/flags
+       LIB_AES_WG=\"${LIB_AES_WG}\" LIB_LZMA=\"${LIB_LZMA}\" > "$PROD"/flags
 

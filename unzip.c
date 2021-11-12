@@ -75,6 +75,10 @@
 # include "aes_wg/iz_aes_wg.h"
 #endif /* def CRYPT_AES_WG */
 
+#ifdef USE_LZMA
+# include "lzma/7zVersion.h"
+#endif /* def USE_LZMA */
+
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
 
 /***************************/
@@ -548,6 +552,10 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
      static ZCONST char Far UseBZip2[] =
      "USE_BZIP2 (PKZIP 4.6+, using bzip2 lib version %s)";
 #  endif
+#  ifdef USE_LZMA
+    static ZCONST char Far UseLZMA[] =
+     "LZMA (LZMA compression, ver %s)";
+#  endif
 #  ifdef VMS_TEXT_CONV
      static ZCONST char Far VmsTextConv[] = "VMS_TEXT_CONV";
 #  endif
@@ -649,8 +657,8 @@ Usage: unzip %s[-opts[modifiers]] file[.zip] [list] [-x xlist] [-d exdir]\n \
 
 #  ifdef VMS
    static ZCONST char Far VMSusageLine2b[] = "\
-=> define foreign command symbol in LOGIN.COM:  $ unzip :== $dev:[dir]unzip.exe\
-\n";
+=> define foreign command symbol in LOGIN.COM: \
+unzip == \"$ dev:[dir]unzip.exe\"\n";
 #  endif
 
 #  ifdef MACOS
@@ -1004,8 +1012,8 @@ int unzip(__G__ argc, argv)
     /* Verify the AES compile-time endian decision. */
     {
         union {
-            int i;
-            char b[ 4];
+            unsigned int i;
+            unsigned char b[ 4];
         } bi;
 
 #  ifndef PLATFORM_BYTE_ORDER
@@ -1495,7 +1503,7 @@ static struct option_struct far options[] = {
     {UZO, "C",  "CMS-MVS-lower",   o_NO_VALUE,       o_NEGATABLE,
        'C',  "CMS/MVS lower case"},
 # else /* ifdef CMS_MVS */
-    {ZIO, "C",  "ignore-case",     o_NO_VALUE,       o_NEGATABLE,
+    {UZO, "C",  "ignore-case",     o_NO_VALUE,       o_NEGATABLE,
        'C',  "ignore case"},
 # endif /* ifdef CMS_MVS [else] */
 # if (!defined(SFX) || defined(SFX_EXDIR))
@@ -1590,10 +1598,8 @@ static struct option_struct far options[] = {
     {UZO, "r",  "remove-exts",     o_NO_VALUE,       o_NEGATABLE,
        'r',  "remove file extensions"},
 # endif
-# ifdef DOS_FLX_NLM_OS2_W32
     {UZO, "s",  "space_to_uscore", o_NO_VALUE,       o_NEGATABLE,
        's',  "spaces to underscores"},
-# endif
 # ifdef VMS
     {UZO, "S",  "stream-LF",       o_NO_VALUE,       o_NEGATABLE,
        'S',  "VMS extract text as Stream LF"},
@@ -2125,14 +2131,12 @@ int uz_opts(__G__ pargc, pargv)
                     uO.rflag = TRUE;
                 break;
 # endif /* TANDEM */
-# ifdef DOS_FLX_NLM_OS2_W32
             case ('s'):    /* spaces in filenames:  allow by default */
                 if (negative)
                     uO.sflag = FALSE;
                 else
                     uO.sflag = TRUE;
                 break;
-# endif /* DOS_FLX_NLM_OS2_W32 */
 # ifndef SFX
             case (o_sc):   /* show processed command line and exit */
                 showhelp = -3;
@@ -2322,15 +2326,22 @@ int uz_opts(__G__ pargc, pargv)
                 break;
 # endif /* UNIX */
             case o_NON_OPTION_ARG:
-                /* not an option */
-                /* no more options as permuting */
-
-
-                if (G.wildzipfn == NULL) {
+                /* Not an option.  (Because of permutation, no more
+                 * "-" options are expected henceforth.)
+                 */
+#ifndef SFX
+                /* For non-SFX (only), the first non-option argument is
+                 * the archive name.  (For SFX, every non-option argument
+                 * is an archive member name.)
+                 */
+                if (G.wildzipfn == NULL)
+                {
                     /* first non-option argument is zip file */
                     G.wildzipfn = value;
 
-                } else {
+                } else
+#endif /* ndef SFX */
+                {
                     /* add include file to list */
                     if (in_files_count == 0) {
                         /* first entry */
@@ -2543,7 +2554,7 @@ opts_done:  /* yes, very ugly...but only used by UnZipSFX with -x xlist */
 # ifdef VMS
     if (uO.bflag > 2)
         uO.bflag = 2;
-    /* Clear -s flag when converting text files. */
+    /* Clear -S flag when converting text files. */
     if (uO.aflag <= 0)
         uO.S_flag = 0;
 # endif /* VMS */
@@ -2871,7 +2882,7 @@ static void help_extended(__G)
   "  -P p Use password p to decrypt files.  THIS IS INSECURE!  Some OS show",
   "         command line to other users.",
   "  -q   Perform operations quietly.  The more q (as in -qq) the quieter.",
-  "  -s   [OS/2, NT, MS-DOS] Convert spaces in filenames to underscores.",
+  "  -s   Convert spaces in filenames to underscores.",
   "  -S   [VMS] Convert text files (-a, -aa) into Stream_LF format.",
   "  -U   [UNICODE enabled] Show non-local characters as #Uxxxx or #Lxxxxxx ASCII",
   "         text escapes where x is hex digit.  [Old] -U used to leave names",
@@ -3449,6 +3460,13 @@ static void show_version_info(__G)
           BZ2_bzlibVersion());
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           (char *)(slide+256)));
+        ++numopts;
+#  endif
+#  ifdef USE_LZMA
+        sprintf((char *)(slide+256), LoadFarStringSmall(UseLZMA),
+         MY_VERSION);
+        Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
+         (char *)(slide+256)));
         ++numopts;
 #  endif
 #  ifdef VMS_TEXT_CONV
