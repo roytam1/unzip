@@ -1037,7 +1037,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
 
         if (!uO.cflag && WriteError(rawbuf, size, G.outfile))
             return disk_error(__G);
-        else if (uO.cflag && (*G.message)((zvoid *)&G, rawbuf, size, 0))
+        else if (uO.cflag && (*G.message)((zvoid *)&G, rawbuf, size, 0x2000))
             return PK_OK;
     } else {   /* textmode:  aflag is true */
         if (unshrink) {
@@ -1124,7 +1124,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
                                     (extent)(q-transbuf), G.outfile))
                                     return disk_error(__G);
                                 else if (uO.cflag && (*G.message)((zvoid *)&G,
-                                         transbuf, (ulg)(q-transbuf), 0))
+                                         transbuf, (ulg)(q-transbuf), 0x2000))
                                     return PK_OK;
                                 q = transbuf;
                                 /* fall through to normal case */
@@ -1149,7 +1149,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
                                   G.outfile))
                                 return disk_error(__G);
                             else if (uO.cflag && (*G.message)((zvoid *)&G,
-                                     transbuf, (ulg)(q-transbuf), 0))
+                                     transbuf, (ulg)(q-transbuf), 0x2000))
                                 return PK_OK;
                             q = transbuf;
                         }
@@ -1208,7 +1208,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
                             (extent)(q-transbuf), G.outfile))
                             return disk_error(__G);
                         else if (uO.cflag && (*G.message)((zvoid *)&G,
-                                 transbuf, (ulg)(q-transbuf), 0))
+                                 transbuf, (ulg)(q-transbuf), 0x2000))
                             return PK_OK;
                         q = transbuf;
                         continue;
@@ -1234,7 +1234,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
                 G.outfile))
                 return disk_error(__G);
             else if (uO.cflag && (*G.message)((zvoid *)&G, transbuf,
-                (ulg)(q-transbuf), 0))
+                (ulg)(q-transbuf), 0x2000))
                 return PK_OK;
         }
     }
@@ -1465,7 +1465,12 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
         return 0;
 #endif
 
-    if (MSG_STDERR(flag) && !((Uz_Globs *)pG)->UzO.tflag)
+    /* 2012-10-09 SMS
+     * Changed to use stderr for messages, if extracting to stdout
+     * (-c, -p).
+     */
+    if ((MSG_STDERR(flag) && !((Uz_Globs *)pG)->UzO.tflag) ||
+     (!MSG_STDOUT(flag) && ((Uz_Globs *)pG)->UzO.cflag))
         outfp = (FILE *)stderr;
     else
         outfp = (FILE *)stdout;
