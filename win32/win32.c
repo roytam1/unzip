@@ -3822,7 +3822,7 @@ int checkdirw(__G__ pathcompw, flag)
                 return MPN_ERR_TOOLONG;
             }
             {
-                char *buildpathFAT = wchar_to_local_string(G.buildpathFATw, G.unicode_escape_all);
+//                char *buildpathFAT = wchar_to_local_string(G.buildpathFATw, G.unicode_escape_all);
                 int i = MKDIRW(G.buildpathFATw, 0777);
                 if (i == -1) { /* create the directory */
                     Info(slide, 1, ((char *)slide,

@@ -615,7 +615,7 @@ int open_outfile(__G)           /* return 1 if fail */
                 if (flen > tlen) flen = tlen;
                 tlen = FILNAMSIZ;
             } else {
-                tname = (char *)malloc(tlen);
+                tname = (char *)izu_malloc(tlen);
                 if (tname == NULL)
                     return 1;                 /* in case we run out of space */
                 strcpy(tname, G.filename);    /* make backup name */
@@ -707,7 +707,7 @@ int open_outfile(__G)           /* return 1 if fail */
 #  ifdef TOPS20
     char *tfilnam;
 
-    if ((tfilnam = (char *)malloc(2*strlen(G.filename)+1)) == (char *)NULL)
+    if ((tfilnam = (char *)izu_malloc(2*strlen(G.filename)+1)) == (char *)NULL)
         return 1;
     strcpy(tfilnam, G.filename);
     upper(tfilnam);
@@ -2404,7 +2404,7 @@ int UZ_EXP UzpPassword (pG, rcnt, pwbuf, size, zfn, efn)
 
     if (*rcnt == 0) {           /* First call for current entry */
         *rcnt = 2;
-        if ((prompt = (char *)malloc(2*FILNAMSIZ + 15)) != (char *)NULL) {
+        if ((prompt = (char *)izu_malloc(2*FILNAMSIZ + 15)) != (char *)NULL) {
             sprintf(prompt, LoadFarString(PasswPrompt),
                     FnFilter1(zfn), FnFilter2(efn));
             m = prompt;
@@ -2601,7 +2601,7 @@ time_t dos_to_unix_time(dosdatetime)
         return (time_t)-1;
 
 #   ifdef TOPS20
-    tmx = (struct tmx *)malloc(sizeof(struct tmx));
+    tmx = (struct tmx *)izu_malloc(sizeof(struct tmx));
     sprintf (temp, "%02d/%02d/%02d %02d:%02d:%02d", mo+1, dy+1, yr, hh, mm, ss);
     time_parse(temp, tmx, (char *)0);
     m_time = time_make(tmx);
@@ -3146,7 +3146,7 @@ int do_string(__G__ length, option)   /* return PK-type error code */
             {
                 if (G.filename_full)
                     izu_free(G.filename_full);
-                G.filename_full = malloc( fnbufsiz);
+                G.filename_full = izu_malloc( fnbufsiz);
                 if (G.filename_full == NULL)
                     return PK_MEM;
                 G.fnfull_bufsize = fnbufsiz;
@@ -3162,7 +3162,7 @@ int do_string(__G__ length, option)   /* return PK-type error code */
                 fnbufsiz = length + 1;
             if (G.filename_full)
                 izu_free(G.filename_full);
-            G.filename_full = malloc(fnbufsiz);
+            G.filename_full = izu_malloc(fnbufsiz);
             if (G.filename_full == NULL)
                 return PK_MEM;
             G.fnfull_bufsize = fnbufsiz;
@@ -3182,6 +3182,21 @@ int do_string(__G__ length, option)   /* return PK-type error code */
         block_len = 0;
         strncpy(G.filename, G.filename_full, length);
         G.filename[length] = '\0';      /* terminate w/zero:  ASCIIZ */
+
+        /* 2017-07-25 SMS.
+         * Moved to here from case EXTRA_FIELD:, below.  (Old Unicode
+         * names were getting reused.)
+         * 2013-02-11 SMS.
+         * Free old G.unipath_filename storage, if not already
+         * done (G.unipath_filename == G.filename_full).
+         */
+        if ((G.unipath_filename != NULL) &&
+         (G.unipath_filename != G.filename_full))
+        {
+            izu_free( G.unipath_filename);
+        }
+        G.unipath_filename = NULL;
+
 #else /* def UNICODE_SUPPORT */
         if (length == 0)
         {
@@ -3284,7 +3299,7 @@ int do_string(__G__ length, option)   /* return PK-type error code */
             return PK_COOL;
         }
         /* Allocate new extra field storage, and fill it. */
-        if ((G.extra_field = (uch *)malloc(length)) == (uch *)NULL) {
+        if ((G.extra_field = (uch *)izu_malloc(length)) == (uch *)NULL) {
             Info(slide, 0x401, ((char *)slide, LoadFarString(ExtraFieldTooLong),
               length));
             /* cur_zipfile_bufstart already takes account of extra_bytes,
@@ -3321,6 +3336,8 @@ int do_string(__G__ length, option)   /* return PK-type error code */
                 error = PK_WARN;
             }
 #ifdef UNICODE_SUPPORT
+
+#if 0  /* See case DS_FN:, above. */
             /* 2013-02-11 SMS.
              * Free old G.unipath_filename storage, if not already
              * done (G.unipath_filename == G.filename_full).
@@ -3331,12 +3348,15 @@ int do_string(__G__ length, option)   /* return PK-type error code */
                 izu_free( G.unipath_filename);
             }
             G.unipath_filename = NULL;
+#endif /* 0 */
+
             if (G.UzO.U_flag < 2) {
               /* check if GPB11 (General Purpuse Bit 11) is set indicating
                  the standard path and comment are UTF-8 */
               if (G.pInfo->GPFIsUTF8) {
                 /* if GPB11 set then filename_full is untruncated UTF-8 */
-                if (!(G.unipath_filename = malloc(strlen(G.filename_full)+1)))
+                if (!(G.unipath_filename =
+                 izu_malloc(strlen(G.filename_full)+1)))
                   return PK_MEM;
                 strcpy(G.unipath_filename, G.filename_full);
               } else {
@@ -3401,9 +3421,9 @@ int do_string(__G__ length, option)   /* return PK-type error code */
               }
 # ifdef WIN32_WIDE
 #  ifdef DYNAMIC_WIDE_NAME
-            /* 2013-02-12 SMS.
-             * Free old G.unipath_widefilename storage.
-             */
+              /* 2013-02-12 SMS.
+               * Free old G.unipath_widefilename storage.
+               */
               if (G.unipath_widefilename != NULL)
               {
                 izu_free( G.unipath_widefilename);
@@ -3415,10 +3435,15 @@ int do_string(__G__ length, option)   /* return PK-type error code */
               if (G.has_win32_wide) {
                 if (G.unipath_filename)
 #  ifdef DYNAMIC_WIDE_NAME
+                {
                   /* Get wide path from UTF-8 */
-                  G.unipath_widefilename = utf8_to_wchar_string(G.unipath_filename);
+                  G.unipath_widefilename =
+                   utf8_to_wchar_string( G.unipath_filename);
+                }
                 else
-                  G.unipath_widefilename = utf8_to_wchar_string(G.filename);
+                {
+                  G.unipath_widefilename = utf8_to_wchar_string( G.filename);
+                }
 #  else /* def DYNAMIC_WIDE_NAME */
                   /* Get wide path from UTF-8 */
                   utf8_to_wchar_string( G.unipath_widefilename,
@@ -3469,7 +3494,8 @@ int do_string(__G__ length, option)   /* return PK-type error code */
             izu_free(G.filenotes[G.filenote_slot]);     /* should not happen */
         G.filenotes[G.filenote_slot] = NULL;
         if (tmp_fnote[0]) {
-            if (!(G.filenotes[G.filenote_slot] = malloc(strlen(tmp_fnote)+1)))
+            if (!(G.filenotes[G.filenote_slot] =
+             izu_malloc(strlen(tmp_fnote)+1)))
                 return PK_MEM;
             strcpy(G.filenotes[G.filenote_slot], tmp_fnote);
         }
