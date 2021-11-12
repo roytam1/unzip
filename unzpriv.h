@@ -395,11 +395,19 @@
 #endif
 
 /*---------------------------------------------------------------------------
-    BeOS/Haiku section:
+    BeOS section:
   ---------------------------------------------------------------------------*/
 
-#if defined( __BEOS__) || defined( __HAIKU__)
+#ifdef __BEOS__
 #  include "beos/beocfg.h"
+#endif
+
+/*---------------------------------------------------------------------------
+    Haiku section:
+  ---------------------------------------------------------------------------*/
+
+#ifdef __HAIKU__
+#  include <sys/stat.h>
 #endif
 
 /*---------------------------------------------------------------------------
@@ -877,7 +885,7 @@ extern void izu_md_check( void);
 #  define DOS_T20_VMS
 #endif
 
-#if (defined(__ATHEOS__) || defined(__BEOS__))
+#if (defined(__ATHEOS__) || defined(__BEOS__) || defined(__HAIKU__))
 #  define ATH_BEO
 #endif
 

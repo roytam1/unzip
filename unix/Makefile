@@ -1,8 +1,8 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2017-04-28
+# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2018-01-25
 #
-# Copyright (c) 2004-2017 Info-ZIP.  All rights reserved.
+# Copyright (c) 2004-2018 Info-ZIP.  All rights reserved.
 #
 # See the accompanying file LICENSE, version 2009-Jan-2 or later (the
 # contents of which are also included in zip.h) for terms of use.  If,
@@ -129,13 +129,14 @@ MISC_TARGETS = clean  clean_bzip2  clean_docs  clean_exe  dashv
 SYS_TARGETS01 = 386i 3Bx 7300 7300_gcc amdahl amdahl_eft apollo aviion
 SYS_TARGETS02 = bsd bsdi bsdi_noasm bull coherent convex cray cray_opt
 SYS_TARGETS03 = cyber_sgi cygwin dec dnix encore eta freebsd gcc gould
-SYS_TARGETS04 = hk68 hp hpux isc isc_gcc isi linux linux_dos linux_noasm
-SYS_TARGETS05 = lynx macosx macosx_gcc minix mips
-SYS_TARGETS06 = mpeix next next10 next2x next3x nextfat osf1 pixel ptx
-SYS_TARGETS07 = pyramid qnxnto realix regulus sco sco_dos sco_sl sco_x286
-SYS_TARGETS08 = sequent sgi solaris stardent stellar sunos3 sunos4
-SYS_TARGETS09 = sysv sysv_gcc sysv6300 tahoe ti_sysv ultrix vax v7
-SYS_TARGETS10 = xenix xos
+SYS_TARGETS04 = haiku hk68 hp hpux isc isc_gcc isi
+SYS_TARGETS05 = linux linux_dos linux_noasm lynx
+SYS_TARGETS06 = macosx macosx_gcc minix mips mpeix
+SYS_TARGETS07 = next next10 next2x next3x nextfat osf1
+SYS_TARGETS08 = pixel ptx pyramid qnxnto realix regulus
+SYS_TARGETS09 = sco sco_dos sco_sl sco_x286 sequent sgi solaris
+SYS_TARGETS10 = stardent stellar sunos3 sunos4 sysv sysv_gcc sysv6300
+SYS_TARGETS11 = tahoe ti_sysv ultrix vax v7 xenix xos
 
 # By default, print help on which "make" targets to try.
 
@@ -258,6 +259,7 @@ list:
 	@echo "  $(SYS_TARGETS08)"
 	@echo "  $(SYS_TARGETS09)"
 	@echo "  $(SYS_TARGETS10)"
+	@echo "  $(SYS_TARGETS11)"
 	@echo ''
 	@echo 'Miscellaneous targets:'
 	@echo "  $(MISC_TARGETS)"
@@ -1649,6 +1651,17 @@ freebsd: unix_make
 gcc: unix_make
 	$(MAKE) $(BINS) CC=gcc LD=gcc CFLAGS="-O3" LF2=""
 	$(STRIP) $(UNZIP_PPGMS)
+
+# Haiku
+haiku: unix_make
+	$(MAKE) $(BINS) \
+         CC="cc" CFLAGS=" -O3 -DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT \
+         -DUNICODE_WCHAR -DICONV_MAPPING -DUTF8_MAYBE_NATIVE \
+         -DNO_LCHMOD -DHAVE_DIRENT_H -DHAVE_TERMIOS_H -D_MBCS \
+         -DNO_SYSDIR" \
+          CRCA_O="" AS="cc -c" LF2="-lbe -liconv -s" \
+          CC_BZ="cc" CFLAGS_BZ="-O3" \
+          IZ_BZIP2="." D_USE_BZ2="" L_BZ2="" LIBBZ2="" LN="ln -s"
 
 # Heurikon HK68 (68010), UniPlus+ System V 5.0, Green Hills C-68000
 hk68: unix_make

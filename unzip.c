@@ -3467,7 +3467,7 @@ static void help_extended(__G)
   "  -I   [Unix, with ICONV_MAPPING] ISO code page to use.",
   "  -i   [MacOS] Ignore filenames in MacOS extra field.  Instead, use name in",
   "         standard header.",
-  "  -J   [BeOS] Junk file attributes.",
+  "  -J   [BeOS, Haiku] Junk file attributes.",
   "       [MacOS] Ignore MacOS specific info.",
   "       [MacOSX] No special AppleDouble file handling.",
   "  -Je  [MacOSX] Ignore AppleDouble extended attributes.",
