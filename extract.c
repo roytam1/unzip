@@ -444,10 +444,10 @@ int extract_or_test_files(__G)    /* return PK-type error code */
           wchar_t *exdirw = local_to_wchar_string(uO.exdir);
           if ((error = checkdirw(__G__ exdirw, ROOT)) > MPN_INF_SKIP) {
               /* out of memory, or file in way */
-              free(exdirw);
+              izu_free(exdirw);
               return (error == MPN_NOMEM ? PK_MEM : PK_ERR);
           }
-          free(exdirw);
+          izu_free(exdirw);
         } else {
           if ((error = checkdir(__G__ uO.exdir, ROOT)) > MPN_INF_SKIP) {
               /* out of memory, or file in way */
@@ -493,11 +493,11 @@ int extract_or_test_files(__G)    /* return PK-type error code */
 
     /* malloc space for check on unmatched filespecs (OK if one or both NULL) */
     if (G.filespecs > 0  &&
-        (fn_matched=(int *)malloc(G.filespecs*sizeof(int))) != (int *)NULL)
+        (fn_matched=(int *)izu_malloc(G.filespecs*sizeof(int))) != (int *)NULL)
         for (i = 0;  i < G.filespecs;  ++i)
             fn_matched[i] = FALSE;
     if (G.xfilespecs > 0  &&
-        (xn_matched=(int *)malloc(G.xfilespecs*sizeof(int))) != (int *)NULL)
+        (xn_matched=(int *)izu_malloc(G.xfilespecs*sizeof(int))) != (int *)NULL)
         for (i = 0;  i < G.xfilespecs;  ++i)
             xn_matched[i] = FALSE;
 
@@ -801,7 +801,7 @@ int extract_or_test_files(__G)    /* return PK-type error code */
            /* remove the processed entry from the chain and free its memory */
            G.slink_last = G.slink_head;
            G.slink_head = G.slink_last->next;
-           free(G.slink_last);
+           izu_free(G.slink_last);
        }
        G.slink_last = NULL;
     }
@@ -816,7 +816,7 @@ int extract_or_test_files(__G)    /* return PK-type error code */
     if (num_dirs > 0) {
 # if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
       if (G.has_win32_wide) {
-        sorted_dirlistw = (direntryw **)malloc(num_dirs*sizeof(direntryw *));
+        sorted_dirlistw = (direntryw **)izu_malloc(num_dirs*sizeof(direntryw *));
         if (sorted_dirlistw == (direntryw **)NULL) {
             Info(slide, 0x401, ((char *)slide,
               LoadFarString(DirlistSortNoMem)));
@@ -824,7 +824,7 @@ int extract_or_test_files(__G)    /* return PK-type error code */
                 direntryw *dw = dirlistw;
 
                 dirlistw = dirlistw->next;
-                free(dw);
+                izu_free(dw);
             }
         } else {
             ulg ndirs_fail = 0;
@@ -852,9 +852,9 @@ int extract_or_test_files(__G)    /* return PK-type error code */
                     if (!error_in_archive)
                         error_in_archive = error;
                 }
-                free(dw);
+                izu_free(dw);
             }
-            free(sorted_dirlistw);
+            izu_free(sorted_dirlistw);
             if (!uO.tflag && QCOND2) {
                 if (ndirs_fail > 0)
                     Info(slide, 0, ((char *)slide,
@@ -865,7 +865,7 @@ int extract_or_test_files(__G)    /* return PK-type error code */
       else
 # endif /* (defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)) */
       {
-        sorted_dirlist = (direntry **)malloc(num_dirs*sizeof(direntry *));
+        sorted_dirlist = (direntry **)izu_malloc(num_dirs*sizeof(direntry *));
         if (sorted_dirlist == (direntry **)NULL) {
             Info(slide, 0x401, ((char *)slide,
               LoadFarString(DirlistSortNoMem)));
@@ -873,7 +873,7 @@ int extract_or_test_files(__G)    /* return PK-type error code */
                 direntry *d = dirlist;
 
                 dirlist = dirlist->next;
-                free(d);
+                izu_free(d);
             }
         } else {
             ulg ndirs_fail = 0;
@@ -901,9 +901,9 @@ int extract_or_test_files(__G)    /* return PK-type error code */
                     if (!error_in_archive)
                         error_in_archive = error;
                 }
-                free(d);
+                izu_free(d);
             }
-            free(sorted_dirlist);
+            izu_free(sorted_dirlist);
             if (!uO.tflag && QCOND2) {
                 if (ndirs_fail > 0)
                     Info(slide, 0, ((char *)slide,
@@ -936,14 +936,14 @@ int extract_or_test_files(__G)    /* return PK-type error code */
                 if (error_in_archive <= PK_WARN)
                     error_in_archive = PK_FIND;   /* some files not found */
             }
-        free((zvoid *)fn_matched);
+        izu_free((zvoid *)fn_matched);
     }
     if (xn_matched) {
         if (reached_end) for (i = 0;  i < G.xfilespecs;  ++i)
             if (!xn_matched[i])
                 Info(slide, 0x401, ((char *)slide,
                   LoadFarString(ExclFilenameNotMatched), G.pxnames[i]));
-        free((zvoid *)xn_matched);
+        izu_free((zvoid *)xn_matched);
     }
 
 /*---------------------------------------------------------------------------
@@ -2304,7 +2304,7 @@ static int extract_or_test_entrylistw(__G__ numchunk,
          */
 # ifdef WIN32_WIDE
         if (G.unipath_widefilename) {
-            free(G.unipath_widefilename);
+            izu_free(G.unipath_widefilename);
             G.unipath_widefilename = NULL;
         }
 # endif
@@ -3637,7 +3637,7 @@ static int test_compr_eb(__G__ eb, eb_size, compr_offset, test_uc_ebdata)
 #ifdef INT_16BIT
         (((ulg)(extent)eb_ucsize) != eb_ucsize) ||
 #endif
-        (eb_ucptr = (uch *)malloc((extent)eb_ucsize)) == (uch *)NULL)
+        (eb_ucptr = (uch *)izu_malloc((extent)eb_ucsize)) == (uch *)NULL)
         return PK_MEM4;
 
     r = memextract(__G__ eb_ucptr, eb_ucsize,
@@ -3647,7 +3647,7 @@ static int test_compr_eb(__G__ eb, eb_size, compr_offset, test_uc_ebdata)
     if (r == PK_OK && test_uc_ebdata != NULL)
         r = (*test_uc_ebdata)(__G__ eb, eb_size, eb_ucptr, eb_ucsize);
 
-    free(eb_ucptr);
+    izu_free(eb_ucptr);
     return r;
 
 } /* end function test_compr_eb() */
@@ -3814,7 +3814,7 @@ uch *extract_izvms_block(__G__ ebdata, size, retlen, init, needlen)
     if (retlen)
         *retlen = usiz;
 
-    if ((ucdata = (uch *)malloc(MAX(needlen, usiz))) == NULL)
+    if ((ucdata = (uch *)izu_malloc(MAX(needlen, usiz))) == NULL)
         return NULL;
 
     if (init && (usiz < needlen))
@@ -3833,7 +3833,7 @@ uch *extract_izvms_block(__G__ ebdata, size, retlen, init, needlen)
                        ebdata+EB_IZVMS_HLEN, (ulg)csiz);
             break;
         default:
-            free(ucdata);
+            izu_free(ucdata);
             ucdata = NULL;
     }
     return ucdata;
@@ -3909,7 +3909,7 @@ static void set_deferred_symlink(__G__ slnk_entry)
     int sts;
     extent ucsize = slnk_entry->targetlen;
     char *linkfname = slnk_entry->fname;
-    char *linktarget = (char *)malloc(ucsize+1);
+    char *linktarget = (char *)izu_malloc(ucsize+1);
 
 #ifdef VMS
     static int vms_symlink_works = -1;
@@ -3949,7 +3949,7 @@ static void set_deferred_symlink(__G__ slnk_entry)
     {
         Info(slide, 0x201, ((char *)slide,
           LoadFarString(SymLnkWarnInvalid), FnFilter1(linkfname)));
-        free(linktarget);
+        izu_free(linktarget);
         if (G.outfile)
             fclose(G.outfile);
         return;
@@ -3963,7 +3963,7 @@ static void set_deferred_symlink(__G__ slnk_entry)
           FnFilter1(linkfname), FnFilter2(linktarget)));
         Info(slide, 0x401, ((char *)slide, LoadFarString(SymLnkError),
           strerror( ENOSYS)));
-        free(linktarget);
+        izu_free(linktarget);
         return;
     }
 #endif /* def VMS */
@@ -3975,7 +3975,7 @@ static void set_deferred_symlink(__G__ slnk_entry)
           FnFilter1(linkfname), FnFilter2(linktarget)));
     if (sts != 0)
         perror("symlink error");
-    free(linktarget);
+    izu_free(linktarget);
 #ifdef SET_SYMLINK_ATTRIBS
     set_symlnk_attribs(__G__ slnk_entry);
 #endif
@@ -4063,14 +4063,14 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
     if (wslen != (size_t)-1)
     {
         /* Apparently valid Unicode.  Allocate wide-char storage. */
-        wstring = (wchar_t *)malloc((wslen + 1) * sizeof(wchar_t));
+        wstring = (wchar_t *)izu_malloc((wslen + 1) * sizeof(wchar_t));
         if (wstring == NULL) {
             strcpy( (char *)space, raw);
             return (char *)space;
         }
-        wostring = (wchar_t *)malloc(2 * (wslen + 1) * sizeof(wchar_t));
+        wostring = (wchar_t *)izu_malloc(2 * (wslen + 1) * sizeof(wchar_t));
         if (wostring == NULL) {
-            free(wstring);
+            izu_free(wstring);
             strcpy( (char *)space, raw);
             return (char *)space;
         }
@@ -4101,9 +4101,9 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
 
         /* Convert filtered wide chars back to multi-byte. */
         woslen = wcstombs( NULL, wostring, 0);
-        if ((newraw = malloc(woslen + 1)) == NULL) {
-            free(wstring);
-            free(wostring);
+        if ((newraw = izu_malloc(woslen + 1)) == NULL) {
+            izu_free(wstring);
+            izu_free(wostring);
             strcpy( (char *)space, raw);
             return (char *)space;
         }
@@ -4144,9 +4144,9 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
             *s = '\0';
         }
 
-        free(wstring);
-        free(wostring);
-        free(newraw);
+        izu_free(wstring);
+        izu_free(wostring);
+        izu_free(newraw);
     }
     else
 # endif /* def UNICODE_SUPPORT */
@@ -4439,8 +4439,8 @@ uzbunzip_cleanup_exit:
  * and add szip/Alloc.* back to the builders.  (And then solve the other
  * problems.)
  */
-void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
-void SzFree(void *p, void *address) { p = p; free(address); }
+void *SzAlloc(void *p, size_t size) { p = p; return izu_malloc(size); }
+void SzFree(void *p, void *address) { p = p; izu_free(address); }
 #endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
 
 
