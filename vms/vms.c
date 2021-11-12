@@ -4151,7 +4151,7 @@ int mapattr(__G)
 #if 0
             /* this is handled generically now */
             /* 2010-11-27 SMS.
-             * But uxattr needs to be set set for these cases.  The
+             * But uxattr needs to be set for these cases.  The
              * 2010-09-22 code set it only conditionally, which was
              * wrong, but disabling the whole thing leaves uxattr always
              * unset, causing bad G.pInfo->symlink values (and who knows

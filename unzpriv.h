@@ -1392,6 +1392,29 @@ struct file_list {
   struct file_list *next;
 };
 
+
+/* function prototypes */
+
+/* get the next option from args */
+unsigned long get_option OF((int option_group,
+                             char ***pargs, int *argc, int *argnum,
+                             int *optchar,
+                             char **value, int *negated, int *first_nonopt_arg,
+                             int *option_num, int recursion_depth));
+
+/* copy args - copy an args array, allocating space as needed */
+char **copy_args OF((char **args, int max_args));
+
+/* arg count - count args in argv like array */
+int arg_count OF((char **args));
+
+/* free args - free args created with one of these functions */
+int free_args OF((char **args));
+
+/* insert arg - copy an arg into args */
+int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
+                   int free_args));
+
 /*--------------------------------------------------------------------
     End of Long option support
   --------------------------------------------------------------------*/
@@ -1448,6 +1471,9 @@ struct file_list {
       /* 64-bit stat functions */
 #     define zstat _stati64
 #     define zfstat _fstati64
+#  if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+#     define zstatw _wstati64
+#  endif
 
       /* 64-bit lseek */
 #     define zlseek _lseeki64
@@ -1490,6 +1516,9 @@ struct file_list {
 
       /* 64-bit fopen */
 #     define zfopen fopen
+#   if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+#     define zfopenw _wfopen
+#   endif
 #     define zfdopen fdopen
 
 #   endif /* _MSC_VER || __MINGW__ || __LCC__ */
@@ -2066,6 +2095,13 @@ typedef struct iztimes {
        char *fn;                /* filename of directory */
        char buf[1];             /* start of system-specific internal data */
    } direntry;
+# if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+   typedef struct direntryw {   /* head of system-specific struct holding */
+       struct direntryw *next;  /*  defered directory attributes info */
+       wchar_t *fnw;            /* filename of directory */
+       wchar_t buf[1];          /* start of system-specific internal data */
+   } direntryw;
+# endif /* defined(UNICODE_SUPPORT) && defined(WIN32_WIDE) */
 #endif /* SET_DIR_ATTRIB */
 
 #ifdef SYMLINKS
@@ -2313,30 +2349,6 @@ typedef struct _APIDocStruct {
    int    usage                  OF((__GPRO__ int error));
 #endif /* !WINDLL */
 
-/* Long option function prototypes */
-
-/* get the next option from args */
-unsigned long get_option OF((__GPRO__ int option_group,
-                             char ***pargs, int *argc, int *argnum,
-                             int *optchar,
-                             char **value, int *negated, int *first_nonopt_arg,
-                             int *option_num, int recursion_depth));
-
-/* copy args - copy an args array, allocating space as needed */
-char **copy_args OF((__GPRO__ char **args, int max_args));
-
-/* arg count - count args in argv like array */
-int arg_count OF((char **args));
-
-/* free args - free args created with one of these functions */
-int free_args OF((char **args));
-
-/* insert arg - copy an arg into args */
-int insert_arg OF((__GPRO__ char ***args, ZCONST char *arg, int insert_at,
-                   int free_args));
-
-void show_commandline OF((__GPRO__ char *args[]));
-
 /*---------------------------------------------------------------------------
     Functions in process.c (main driver routines):
   ---------------------------------------------------------------------------*/
@@ -2414,6 +2426,9 @@ int      seek_zipf            OF((__GPRO__ zoff_t abs_offset));
 void     handler              OF((int signal));
 time_t   dos_to_unix_time     OF((ulg dos_datetime));
 int      check_for_newer      OF((__GPRO__ char *filename)); /* os2,vmcms,vms */
+#if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+int      check_for_newerw     OF((__GPRO__ wchar_t *filenamew)); /* os2,vmcms,vms */
+#endif
 int      do_string            OF((__GPRO__ unsigned int length, int option));
 ush      makeword             OF((ZCONST uch *b));
 ulg      makelong             OF((ZCONST uch *sig));
@@ -2657,6 +2672,10 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
 #ifdef W32_STAT_BANDAID
    int   zstat_win32    OF((__W32STAT_GLOBALS__
                             const char *path, z_stat *buf));      /* win32.c */
+# if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+   int   zstat_win32w   OF((__W32STAT_GLOBALS__
+                            const wchar_t *pathw, z_stat *buf));      /* win32.c */
+# endif
 #endif
 #endif
 
@@ -2682,6 +2701,9 @@ void     mksargs         OF((int *argcp, char ***argvp));       /* envargs.c */
 int      match           OF((ZCONST char *s, ZCONST char *p,
                              int ic __WDLPRO));                   /* match.c */
 int      iswild          OF((ZCONST char *p));                    /* match.c */
+#if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+int      iswildw         OF((ZCONST wchar_t *pw));                /* match.c */
+#endif
 
 /* declarations of public CRC-32 functions have been moved into crc32.h
    (free_crc_table(), get_crc_table(), crc32())                      crc32.c */
@@ -2694,6 +2716,10 @@ char     dateseparator   OF((void));                                /* local */
 int      mapattr         OF((__GPRO));                              /* local */
 int      mapname         OF((__GPRO__ int renamed));                /* local */
 int      checkdir        OF((__GPRO__ char *pathcomp, int flag));   /* local */
+#if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+  int    mapnamew        OF((__GPRO__ int renamed));                /* local */
+  int    checkdirw       OF((__GPRO__ wchar_t *pathcomp, int flag));   /* local */
+#endif
 char    *do_wild         OF((__GPRO__ ZCONST char *wildzipfn));     /* local */
 char    *GetLoadPath     OF((__GPRO));                              /* local */
 #if (defined(MORE) && (defined(ATH_BEO_UNX) || defined(QDOS) || defined(VMS)))
@@ -2714,9 +2740,13 @@ char    *GetLoadPath     OF((__GPRO));                              /* local */
 #ifdef SET_DIR_ATTRIB
    int   defer_dir_attribs  OF((__GPRO__ direntry **pd));           /* local */
    int   set_direc_attribs  OF((__GPRO__ direntry *d));             /* local */
+# if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
+   int   defer_dir_attribsw  OF((__GPRO__ direntryw **pd));           /* local */
+   int   set_direc_attribsw  OF((__GPRO__ direntryw *d));             /* local */
+# endif
 #endif
 #ifdef TIMESTAMP
-# if defined( VMS) || defined( WIN32)
+# ifdef WIN32
    int   stamp_file      OF((__GPRO__
                              ZCONST char *fname, time_t modtime));  /* local */
 # else
@@ -3110,7 +3140,7 @@ char    *GetLoadPath     OF((__GPRO));                              /* local */
          !(((islochdr) || (isuxatt)) && \
            ((hostver) == 25 || (hostver) == 26 || (hostver) == 40))) || \
         (hostnum) == FS_HPFS_ || \
-        ((hostnum) == FS_NTFS_ && (hostver) == 50)) { \
+        ((hostnum) == FS_NTFS_ && (hostver) >= 50)) { \
         _OEM_INTERN((string)); \
     } else { \
         _ISO_INTERN((string)); \
@@ -3190,6 +3220,10 @@ char    *GetLoadPath     OF((__GPRO));                              /* local */
 
   /* convert UTF-8 string to wide string */
   zwchar *utf8_to_wide_string OF((ZCONST char *utf8_string));
+
+  char *wchar_to_local_string OF((wchar_t *, int));
+
+  zwchar *wchar_to_wide_string OF((wchar_t *));
 
   /* convert wide string to multi-byte string */
   char *wide_to_local_string OF((ZCONST zwchar *wide_string, int escape_all));

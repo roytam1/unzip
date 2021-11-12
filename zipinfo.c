@@ -276,7 +276,7 @@ static ZCONST char Far FileCommentLength[] =
 static ZCONST char Far FileDiskNum[] =
   "  disk number on which file begins:               disk %lu\n";
 static ZCONST char Far ApparentFileType[] =
-  "  apparent file type (%02x hex):                    %s%s\n";
+  "  apparent file type:                             %s\n";
 static ZCONST char Far VMSFileAttributes[] =
   "  VMS file attributes (%06o octal):             %s\n";
 static ZCONST char Far AmigaFileAttributes[] =
@@ -472,6 +472,12 @@ int zi_opts(__G__ pargc, pargv)
     int optnum = 0;       /* index in table */
     int showhelp = 0;     /* for --commandline */
 
+#ifdef USE_ICONV_MAPPING
+# ifdef UNIX
+    extern char OEM_CP[MAX_CP_NAME];
+    extern char ISO_CP[MAX_CP_NAME];
+# endif
+#endif
 
     /* since get_option() returns xfiles and files one at a time, store them in
        linked lists until have them all */
@@ -492,7 +498,7 @@ int zi_opts(__G__ pargc, pargv)
     G.wildzipfn = NULL;
 
     /* make copy of args that can use with insert_arg() used by get_option() */
-    args = copy_args(__G__ *pargv, 0);
+    args = copy_args(*pargv, 0);
 
 
     /* Initialize lists */
@@ -532,7 +538,7 @@ int zi_opts(__G__ pargc, pargv)
 #define o_so            0x104
 
 
-    while ((option = get_option(__G__ ZIO, &args, &argcnt, &argnum,
+    while ((option = get_option(ZIO, &args, &argcnt, &argnum,
                                 &optchar, &value, &negative,
                                 &fna, &optnum, 0)))
     {
@@ -571,6 +577,14 @@ int zi_opts(__G__ pargc, pargv)
                             uO.lflag = 0;
                     }
                     break;
+#ifdef USE_ICONV_MAPPING
+# ifdef UNIX
+                case ('I'):    /* -I:  map ISO name to internal */
+                    strncpy(ISO_CP, value, sizeof(ISO_CP));
+                    free(value);
+                    break;
+# endif
+#endif
                 case 'l':      /* longer form of "ls -l" type listing */
                     if (negative)
                         uO.lflag = -2;
@@ -590,6 +604,14 @@ int zi_opts(__G__ pargc, pargv)
                     else
                         G.M_flag = TRUE;
                     break;
+#endif
+#ifdef USE_ICONV_MAPPING
+# ifdef UNIX
+                case ('O'):    /* -O:  map OEM name to internal */
+                    strncpy(OEM_CP, value, sizeof(OEM_CP));
+                    free(value);
+                    break;
+# endif
 #endif
                 case 's':      /* default:  shorter "ls -l" type listing */
                     if (negative)
@@ -714,7 +736,7 @@ int zi_opts(__G__ pargc, pargv)
     } /* get_option() */
 
     if (showhelp == -3) {
-      show_commandline(__G__ args);
+      show_commandline(args);
       return PK_OK;
     }
 
@@ -1339,11 +1361,9 @@ static int zi_long(__G__ pEndprev, error_in_archive)
     Info(slide, 0, ((char *)slide, LoadFarString(FileDiskNum),
       (ulg)(G.crec.disk_number_start + 1)));
     Info(slide, 0, ((char *)slide, LoadFarString(ApparentFileType),
-      G.crec.internal_file_attributes,
-      ((G.crec.internal_file_attributes & 1)? "text"
+      (G.crec.internal_file_attributes & 1)? "text"
          : (G.crec.internal_file_attributes & 2)? "ebcdic"
-              : "binary"),             /* changed to accept EBCDIC */
-      ((G.crec.internal_file_attributes & 0xfc)? "+" : "")));
+              : "binary"));             /* changed to accept EBCDIC */
 #ifdef ATARI
     printf("  external file attributes (hex):                   %.8lx\n",
       G.crec.external_file_attributes);

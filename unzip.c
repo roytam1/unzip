@@ -640,8 +640,8 @@ Usage: unzip %s[-opts[modifiers]] file[.zip] [list] [-x xlist] [-d exdir]\n \
 
 #  ifdef VMS
    static ZCONST char Far VMSusageLine2b[] = "\
-=> define foreign command symbol in LOGIN.COM: \
-unzip == \"$ dev:[dir]unzip.exe\"\n";
+=> define foreign command symbol in LOGIN.COM:  $ unzip :== $dev:[dir]unzip.exe\
+\n";
 #  endif
 
 #  ifdef MACOS
