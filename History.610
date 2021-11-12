@@ -88,8 +88,8 @@ Features added (or removed):
 
 6.10b02 (16 Sep 2010):
  - Implement -I (--iso-char-set) and -O (--oem-char-set) options to allow user
-    to set a specific ISO or OEM character set that UnZip should translate from
-    to create the internal file name strings.  Based on the
+    to set a specific ISO or OEM character set that UnZip should translate
+    from to create the internal file name strings.  Based on the
     unzip60-alt-iconv-utf8.patch suggested in a forum thread.  This patch is
     rather simple, just providing the new options to manually set the input
     character set (generally OEM if archive from Windows and ISO otherwise).
@@ -121,6 +121,8 @@ Features added (or removed):
     acorn/swiven.s deleted.) [Jeffrey Lee]
  - Acorn port: Increased max file name/path length to 1024.  (acorn/riscos.h)
     [Jeffrey Lee]
+ - Acorn port: Increased max file name/path length to 1024.  (acorn/riscos.h)
+    [Jeffrey Lee]
  - Acorn port: Added SET_DIR_ATTRIB support, so that directories are created
     with the right timestamps/attributes.  (acorn/riscos.h, acorn/acorn.c)
     [Jeffrey Lee]
@@ -134,8 +136,14 @@ Features added (or removed):
 6.10b05 (29 Nov 2010):
  - No feature changes.
 
-6.10b (10 Dec 2010):
+6.10b06 (3 Dec 2010):
  - Updated INSTALL and README.  (INSTALL, README) [EG]
+
+6.10b07 (5 Dec 2010):
+ - No feature changes.
+
+6.10b (10 Dec 2010):
+ - No feature changes.
 
 
 Bugs fixed:
@@ -203,10 +211,10 @@ Bugs fixed:
 
 6.10b03 (6 Nov 2010):
  - Add __G__ to multiple places to fix compile problems if REENTRANT is
-   defined.  (process.c, unzip.c, unzip.h, unzpriv.h, zipinfo.c, vms/vms.c)
-   Move local variable uxattr definition higher up.  Set DOS subdir bit if
-   entry path ends in "/". Get process RMS_DEFAULT values only if not
-   REENTRANT.  (vms/vms.c) [SMS]
+    defined.  (process.c, unzip.c, unzip.h, unzpriv.h, zipinfo.c, vms/vms.c)
+ - Move local variable uxattr definition higher up.  Set DOS subdir bit if
+    entry path ends in "/". Get process RMS_DEFAULT values only if not
+    REENTRANT.  (vms/vms.c) [SMS]
  - Change dw->fn to wide version dw->fnw in Trace statement.  Free structure
     values G.unipath_filename and G.unipath_widefilename to help debugging.
     Set G.unipath_widefilename to either translated G.unipath_filename if set
@@ -232,7 +240,14 @@ Bugs fixed:
  - See features above for some related bug fixes.
 
 6.10b05 (29 Nov 2010):
- - Fix bug from previous fix where uxattr was not being set.  (vms/vms.c) [SMS]
+ - Fix bug from previous fix where uxattr was not being set reliably.
+   (vms/vms.c) [SMS]
+
+6.10b06 (3 Dec 2010):
+ - No bug fixes.
+
+6.10b07 (5 Dec 2010):
+ - Fix bug by adding missing line end.  (vms/hlp_lib_next.com) [SMS]
 
 6.10b (10 Dec 2010):
  - No bug fixes.
