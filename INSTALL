@@ -1,6 +1,6 @@
 __________________________________________________________________________
 
-  This is the Info-ZIP file INSTALL (for UnZip), last updated 06 May 2011.
+  This is the Info-ZIP file INSTALL (for UnZip), last updated 29 Aug 2011.
 __________________________________________________________________________
 
   Yes, this is a rather long file, but don't be intimidated:  much of its
@@ -29,7 +29,8 @@ To build UnZip, UnZipSFX and/or fUnZip (quick-start instructions):
 (4) Try out your new UnZip the way you would any new utility:  read the
     docs first.
 
-    For VMS, see the Install section below or [.vms]INSTALL.VMS for details.
+    For brief VMS instructions, see the VMS-specific sections below. 
+    For more details, see [.vms]INSTALL_VMS.txt.
 
     For DOS and other OSes without explicit timezone support (i.e., everybody
     but Unix, VMS, Windows 95 and later), make sure the "TZ" environment
@@ -103,18 +104,20 @@ To build UnZip, UnZipSFX and/or fUnZip (detailed instructions):
     instead.)
 
 
-(3) If you want a non-standard edition of UnZip, define one or more of the
-    optional C macros listed below, either by adding them to the LOCAL_UNZIP
-    "make" macro (or environment variable), or by editing your makefile as
+(3) To enable some optional features in UnZip, or to customize your
+    UnZip program in other ways, define one or more of the optional C
+    macros listed below, either by adding them to the LOCAL_UNZIP "make"
+    macro (or environment variable), or by editing your makefile as
     appropriate.  The syntax differs from compiler to compiler, but a C
     macro named MACRO_NAME is commonly defined using syntax like
-    "-DMACRO_NAME" (or "-DMACRO_NAME=value").  Note that, like all the UnZip
-    source code, the C macros used and/or supported may change from one UnZip
-    release to another.  Note also that very short command lines in MS-DOS
-    (128 characters) may place severe limits on how many of these can be
-    used; if need be, the definitions can be placed at the top of unzip.h
-    instead (it is included in all source files).  For example,
-    "#define MACRO_NAME" (or "#define MACRO_NAME value"), one macro per line.
+    "-DMACRO_NAME" (or "-DMACRO_NAME=value").  Note that, like all the
+    UnZip source code, the C macros used and/or supported may change
+    from one UnZip version to another.  Note also that very short
+    command lines in MS-DOS (128 characters) may place severe limits on
+    how many of these can be used; if need be, the definitions can be
+    placed at the top of unzip.h instead (it is included in all source
+    files).  For example, "#define MACRO_NAME" (or "#define MACRO_NAME
+    value"), one macro per line.
 
       DOSWILD   (MS-DOS only)
         Treat trailing "*.*" like Unix "*" (i.e., matches anything); treat
@@ -374,11 +377,11 @@ To build UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         Compilation:
         - MSDOS, Win32: You have to supply the symbol definition
           "USEBZ2=1" on the command line when you invoke the "make" program.
-        - Unix: The target "generic" (or "generic_gcc") automatically
-          activates bzip2 support when its unix/configure script detects
-          bzip2 sources in the ./bzip2 subdirectory.  See the Unix section
-          below for details on how to specify the use of an existing bzip2
-          kit somewhere other than in the local UnZip ./bzip2 subdirectory.
+        - Unix: The target "generic" automatically activates bzip2
+          support when its unix/configure script detects bzip2 sources
+          in the ./bzip2 subdirectory.  See the Unix section below for
+          details on how to specify the use of an existing bzip2 kit
+          somewhere other than in the local UnZip ./bzip2 subdirectory.
           For other targets, there are two options:
           a) Use a command like:
               make -f unix/Makefile D_USE_BZ2=-DUSE_BZIP2 L_BZ2=-lbz2 \
@@ -392,12 +395,21 @@ To build UnZip, UnZipSFX and/or fUnZip (detailed instructions):
           they detect the bzip2 files in the [.bzip2] subdirectory.  The user
           can also specify a different directory where the bzip2 source and
           object library can be found using the IZ_BZIP2 parameter/macro.
-          See [.vms]INSTALL.VMS for details.
+          See [.vms]INSTALL_VMS.txt for details.
 
       BZIP2_SFX
         Enable bzip2 compression support in UnZipSFX (if it's enabled in
         UnZip).  By default, to reduce the size of the UnZipSFX executable,
         bzip2 compression support is disabled in UnZipSFX even when it's
+        enabled in UnZip itself.
+
+      USE_LZMA
+        Enable LZMA compression support.
+
+      LZMA_SFX
+        Enable LZMA compression support in UnZipSFX (if it's enabled in
+        UnZip).  By default, to reduce the size of the UnZipSFX executable,
+        LZMA compression support is disabled in UnZipSFX even when it's
         enabled in UnZip itself.
 
       MULT_VOLUME (experimental for 5.5x, do NOT use in production versions!)
@@ -606,7 +618,7 @@ To build UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         subdirectory.  Use the "make" macro IZ_BZIP2 with the "generic" target
         to specify a directory where an existing bzip2 header file and
         suitable object/shared library may be found.  For example:
-            make -f unix/Makefile IZ_BZIP2=../../bzip2/bzip-1.0.5 generic
+            make -f unix/Makefile IZ_BZIP2=../../bzip2/bzip-1.0.6 generic
         Frequent builders may find it convenient to create a nearby bzip2
         directory, or a nearby link to some particular bzip2 kit directory.
         For example:
@@ -624,75 +636,36 @@ To build UnZip, UnZipSFX and/or fUnZip (detailed instructions):
             make -f unix/Makefile IZ_BZIP2=../iz_bzip2 \
              LOCAL_UNZIP=-DBZIP2_SFX generic_gcc
 
-        Use of "make" targets other than "generic" (or "generic_gcc") requires
-        some care, because many other targets will not use the unix/configure
-        script (or its intermediate "flags" file), and this may cause programs
+        Use of "make" targets other than "generic" requires some care,
+        because many other targets will not use the unix/configure script
+        (or its intermediate "flags" file), and this may cause programs
         to be built without some expected features enabled.
 
 
       VMS (OpenVMS):
-        On VMS, two build methods are provided: a DCL command procedure,
-        and description files for MMS or MMK.  Both methods must be run
-        from the main directory, not the [.VMS] subdirectory.
+        The most complete information on building and installing UnZip
+        on VMS is in [.vms]INSTALL_VMS.txt.  Optimists in a hurry may
+        wish to try commands like these:
 
-        A simple build using the command procedure looks like this:
-             @ [.VMS]BUILD_UNZIP.COM
+            @ [.VMS]BUILD_UNZIP.COM
+        or:
+            MMS /DESCRIP = [.VMS]DESCRIP.MMS CLEAN      ! Or MMK ...
+            MMS /DESCRIP = [.VMS]DESCRIP.MMS            ! Or MMK ...
 
-        A simple build using MMS or MMK looks like this:
-             MMS /DESCRIP = [.VMS]DESCRIP.MMS      ! Or, with MMK, ...
-             MMK /DESCRIP = [.VMS]DESCRIP.MMS
+        When the executables have been created (or located if already
+        installed), most users define foreign command symbols for the
+        UnZip executables, like this:
 
-        Various options for each build method are explained in comments in
-        the main builder file, either BUILD_UNZIP.COM or DESCRIP.MMS.
+            UNZIP :== $ dev:[dir]UNZIP.EXE      ! UNIX-style command line.
+        or:
+            UNZIP :== $ dev:[dir]UNZIP_CLI.EXE  ! VMS-style command line.
 
-        Here are some more complex build examples:
+        Such symbol definitions are often added to a user's
+        SYS$LOGIN:LOGIN.COM procedure, or to a common, site-specific
+        procedure, like SYS$MANAGER:SYLOGIN.COM.
 
-        o Build with the large-file option enabled (non-VAX only):
-
-             @ [.VMS]BUILD_UNZIP LARGE
-          or:
-             MMS /DESC = [.VMS] /MACRO = LARGE=1
-
-        o Re-link the executables (small-file and large-file):
-
-             @ [.VMS]BUILD_UNZIP LINK
-             @ [.VMS]BUILD_UNZIP LARGE LINK
-          or
-             MMK /DESC = [.VMS] CLEAN_EXE  ! Deletes existing executables.
-             MMK /DESC = [.VMS]            ! Builds new executables.
-             MMK /DESC = [.VMS] /MACRO = LARGE=1 CLEAN_EXE
-             MMK /DESC = [.VMS] /MACRO = LARGE=1
-
-        o Build a large-file product from scratch, for debug, getting
-          compiler listings and link maps:
-
-             mms /desc = [.vms] clean
-             mms /desc = [.vms] /macro = (DBG=1, LARGE=1. LIST=1)
-
-        On VAX, the builders attempt to cope with the various available C
-        compilers: DEC/Compaq/HP C, VAX C, or GNU C.  If DEC/Compaq/HP C is
-        not available or not desired, comments in the relevant builder file
-        explain the command-line options used to select a different
-        compiler.
-
-        System-architecture-specific files (like objects and executables)
-        are placed in separate directories, such as [.ALPHA], [.IA64], or
-        [.VAX].  Large-file products get their own directories, [.ALPHAL]
-        or [.IA64L].  On VAX, VAX C products are placed in [.VAXV], GNU C
-        products in [.VAXG].  Each product builder announces what the
-        destination directory will be when it is run.
-
-        Common files, such as the help libraries (UNZIP.HLP for the
-        default UNIX-like command-line interface, UNZIP_CLI.HLP for the
-        VMS-like command-line interface), are placed in the main
-        directory.  With a mixed-architecture VMS cluster, the same main
-        directory on a shared disk may may be used by all system types.
-        (Using the NOHELP option with BUILD_UNZIP.COM can keep it from
-        making the same help files repeatedly.)
-
-        Some further information may be found in the files
-        [.VMS]README. and [.VMS]00BINARY.VMS, though much of what's
-        there is now obsolete.
+        Additional installation options are described in
+        [.vms]INSTALL_VMS.txt.
 
       MS-DOS
         See the msdos\Contents file for notes regarding which makefile(s) to
@@ -867,62 +840,10 @@ Unix
   stallation into a public directory.  Do "rehash" if your shell requires
   it in order to find the new executables.
 
-VMS
-  To complete the installation, the executables may be left in place,
-  or moved (or copied) to a convenient place.  While other methods
-  (like DCL$PATH) exist, most users define symbols to make the UnZip
-  executables available as foreign commands.  These symbol definitions
-  may be placed in a user's SYS$LOGIN:LOGIN.COM, or in a more central
-  location, like SYS$MANAGER:SYLOGIN.COM.  Typical symbol definitions
-  might look like these:
-
-     UNZIP :== $ dev:[dir]UNZIP.EXE             ! UNIX-like command line.
-  or:
-     UNZIP :== $ dev:[dir]UNZIP_CLI.EXE         ! VMS-like command line.
-
-  For convenience, a ZIPINFO symbol could also be defined, so:
-
-     ZIPINFO :== $ dev:[dir]UNZIP.EXE """-Z"""
-
-  On a non-VAX system, different symbols could be defined for the
-  small-file and large-file programs.  For example:
-
-     UNZIPS  :== $ dev:[dir.ALPHA]UNZIP.EXE     ! UNZIPS = small-file UnZip.
-     UNZIP*L :== $ dev:[dir.ALPHAL]UNZIP.EXE    ! UNZIP[L] = large-file UnZip.
-
-  The builders create help text files, UNZIP.HLP and UNZIP_CLI.HLP.
-  These may be incorporated into an existing help library, or a separate
-  UnZip help library may be created using commands like these, using
-  either UNZIP.HLP (as shown) or UNZIP_CLI.HLP:
-
-      $ LIBRARY /HELP dev:[dir]existing_library.HLB UNZIP.HLP
-
-      $ LIBRARY /CREATE /HELP UNZIP.HLB UNZIP.HLP
-
-  UnZip help may then be accessed from a separate UnZip help library
-  using a command like:
-
-          $ HELP /LIBRARY = device:[directory]UNZIP.HLB
-
-  For greater ease, the user (or system manager) may define a
-  HLP$LIBRARY logical name to allow the HELP utility to find the UnZip
-  help library automatically.  See HELP HELP /USERLIBRARY for more
-  details.   The command procedure HLP_LIB_NEXT.COM may be used to
-  determine the next available HLP$LIBRARY logical name, and could be
-  adapted to define a HLP$LIBRARY logical name for an UnZip help library.
-
-  The kit includes MAKESFX.COM, a command procedure intended to simplify
-  creating a self-extracting archive.  It may be helpful to install this
-  procedure near the UnZip executables.  MAKESFX.COM expects another
-  symbol definition, like one of these:
-
-     UNZIPSFX :== $ dev:[dir]UNZIPSFX.EXE       ! UNIX-like command line.
-  or:
-     UNZIPSFX :== $ dev:[dir]UNZIPSFX_CLI.EXE   ! VMS-like command line.
-
-  Again here, on a non-VAX system, either a small-file or a large-file
-  UNZIPSFX program may be used.  (MAKESFX.COM could be modified to allow
-  a run-time choice to be made.)
+VMS (OpenVMS)
+  For additional installation instructions for VMS, see
+  [.vms]INSTALL_VMS.txt.  This covers DCL foreign command symbols, help
+  libraries, and preparation for creating self-extracting archives.
 
 OS/2, MS-DOS, NT, Atari, Amiga
   Move or copy unzip.exe (or unzip.ttp, or UnZip, or whatever) to a direc-
@@ -965,9 +886,8 @@ Macintosh
 
 Macintosh OS X (Unix Apple)
   Mac OS X and later are based on BSD Unix and are supported by the Unix
-  port.  See the Unix port for details.  Though support is currently
-  minimal, we plan to support additional Mac OS X features, such as resource
-  forks, in future releases.
+  port.  See the Unix port for details.  Beginning with version 6.1,
+  UnZip supports AppleDouble storage of Finder info and resource forks.
 
 MVS, VM/CMS, z/OS
   More information may be coming soon.

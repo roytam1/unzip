@@ -4229,7 +4229,7 @@ __GDEF
         {
             /* Expecting this to be the last decode operation. */
             finishMode = LZMA_FINISH_END;
-            out_buf_size_len = ucsize_lzma;
+            out_buf_size_len = (SizeT)ucsize_lzma;
         }
 
         sts = LzmaDec_DecodeToBuf( &state_lzma, next_out, &out_buf_size_len,

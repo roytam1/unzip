@@ -263,7 +263,7 @@ M  pipe through \"more\" pager              -s  spaces in filenames => '_'\n\n";
 #    else
    static ZCONST char Far local3[] = "\n\
   -Y  treat \".nnn\" as \";nnn\" version         -2  force ODS2 names\n\
-  -D- restore dir (-D: no) timestamps        -M  pipe through \"more\" pager\n\
+  -D- restore dir (-D: no) timestamps\n\
   (Must quote upper-case options, like \"-V\", unless SET PROC/PARSE=EXTEND.)\
 \n\n";
 #    endif
@@ -1529,7 +1529,7 @@ static struct option_struct far options[] = {
 # endif
 # if (!defined(NO_TIMESTAMPS))
     {UZO, "D",  "dir-timestamps",  o_NO_VALUE,       o_NEGATABLE,
-       'D',  "don't restore dir (-DD: any) timestamps"},
+       'D',  "don't restore file timestamps (-D-: do dir, too)"},
 # endif
     {UZO, "e",  "extract",         o_NO_VALUE,       o_NEGATABLE,
        'e',  "extract (not used?)"},
@@ -2871,9 +2871,9 @@ static void help_extended(__G)
   "  -B   [UNIXBACKUP compile option enabled] Save a backup copy of each",
   "         overwritten file in foo~ or foo~99999 format.",
   "  -C   Use case-insensitive matching.",
-  "  -D   Skip restoration of timestamps for extracted directories.  On VMS this",
-  "         is on by default and -D essentially becames -DD.",
-  "  -DD  Skip restoration of timestamps for all entries.",
+  "  -D   Skip restoration of timestamps on all files and directories.",
+  "  -D-  Restore timestamps on directories as well as on files.",
+  "       Default is to restore timestamps on files, not on directories.",
   "  -E   [MacOS (not Unix Apple)]  Display contents of MacOS extra field during",
   "         restore.",
   "  -F   [Acorn] Suppress removal of NFS filetype extension.  [Non-Acorn if",

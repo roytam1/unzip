@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2009 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -823,6 +823,10 @@ static int do_seekable(__G__ lastchance)        /* return PK-type error code */
     archives) or inconsistencies (missing or extra bytes in zipfile).
   ---------------------------------------------------------------------------*/
 
+    /* Apparently a few archives out there use 1 as the disk number in a
+       one disk archive, incorrectly.  Need to change this to allow for that
+       case.  */
+
 #ifdef NO_MULTIPART
     error = !uO.zipinfo_mode && (G.ecrec.number_this_disk == 1) &&
             (G.ecrec.num_disk_start_cdir == 1);
@@ -1283,7 +1287,8 @@ static int find_ecrec64(__G__ searchlen)         /* return PK-class error */
             G.ecrec.number_this_disk, ecloc64_total_disks); fflush(stdout);
 #endif
     if ((G.ecrec.number_this_disk != 0xFFFF) &&
-        (G.ecrec.number_this_disk != ecloc64_total_disks - 1)) {
+        (G.ecrec.number_this_disk != ecloc64_total_disks - 1) &&
+        (ecloc64_total_disks != 0)) {
       /* Note: For some unknown reason, the developers at PKWARE decided to
          store the "zip64 total disks" value as a counter starting from 1,
          whereas all other "split/span volume" related fields use 0-based
@@ -1293,6 +1298,12 @@ static int find_ecrec64(__G__ searchlen)         /* return PK-class error */
          When this is not the case, the found ecrec64 locator cannot be valid.
          -> This is not a Zip64 archive.
        */
+      /* Actually the central directory can span multiple disks, and the above
+         total - 1 check would fail in this case.  Should fix this.
+         
+         There are archive creators that put 0 in total disks when it should
+         be 1.  We should handle this.  This is done by the added check above.
+      */
       Trace((stderr,
              "\ninvalid ECLOC64, differing disk# (ECR %u, ECL64 %lu)\n",
              G.ecrec.number_this_disk, ecloc64_total_disks - 1));
@@ -1766,6 +1777,13 @@ int process_cdir_file_hdr(__G)    /* return PK-type error code */
        that the standard path and comment are UTF-8. */
     G.pInfo->GPFIsUTF8
         = (G.crec.general_purpose_bit_flag & UTF8_BIT) == UTF8_BIT;
+#endif
+
+#ifdef SYMLINKS
+    /* Initialize the symlink flag.  The system-specific mapattr() (or
+     * other) function should set it properly.
+     */
+    G.pInfo->symlink = 0;
 #endif
 
     return PK_COOL;

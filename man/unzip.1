@@ -286,26 +286,13 @@ the extraction path.  On a case-sensitive file system, \fIunzip\fP will
 never try to overwrite a file ``FOO'' when extracting an entry ``foo''!
 .TP
 .B \-D
-skip restoration of timestamps for extracted items.  Normally, \fIunzip\fP
-tries to restore all meta-information for extracted items that are supplied
-in the Zip archive (and do not require privileges or impose a security risk).
-By specifying \fB\-D\fP, \fIunzip\fP is told to suppress restoration of
-timestamps for directories explicitly created from Zip archive entries.
-This option only applies to ports that support setting timestamps for
-directories (currently ATheOS, BeOS, MacOS, OS/2, Unix, VMS, Win32, for other
-\fIunzip\fP ports, \fB\-D\fP has no effect).
-The duplicated option \fB\-DD\fP forces suppression of timestamp restoration
-for all extracted entries (files and directories).  This option results in
-setting the timestamps for all extracted entries to the current time.
-.IP
-On VMS, the default setting for this option is \fB\-D\fP for consistency
-with the behaviour of BACKUP: file timestamps are restored, timestamps of
-extracted directories are left at the current time.  To enable restoration
-of directory timestamps, the negated option \fB\--D\fP should be specified.
-On VMS, the option \fB\-D\fP disables timestamp restoration for all extracted
-Zip archive items.  (Here, a single \fB\-D\fP on the command line combines
-with the default \fB\-D\fP to do what an explicit \fB\-DD\fP does on other
-systems.)
+By default, \fIunzip\fP restores timestamps for extracted files, but not
+for directories it creates.  Specifying \fB\-D\fP tells \fIunzip\fP not
+to restore any timestamps.  Specifying \fB\-D-\fP tells \fIunzip\fP to
+restore timestamps for directories as well as other items.  The -D-
+option works only on systems that support setting timestamps for
+directories (currently ATheOS, BeOS, MacOS, OS/2, Unix, VMS, Win32, for
+other \fIunzip\fP ports, \fB\-D-\fP has no effect).
 .TP
 .B \-E
 [MacOS only] display contents of MacOS extra field during restore operation.

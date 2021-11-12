@@ -195,6 +195,29 @@ Features added (or removed):
    (unix/unix.c) [EG, based on patch by Dmitry Butskoy on Red Hat Bugzilla -
    Bug 225576]
 
+6.10c05 (13 Aug 2011):
+ - Add LZMA files needed by UnZip from LZMA SDK version 9.20.  (lzma/7zfile.c,
+   lzma/7zfile.h, lzma/7zversion.h, lzma/alloc.c, lzma/alloc.h, lzma/lzfind.c,
+   lzma/lzhash.h, lzma/lzmadec.c, lzma/lzmadec.h, lzma/README_LZMA.txt,
+   lzma/types.h, lzma/orig/lzfind.h) [SMS]
+ - Split cmsmvs port into two ports zos and zvm.  (cmsmvs/* (removed),
+   zos/ccunzip.exec, zos/mvs.mki, zos/readme.mvs, zos/unzmvsc.job, zos/vmmvs.c,
+   zos/vmmvs.h, zvm/install.cms, zvm/mc.exec, zvm/readme.cms, zvm/unzip.exec,
+   zvm/unzip.makefile, zvm/unzvmc.exec, zvm/vmstat.h, zvm/whatsnew.cms,
+   zvm/zipinfo.exec) [AD]
+ - Drop VMS CASE_INSENSITIVE option as conflicts with CASE_MATCH.  Add NAMES
+   option that includes NAMES.LOWERCASE, NAMES.ODS2 (convert names to ODS2),
+   and NAMES.SPACES (convert spaces to underscores).  Add CASE_MATCH = BLIND
+   (ignore case) or SENSITIVE (don't ignore differences in case).
+   (vms/cmdline.c, vms/unz_cli.cld, vms/unzip_cli.help) [SMS]
+ - Add note about self-extracting archives.  (vms/install.vms) [SMS]
+ - Update VMS help for self-extracting archives.  (vms/unzipsfx.hlp) [SMS]
+
+6.10c06 (24 Aug 2011):
+ - Create new Win32 projects for AES_WG and LZMA.  Additional cleanup of
+   the Win32 projects is expected before release.  (win32/vc6/unzip.dsp,
+   win32/vc6/unzip.dsw, win32/vc6/unzipaes.dsp) [EG]
+
 
 
 Bugs fixed:
@@ -458,7 +481,7 @@ Bugs fixed:
  - VMS builders now generate module-ID options files.  vms/unzip.opt and
    vms/unzipsfx.opt have been removed from the kit.  Add new NOCOMPILE, NOEXE,
    LZMA, and TEST commands.  Command-line options for the VMS DCL builder
-   should now agree better with those for Zip.(vms/build_unzip.com,
+   should now agree better with those for Zip.  (vms/build_unzip.com,
    vms/descrip.mms, vms/unzip.opt (removed), vms/unzipsfx.opt (removed),
    vms/optgen.com (new)) [SMS]
  - Added VMS CLI option, /LICENSE, equivalent to --license.  Change
@@ -473,14 +496,52 @@ Bugs fixed:
    (vms/descrip_mkdeps.mms, vms/descrip_src.mms) [SMS]
  - Initial update to README.  (README) [SMS]
 
-6.10cXX (XX Aug 2011):
- - Added VMS-style option /SPACEUNDER for -s.  (vms/cmdline.c,
-   vms/unz_cli.cld, vms/unzip_cli.help, vms/unzipsfx.hlp) [SMS]
- - Updated VMS UnZipSFX_CLI help.  (vms/unzipsfx.hlp) [SMS]
- - The change from /[NO]CASE_INSENSITIVE to /CASE_MATCH never made it
-   into the VMS CLI usage text.  (vms/cmdline.c) [SMS]
+6.10c05 (13 Aug 2011):
+ - Bug fix for array overflow and slight enhancement of "Available
+   options" listing.  (unzip.c) [EG]
+ - Fix for improper argument count for -Z bug.  (zipinfo.c) [EG, SMS]
 
+6.10c06 (24 Aug 2011):
+ - Change UNZIP_BZ2VERS to UNZIP_BZIP2_VERS to be consistent with other
+   version defines.  Set UnZip (compatible with) version based on inclusion
+   of BZIP2 or LZMA support.  (extract.c, unzpriv.h) [SMS]
+ - Change %ld in a Trace() to %lld.  (This would be incompatible with
+   Win32, which uses %I64d, but not an issue unless Trace() is used.)
+   Remove G.incnt < LZMA_PROPS_SIZE + 4 check from LZMA properties
+   length check.  (extract.c) [SMS]
+ - Add (unsigned int) cast to ucsize assignment to fix 64-bit to 32-bit
+   assignment.  (extract.c) [EG]
+ - Add (long) cast to G.ucsize_aes in IZ_MIN() to fix 64-bit to 32-bit
+   assignment.  (fileio.c) [EG]
+ - Rename 7z* files to Sz*.  (unzip.c, SzVersion.h, lzma/7zFile.c (remove),
+   lzma/7zFile.h (remove), lzma/7zVersion.h (remove), lzma/SzFile.c,
+   lzma/SzFile.h, lzma/SzVersion.h) [SMS, EG]
+ - Add encryption notices.  (unzip.c) [SMS]
+ - Update LZMA Readme.  (README_LZMA.txt) [SMS]
+ - Change 7z* to Sz*.  Explicitly use sh to run test_unzip.sh.
+   (unix/makefile) [SMS]
+ - For VMS, update comments for SFX regarding AES_WG and LZMA.  Note that
+   SFX does not include AES_WG by default.  Change 7z* to Sz*.
+   (vms/build_unzip.mms, vms/descrip.mms, vms/descrip_deps.mms,
+   vms/descrip_src.mms) [SMS]
+ - Update VMS Install documentation.  (vms/install.vms) [SMS]
+ - Minor updates to VMS test script.  (vms/test_unzip.com) [SMS]
+ - Repackage Win32 VC 6 projects, creating new project unzipaes for AES_WG
+   and moving configurations dependent on AES files in the aes_wg
+   directory to that project.  Remove AES_WG dependencies from unzip
+   project.  Add LZMA configurations to the unzip and unzipaes projects.
+   Currently the VC 6 configurations depend on the LZMA files being present
+   (they are part of the source distribution so they should be).  The user
+   ignores those files when they select a configuration that does not use
+   them.  Added missing Release configurations.  The ASM (assembly)
+   configurations are not updated yet to support AES_WG or LZMA.
+   (win32/vc6/unzip.dsp, win32/vc6/unzip.dsw, win32/vc6/unzipaes.dsp) [EG]
 
+6.10c07 (XX Xxx 2011):
+ - Rename vms/INSTALL.VMS to vms/INSTALL_VMS.txt.  (INSTALL) [SMS]
+ - Change default to -D everywhere, not only on VMS.
+ - In some cases, non-symlink files could be processed as symlinks.
+   (process.c) [A. Schwab]
 
 ==================
 

@@ -13,7 +13,7 @@ Contents of the "vms" sub-directory for UnZip 6.10
   find_bzip2_lib.com  DCL procedure to locate bzip2 and zlib libraries
   hlp_lib_next.com    DCL procedure to find next HLP$LIBRARY[_*] logical
   infback9.h          VMS wrapper header file for zlib inflate64 definitions
-  INSTALL.VMS         VMS-specific build and install instructions
+  INSTALL_VMS.txt     VMS-specific build and install instructions
   makesfx.com         DCL procedure to create a self-extracting archive
   memory.h            Replacement for <memory.h>, where missing.
   mod_dep.com         DCL procedure used in source dependencies creation
