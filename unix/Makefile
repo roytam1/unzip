@@ -1,6 +1,6 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo            Last update: 13 Oct 2011
+# - For UnZip, UnZipSFX, fUnZip and ZipInfo            Last update: 06 Mar 2012
 #==============================================================================
 
 #==============================================================================
@@ -59,6 +59,10 @@
 #   "make" macro LZMA to 1.  See the files README_LZMA.txt and INSTALL for
 #   more information.
 #
+# PPMd compression - If you want PPMd compression support included, set the
+#   "make" macro PPMD to 1.  See the files README_LZMA.txt and INSTALL for
+#   more information.
+#
 # Bzip2 compression - If you want bzip2 compression support included, there
 #   are three options:
 #   - Create a local build of bzip2 by unzipping the latest bzip2 source
@@ -98,7 +102,7 @@
 # Supported ports include:
 #   msdos : DOS port built using the DJGPP (or Cygwin) cross-compiler
 #   os2   : OS/2 port
-#   qdos  : Sinclare Q-DOS port built using a gcc cross-compiler
+#   qdos  : Sinclair Q-DOS port built using a gcc cross-compiler
 #   zos   : z/OS MVS port built under z/OS UNIX
 #   zvm   : z/VM CMS port built under z/VM OpenExtensions
 #
@@ -123,8 +127,8 @@ SYS_TARGETS04  = hk68 hp hpux isc isc_gcc isi linux linux_dos linux_noasm
 SYS_TARGETS05  = linux_shlib linux_shlibz lynx macosx macosx_gcc minix mips
 SYS_TARGETS06  = mpeix next next10 next2x next3x nextfat osf1 pixel ptx
 SYS_TARGETS07  = pyramid qnxnto realix regulus sco sco_dos sco_sl sco_x286
-SYS_TARGETS08  = sequent sgi solaris solaris_pkg stardent stellar sunos3
-SYS_TARGETS09  = sunos4 sysv sysv_gcc sysv6300 tahoe ti_sysv ultrix vax v7
+SYS_TARGETS08  = sequent sgi solaris stardent stellar sunos3 sunos4
+SYS_TARGETS09  = sysv sysv_gcc sysv6300 tahoe ti_sysv ultrix vax v7
 SYS_TARGETS10  = xenix xos
 
 # By default, print help on which makefile targets to try.
@@ -150,6 +154,7 @@ help:
 	@echo '    "CC=gcc"          Use "gcc" instead of "cc" for C compiler'
 	@echo '    "AES_WG=1"        Add AES encryption (WinZip/Gladman)'
 	@echo '    "LZMA=1"          Add LZMA compression'
+	@echo '    "PPMD=1"          Add PPMd compression'
 	@echo '    "IZ_BZIP2=bz2dir" Add BZIP2 compression from dir bz2dir'
 	@echo '    "IZ_ZLIB=zdir"    Use ZLIB from dir zdir for deflate'
 	@echo '    "LOCAL_UNZIP=opts" Add C compiler options and macro defines'
@@ -267,17 +272,24 @@ MAKEF = '-f unix/Makefile'
 # - Manuals build directory is "./manout"
 
 # Build Dependencies for make
-# - Contains archive library name, if enabled
-LIB_AES_WG  =                          # AES (WinZip/Gladman) encryption
-LIB_LZMA    =                          # LZMA compression
-LIB_BZ      =                          # BZIP2 compression
-LIB_Z       =                          # ZLIB compression
+# - Optional archive library names
+#    AES (WinZip/Gladman) encryption
+#    BZIP2 compression
+#    LZMA compression
+#    PPMd compression
+#    ZLIB compression
+LIB_AES_WG  =
+LIB_BZ      =
+LIB_LZMA    =
+LIB_PPMD    =
+LIB_Z       =
 
 # Build makefiles
 # - Alternatively, use bzip2/Makebz2.iz
-MK_BZ   = Makefile                     # BZIP2 compression
+#    BZIP2 compression
+MK_BZ   = Makefile
 
-# OS Dependent files
+# OS-dependent files
 # - Default:  Unix port.
 # - Compilation and execution are both for Unix (or a Unix-like) environment.
 #   The files in the UnZip root and unix directories are used.
@@ -287,60 +299,66 @@ MK_BZ   = Makefile                     # BZIP2 compression
 #   or a Makefile located in another port directory) uses the PORT parm to set
 #   the correct OS dependent files via unix/configure.  Or you can (very
 #   carefully) override as required.
-OSDEP_H  = unix/unxcfg.h               # OS dep C header files
-OSDEP_OC = ./unix.o                    # OS dep C object files
-OSDEP_OS =                             # OS dep Assembler object files
+#    C header files
+#    C object files
+#    Assembler object files
+OSDEP_H  = unix/unxcfg.h
+OSDEP_OC = ./unix.o
+OSDEP_OS =
 
 # OS-dependent file extensions
 # - This default may be customized by unix/configure based on PORT
-PGMEXT =                               # Executable programs
-DLLEXT = .so                           # DLL (.so) (currently not used)
-MANEXT = .1                            # man page
+#    Executable programs
+#    DLL (.so) (currently not used)
+#    man page
+PGMEXT =
+DLLEXT = .so
+MANEXT = 1
 
-# OS-dependent installation directories
+# OS-dependent installation directories: executables and man pages
 # - This default may be customized by unix/configure based on PORT
-BINDIR = /usr/local/bin                # Where to install executables
-MANDIR = /usr/local/man/man$(MANEXT)   # where to install man pages
+BINDIR = /usr/local/bin
+MANDIR = /usr/local/man/man$(MANEXT)
 
-# OS-dependent installation file permissions
+# OS-dependent installation file permissions: executables and man pages
 # - This default may be customized by unix/configure based on PORT
-BINPERMS = 755                         # Executable programs
-MANPERMS = 644                         # man pages
+BINPERMS = 755
+MANPERMS = 644
 
-# C compiler
+# C compiler and flags: core and bzip2
 # - CC and LD must match, else "unresolved symbol:  ___main" is possible)
-#   - Try using "gcc" target rather than changing CC and LD
-CC     = cc                            # C compiler name  (core components)
-CC_BZ  = $(CC)                         # C compiler name  (BZIP2 components)
+# - To use "gcc", specify "make" macro, "CC=gcc", instead of editing here.
+CC     = cc
+CC_BZ  = $(CC)
 
 CF_NOOPT = -I. -DUNIX $(LOCAL_UNZIP)
 CFLAGS = -O
-CF     = $(CFLAGS) $(CF_NOOPT)         # C compiler flags (core components)
-CF_BZ  = $(CF)                         # C compiler flags (BZIP2 components)
+CF     = $(CFLAGS) $(CF_NOOPT)
+CF_BZ  = $(CF)
 
 # C preprocessor
-CPP    = $(CC) -E                      # C preprocessor name
+CPP    = $(CC) -E
 
-# Assembler
-AS     = as                            # Assembler name
-AF     = $(LOCAL_UNZIP)                # Assembler flags
+# Assembler and assembler flags
+AS     = as
+AF     = $(LOCAL_UNZIP)
 
-# Linker
+# Linker and linker flags (early and late)
 # - CC and LD must match, else "unresolved symbol:  ___main" is possible)
-#   - Try using "gcc" target rather than changing CC and LD
-LD     = $(CC)                         # Linker name
-LF1    =                               # Linker options, part 1
-LF2    = -s                            # Linker options, part 2
+# - To use "gcc", specify "make" macro, "CC=gcc", instead of editing here.
+LD     = $(CC)
+LF1    =
+LF2    = -s
 
 # Other utility programs
-AR     = ar cq
-CHMOD  = chmod
-LN     = ln -s                         # Create symbolic link
-RANLIB = ranlib
-RM     = rm -f
-SHELL  = /bin/sh
-STRIP  = strip
-ZIP    = zip
+AR      = ar cq
+CHMOD   = chmod
+LN      = ln
+RANLIB  = ranlib
+RM      = rm -f
+SHELL   = /bin/sh
+STRIP   = strip
+PGM_ZIP = zip
 
 # Default for dependency on auto-configure result, is an empty symbol
 # so that the static non-autoconfigure targets continue to work
@@ -350,7 +368,7 @@ ACONF_DEP =
 #  Build configuration:  header files
 #----------------------------------------------------------------------------
 
-# OSDEP_H is port dependent and can be updated by unix/configure
+# OSDEP_H is port-dependent and can be updated by unix/configure
 
 # C header files: unzip
 H_UNZIP  = unzip.h          \
@@ -369,19 +387,21 @@ H_AES    = aes_wg/aes.h     \
            aes_wg/sha1.h
 
 # C header files: LZMA compression
-H_LZMA   = lzma/SzFile.h    \
-           lzma/SzVersion.h \
-           lzma/Alloc.h     \
+H_LZMA   = lzma/SzVersion.h \
            lzma/LzFind.h    \
            lzma/LzHash.h    \
            lzma/LzmaDec.h   \
            lzma/Types.h
 
+# C header files: PPMd compression
+H_PPMD   = lzma/Ppmd.h      \
+           lzma/Ppmd8.h
+
 #----------------------------------------------------------------------------
 #  Build configuration:  object files
 #----------------------------------------------------------------------------
 
-# OSDEP_OC and OSDEP_OS are port dependent and can be updated by unix/configure
+# OSDEP_OC and OSDEP_OS are port-dependent and can be updated by unix/configure
 
 # object files: unzip
 O_UNZIP  = unzip.o     \
@@ -454,10 +474,12 @@ O_AES    = aescrypt.o \
            sha1.o
 
 # object files: LZMA compression
-O_LZMA   = SzFile.o   \
-           Alloc.o    \
-           LzFind.o   \
+O_LZMA   = LzFind.o   \
            LzmaDec.o
+
+# object files: PPMd compression
+O_PPMD   = Ppmd8.o   \
+           Ppmd8Dec.o
 
 # object files: ZLIB compression
 # - N/A. ZLIB is not built as part of UnZip
@@ -469,11 +491,14 @@ O_LZMA   = SzFile.o   \
 # object archive: AES (WinZip/Gladman) encryption
 AR_AES  = libaes.a
 
+# object archive: BZIP2 compression
+AR_BZ   = bzip2/libbz2.a
+
 # object archive: LZMA compression
 AR_LZMA = liblzma.a
 
-# object archive: BZIP2 compression
-AR_BZ   = bzip2/libbz2.a
+# object archive: PPMd compression
+AR_PPMD = libppmd.a
 
 # object archive: ZLIB compression
 AR_Z    = zlib/libz.a
@@ -495,11 +520,11 @@ UNZIP_PGMS = $(PGM_UNZIP) \
 #----------------------------------------------------------------------------
 #  Build configuration:  Manuals
 #----------------------------------------------------------------------------
-MAN_UNZIP  = manout/unzip$(MANEXT)
-MAN_SFX    = manout/unzipsfx$(MANEXT)
-MAN_FUZ    = manout/funzip$(MANEXT)
-MAN_ZINFO  = manout/zipinfo$(MANEXT)
-MAN_ZGREP  = manout/zipgrep$(MANEXT)
+MAN_UNZIP  = manout/unzip.$(MANEXT)
+MAN_SFX    = manout/unzipsfx.$(MANEXT)
+MAN_FUZ    = manout/funzip.$(MANEXT)
+MAN_ZINFO  = manout/zipinfo.$(MANEXT)
+MAN_ZGREP  = manout/zipgrep.$(MANEXT)
 
 UNZIP_MANS = $(MAN_UNZIP) \
              $(MAN_SFX)   \
@@ -750,17 +775,22 @@ sha1.o:     aes_wg/sha1.c     $(H_AES)
 
 # C Compile rules: LZMA compression
 
-SzFile.o:  lzma/SzFile.c      $(H_LZMA)
-	$(CC) -c $(CF) -o $@ lzma/SzFile.c
-
-Alloc.o:   lzma/Alloc.c       $(H_LZMA)
-	$(CC) -c $(CF) -o $@ lzma/Alloc.c
-
 LzFind.o:  lzma/LzFind.c      $(H_LZMA)
 	$(CC) -c $(CF) -o $@ lzma/LzFind.c
 
 LzmaDec.o: lzma/LzmaDec.c     $(H_LZMA)
 	$(CC) -c $(CF) -o $@ lzma/LzmaDec.c
+
+
+#----------------------------------------------------------------------------
+
+# C Compile rules: PPMd compression
+
+Ppmd8.o:  lzma/Ppmd8.c          $(H_PPMD)
+	$(CC) -c $(CF) -o $@ lzma/Ppmd8.c
+
+Ppmd8Dec.o:  lzma/Ppmd8Dec.c    $(H_PPMD)
+	$(CC) -c $(CF) -o $@ lzma/Ppmd8Dec.c
 
 
 #----------------------------------------------------------------------------
@@ -805,6 +835,13 @@ $(AR_LZMA): $(O_LZMA)
 	$(AR) liblzma.a $(O_LZMA)
 	-$(RANLIB) liblzma.a
 
+# Object archive rule: PPMd compression
+$(AR_PPMD): $(O_PPMD)
+	@echo 'Building/updating PPMd object library...'
+	-$(RM) libppmd.a
+	$(AR) libppmd.a $(O_PPMD)
+	-$(RANLIB) libppmd.a
+
 # Object archive rule: BZIP2 compression
 $(AR_BZ):
 	@echo 'Building/updating BZIP2 object library...'
@@ -832,15 +869,18 @@ $(AR_Z):
 #----------------------------------------------------------------------------
 
 # Link rule: unzip
-$(PGM_UNZIP): $(O_UNZIP) $(LIB_AES_WG) $(LIB_LZMA) $(LIB_BZ) $(LIB_Z)
+$(PGM_UNZIP): $(O_UNZIP) $(LIB_AES_WG) $(LIB_BZ) $(LIB_LZMA) \
+              $(LIB_PPMD) $(LIB_Z)
 	$(LD) -o $@ $(LF1) $(O_UNZIP) $(LF2)
 
 # Link rule: unzipsfx
-$(PGM_SFX): $(O_SFX) $(LIB_AES_WG) $(LIB_LZMA) $(LIB_BZ) $(LIB_Z)
+$(PGM_SFX): $(O_SFX) $(LIB_AES_WG) $(LIB_BZ) $(LIB_LZMA) \
+            $(LIB_PPMD) $(LIB_Z)
 	$(LD) -o $@ $(LF1) $(O_SFX) $(LF2)
 
 # Link rule: funzip
-$(PGM_FUZ): $(O_FUZ) $(LIB_AES_WG) $(LIB_LZMA) $(LIB_BZ) $(LIB_Z)
+$(PGM_FUZ): $(O_FUZ) $(LIB_AES_WG) $(LIB_BZ) $(LIB_LZMA) \
+            $(LIB_PPMD) $(LIB_Z)
 	$(LD) -o $@ $(LF1) $(O_FUZ) $(LF2)
 
 # Link rule: zipinfo
@@ -944,6 +984,7 @@ flags: unix/configure
 	        "CFLAGS=${CF_NOOPT}" \
 	        "AES_WG=${AES_WG}" \
 	        "LZMA=${LZMA}" \
+	        "PPMD=${PPMD}" \
 	        "IZ_BZIP2=${IZ_BZIP2}" \
 	        "IZ_ZLIB=${IZ_ZLIB}"
 
@@ -979,8 +1020,8 @@ flags_bz: flags
 
 clean:
 	rm -f *.o *.a $(UNZIP_PGMS) $(PGM_ZINFO) flags flags_bz
-	rm -rf manout/*
-	rm -rf $(PKGDIR)/*
+	rm -rf manout
+	rm -rf $(PKGDIR)
 
 clean_bzip2:
 	@if [ -f bzip2/${MK_BZ} ]; then \
@@ -1005,7 +1046,7 @@ install: unzips manuals
 	$(INSTALL_PROGRAM) $(UNZIP_PGMS) $(BINDIR)
 	$(INSTALL) $(PGM_ZGREP) $(BINDIR)
 	$(RM) $(BIN_ZINFO)
-	$(LN) $(BIND_UNZIP) $(BIN_ZINFO)
+	$(LN) $(BIN_UNZIP) $(BIN_ZINFO)
 	-$(INSTALL_D) $(MANDIR)
 	$(INSTALL) $(UNZIP_MANS) $(MANDIR)
 	$(CHMOD) $(BINPERMS) $(INSTALLEDBIN)
@@ -1052,8 +1093,9 @@ dist: $(DOC_UNZIP)
 #  Build rules: Unzip validation tests
 #----------------------------------------------------------------------------
 
-# the test zipfile
+# Test archives.
 TESTZIP = testmake.zip
+TESTZIP_PPMD = testmake_ppmd.zip
 
 # test some basic features of the build
 check: test
@@ -1061,9 +1103,12 @@ check: test
 test:
 	sh unix/test_unzip.sh $(TESTZIP)
 
-# Create a new testmake.zip.
+test_ppmd:
+	sh unix/test_unzip.sh $(TESTZIP_PPMD) . NOFUNSFX
+
+# Create a new testmake.zip or testmake_ppmd.zip.
 #
-# This target is intended for use by UnZip developers, not by normal
+# These targets are intended for use by UnZip developers, not by normal
 # users.  The method used relies on an existing testmake.zip file to
 # provide "notes", which historically has non-UNIX line endings.
 #
@@ -1075,27 +1120,61 @@ test:
 # the original (or some other old version).
 #
 # While crude, the method used here does try to save the original
-# testmake.zip file as testmake.zip_orig, which is deleted only if the
-# "diff" succeeds, which normally allows a manual restoration to the
-# original state, if success remains elusive.
+# testmake[_ppmd].zip file as testmake[_ppmd].zip_orig, which is deleted
+# only if the "diff" succeeds, which normally allows a manual restoration
+# to the original state, if success remains elusive.
 
 testmake_zip:
-	if test ! -f testmake.zip_orig ; then \
-	    cp -p testmake.zip testmake.zip_orig ; \
+	@if test ! -f $(TESTZIP) ; then \
+	    echo "***" ; \
+	    echo "*** Missing \"$(TESTZIP)\".  Expect chronic failure. ***" ; \
+	    echo "***" ; \
 	fi
+	if test -f $(TESTZIP) -a ! -f $(TESTZIP)_orig ; then \
+	    cp -p $(TESTZIP) $(TESTZIP)_orig ; \
+	fi
+	@rm -rf testmake
 	@mkdir testmake
 	@( cd testmake ; \
-	../unzip ../testmake.zip > /dev/null ; \
+	../unzip ../$(TESTZIP) > /dev/null ; \
 	touch testmake.zipinfo ; \
-	$(ZIP) testmake.zip notes testmake.zipinfo > /dev/null ; \
-	../unzip -Z testmake.zip > testmake.zipinfo ; \
-	$(ZIP) testmake.zip notes testmake.zipinfo > /dev/null ; \
-	../unzip -Z testmake.zip > testmake.zipinfo_new ; \
-	mv testmake.zip ../testmake.zip )
+	$(PGM_ZIP) $(TESTZIP) notes testmake.zipinfo > /dev/null ; \
+	../unzip -Z $(TESTZIP) > testmake.zipinfo ; \
+	$(PGM_ZIP) $(TESTZIP) notes testmake.zipinfo > /dev/null ; \
+	../unzip -Z $(TESTZIP) > testmake.zipinfo_new ; \
+	mv $(TESTZIP) ../$(TESTZIP) )
 	@if diff testmake/testmake.zipinfo \
 	 testmake/testmake.zipinfo_new 2> /dev/null ; then \
-	    echo '' ; echo "   It's a miracle!" ; echo '' ;\
-	    rm testmake.zip_orig ; \
+	    echo '' ; echo "   It's a miracle!" ; echo '' ; \
+	    rm $(TESTZIP)_orig ; \
+	else \
+	    echo '' ; echo '   Try again?' ; echo '' ; \
+	fi
+	@rm -r testmake
+
+testmake_ppmd_zip:
+	@if test ! -f $(TESTZIP_PPMD) ; then \
+	    cp -p $(TESTZIP) $(TESTZIP_PPMD) ; \
+	fi
+	if test -f $(TESTZIP_PPMD) -a ! -f $(TESTZIP_PPMD)_orig ; then \
+	    cp -p $(TESTZIP_PPMD) $(TESTZIP_PPMD)_orig ; \
+	fi
+	@rm -rf testmake
+	@mkdir testmake
+	@( cd testmake ; \
+	../unzip ../$(TESTZIP_PPMD) > /dev/null ; \
+	touch testmake.zipinfo ; \
+	$(PGM_ZIP) -Z ppmd $(TESTZIP_PPMD) notes testmake.zipinfo > \
+	 /dev/null ; \
+	../unzip -Z $(TESTZIP_PPMD) > testmake.zipinfo ; \
+	$(PGM_ZIP) -Z ppmd $(TESTZIP_PPMD) notes testmake.zipinfo > \
+	 /dev/null ; \
+	../unzip -Z $(TESTZIP_PPMD) > testmake.zipinfo_new ; \
+	mv $(TESTZIP_PPMD) ../$(TESTZIP_PPMD) )
+	@if diff testmake/testmake.zipinfo \
+	 testmake/testmake.zipinfo_new 2> /dev/null ; then \
+	    echo '' ; echo "   It's a miracle!" ; echo '' ; \
+	    rm $(TESTZIP_PPMD)_orig ; \
 	else \
 	    echo '' ; echo '   Try again?' ; echo '' ; \
 	fi
@@ -1198,7 +1277,7 @@ generic_shlib: unix_make
 #----------------------------------------------------------------------------
 
 # Solaris:  generic, plus generation of installable package.
-solaris_pkg: generic_pkg
+solaris: generic_pkg
 
 #----------------------------------------------------------------------------
 #  "Normal" group (BSD vs. SysV may be set in unzip.h via predefined macros):

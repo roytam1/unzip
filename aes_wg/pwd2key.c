@@ -34,7 +34,12 @@
  a password and a salt value.
 */
 
-#include <memory.h>
+/*************************************************************************
+ * 2011-06-16 SMS for Info-ZIP.
+ * Changed <memory.h> to <string.h> for portability.
+ * The appropriate #include directive in "hmac.h" obviates any here.
+ *************************************************************************
+ */
 #include "hmac.h"
 
 #if defined(__cplusplus)

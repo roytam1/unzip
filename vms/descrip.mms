@@ -1,4 +1,4 @@
-#                                               9 August 2011.  SMS.
+#                                               1 December 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
@@ -59,12 +59,17 @@
 #    LZMA=1         Enable LZMA compression support.  By default, the
 #                   SFX programs are built without LZMA support.  Add
 #                   "LZMA_SFX=1" to the LOCAL_UNZIP C macros to enable
-#                   it.  (See LOCAL_UNZIP, below.)
+#                   it.  (See LOCAL_UNZIP, above.)
 #
 #    NOSHARE=1      Link /NOSYSSHR (not using shareable images).
 #    NOSHARE=OLDVAX Link /NOSYSSHR on VAX for:
 #                      DEC C with VMS before V7.3.
 #                      VAX C without DEC C RTL (DEC C not installed).
+#
+#    PPMD=1         Enable PPMd compression support.  By default, the
+#                   SFX programs are built without PPMd support.  Add
+#                   "PPMD_SFX=1" to the LOCAL_UNZIP C macros to enable
+#                   it.  (See LOCAL_UNZIP, above.)
 #
 #    USEBZ2=1       Build with optional BZIP2 support.  This macro
 #                   is a shortcut for IZ_BZIP2=SYS$DISK:[.BZIP2].
@@ -103,6 +108,8 @@
 #    CLEAN_TEST deletes all test directories.
 #
 #    TEST       Runs a brief test.
+#
+#    TEST_PPMD  Runs a brief PPMd test.
 #
 # Example commands:
 #
@@ -255,7 +262,12 @@ CLEAN_TEST :
 # TEST target.  Runs a test procedure.
 
 TEST :
-	@[.vms]test_unzip.com "" [.$(DEST)]
+	@[.vms]test_unzip.com testmake.zip [.$(DEST)]
+
+# TEST_PPMD target.  Runs a PPMdtest procedure.
+
+TEST_PPMD :
+	@[.vms]test_unzip.com testmake_ppmd.zip [.$(DEST)] NOSFX
 
 
 # Object library module dependencies.

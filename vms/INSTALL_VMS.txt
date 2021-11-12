@@ -4,7 +4,7 @@
       Source Kits
       -----------
 
-   UnZip source kits are distributed as Zip archives and tar+gzip kits. 
+   UnZip source kits are distributed as Zip archives and tar+gzip kits.
 A Zip archive is usually the more convenient form for a VMS user.  If an
 UnZip program is not already available on the target system, pre-built
 UnZip programs may be found in many freeware collections, and on the
@@ -27,7 +27,7 @@ If the UnZip kit is elsewhere, specify its actual location:
 
    o Bzip2 Compression
 
-     By default, UnZip can use the "deflate" compression method.  To add
+     By default, UnZip can use the Deflate compression method.  To add
      support for the optional "bzip2" compression method, obtain and
      build the bzip2 software ("http://www.bzip.org/" or, for a more
      VMS-friendly kit, "http://antinode.info/dec/sw/bzip2.html").  The
@@ -38,7 +38,7 @@ If the UnZip kit is elsewhere, specify its actual location:
 
      This UnZip release includes the Traditional encryption code
      ("CRYPT") previously supplied in the separate package zcrypt29.zip,
-     but you still can decide whether to activate the CRYPT code or not. 
+     but you still can decide whether to activate the CRYPT code or not.
      CRYPT is enabled by default, but you may disable it by specifying
      the C macro "NO_CRYPT" in the LOCAL_UNZIP symbol/macro (explained
      below).  See README_CR.txt for more on CRYPT.
@@ -143,6 +143,20 @@ the command-line options used to select a different compiler.
          MMS /DESC = [.VMS] /MACRO = (LARGE=1, "CCOPTS=/NAMES=AS_IS", -
           IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_6A_VMS])
 
+      The %CC-I-UNKNOWNPRAGMA complaints are still emitted, but the link
+      should work.
+
+   o Other Optional Compression Methods (LZMA, PPMd)
+
+      LZMA and PPMd compression (new in UnZip version 6.1) are not
+      enabled by default, but the required source code is included in
+      the UnZip source kit.  To enable LZMA and/or PPMd compression, add
+      the appropriate option to the builder command line.  For example:
+
+         @ [.VMS]BUILD_UNZIP LARGE LZMA PPMD
+      or:
+         MMS /DESC = [.VMS] /MACRO = (LARGE=1, LZMA=1, PPMD=1)
+
    o Encryption
 
       By default, Traditional Zip encryption is enabled.  To disable it,
@@ -165,22 +179,11 @@ the command-line options used to select a different compiler.
       or:
          MMS /DESC = [.VMS] /MACRO = (LARGE=1, AES_WG=1)
 
-   o LZMA Compression
-
-      LZMA compression (new in UnZip version 6.1) is not enabled by
-      default, but the required source code is included in the UnZip
-      source kit.  To enable LZMA compression, add the appropriate LZMA
-      option to the builder command line.  For example:
-
-         @ [.VMS]BUILD_UNZIP LARGE LZMA
-      or:
-         MMS /DESC = [.VMS] /MACRO = (LARGE=1, LZMA=1)
-
 
    System-architecture-specific files (like objects and executables) are
-placed in separate directories, such as [.ALPHA], [.IA64], or [.VAX]. 
-Large-file products get their own directories, [.ALPHAL] or [.IA64L]. 
-On VAX, VAX C products are placed in [.VAXV], GNU C products in [.VAXG]. 
+placed in separate directories, such as [.ALPHA], [.IA64], or [.VAX].
+Large-file products get their own directories, [.ALPHAL] or [.IA64L].
+On VAX, VAX C products are placed in [.VAXV], GNU C products in [.VAXG].
 Each product builder announces what the destination directory will be
 when it is run.
 
@@ -189,7 +192,7 @@ UNIX-like command-line interface, UNZIP_CLI.HLP for the VMS-like
 command-line interface), are placed in the main directory.  With a
 mixed-architecture VMS cluster, the same main directory on a shared disk
 may be used by all system types.  (Using the NOHELP option with
-BUILD_UNZIP.COM can keep it from making the same help files repeatedly.) 
+BUILD_UNZIP.COM can keep it from making the same help files repeatedly.)
 Building the help files is detailed below.
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -213,6 +216,13 @@ it, because they know where the executables are stored.  (Which is why
 those options which affect the destination directory are required for
 TEST.)
 
+   If PPMd compression was enabled, then a separate PPMd test can be run
+similarly:
+
+      @ [.VMS]BUILD_UNZIP LARGE TEST_PPMD
+   or:
+      MMS /DESC = [.VMS] /MACRO = (LARGE=1) TEST_PPMD
+
    The test procedure leaves its results files in place (for inspection,
 as desired).  To clean up after running the tests, use the CLEAN_TEST
 target in the MMS/MMK builder, or do the job manually:
@@ -221,6 +231,17 @@ target in the MMS/MMK builder, or do the job manually:
    or:
       DELETE [.TEST_DIR_*...]*.*;*  ! Repeat as needed.
       DELETE TEST_DIR_*.DIR;*
+
+   Note: For its self-extracting archive (SFX) tests, the test procedure
+uses SET FILE /ATTRIBUTES to adjust the attributes of the UnZip SFX
+executable to match those of the test archive in the UnZip kit
+(rfm:stmlf).  Thus, these tests will fail on systems where this command
+is not available (that is, on VMS versions before V6.0).  While this
+kind of attribute adjustment is required for the test archive (which was
+created on a non-VMS system), it should not be needed when creating a
+self-extracting archive from an archive which is created on a VMS
+system, where the archive file attributes should be more convenient
+(rfm:fix, mrs=512).
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -262,7 +283,7 @@ a command like:
 
    For greater ease, the user (or system manager) may define a
 HLP$LIBRARY logical name to allow the HELP utility to find the UnZip help
-library automatically.  See HELP HELP /USERLIBRARY for more details.  
+library automatically.  See HELP HELP /USERLIBRARY for more details.
 The command procedure [.vms]hlp_lib_next.com may be used to determine
 the next available HLP$LIBRARY logical name, and could be adapted to
 define a HLP$LIBRARY logical name for an UnZip help library.
@@ -310,8 +331,19 @@ program and the Zip archive have different record formats.  SET FILE
 the other to make them compatible.
 
    By default, the UNZIPSFX.EXE and UNZIPSFX_CLI.EXE programs include
-support for only the default "Deflate" compression method, and for no
+support for only the default Deflate compression method, and for no
 form of encryption.  Other, optional compression and/or encryption
-methods may be enabled in the SFX programs at build time.  See the
-comments in the main builder files for details.
+methods may be enabled in the SFX programs at build time, and support
+for Deflate may be disabled.  See the comments in the main builder files
+and the generic INSTALL document for details.
+
+   Building an optimal UnZipSFX executable is more complicated when
+optional compression methods will be used (or when the standard method,
+Deflate, will not be used).  Ideally, UnZipSFX should be built with only
+the required compression methods enabled, but the list of required
+compression methods is determined when an archive is created, while the
+list of available methods is determined when UnZipSFX is built.  As
+always, when creating a self-extracting archive, the resulting
+program+archive should be tested (on the target system).  Options like
+"-q -t" should be helpful for this.
 

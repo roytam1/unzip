@@ -37,8 +37,11 @@
 #include <string.h>     /* for memcpy() etc.        */
 #include <stdlib.h>     /* for _lrotl with VC++     */
 
-/* 2011-04-23 SMS.
- * __GNUC__ does _not_ ensure <endian.h>.
+/**************************************************************************
+ * 2011-06-16 SMS for Info-ZIP.
+ * Changed to use (a modified) "brg_endian.h" for endian determination
+ * instead of the code below.
+ **************************************************************************
  */
 #include "brg_endian.h"
 
@@ -50,7 +53,6 @@
 #endif
 
 #endif /* 0 */
-
 
 #include "sha1.h"
 

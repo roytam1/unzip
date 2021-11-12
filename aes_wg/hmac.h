@@ -36,7 +36,12 @@
 #ifndef _HMAC_H
 #define _HMAC_H
 
-#include <memory.h>
+/***************************************************************
+ * 2011-06-16 SMS for Info-ZIP.
+ * Changed <memory.h> to <string.h> for portability.
+ ***************************************************************
+ */
+#include <string.h>
 
 #include "sha1.h"
 

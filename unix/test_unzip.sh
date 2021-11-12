@@ -4,7 +4,10 @@
 #
 #    $1 = test archive name.  Default: testmake.zip
 #    $2 = program directory (relative).  Default: .
+#    $3 = non-null to skip funzip and SFX tests.
 #
+#    2012-02-24  SMS.  Added $3 check for PPMd test.
+#                      Added exit status tests.
 #    2011-08-05  SMS.  New.
 
 test_archive=${1:-testmake.zip}
@@ -33,7 +36,12 @@ fi
 
 # Check for existence of expected programs.
 
-program_list='funzip unzip unzipsfx'
+if test -z "$3" ; then
+    program_list='funzip unzip unzipsfx'
+else
+    program_list='unzip'
+fi
+
 for program in $program_list ; do
     if test -f "${prod}/${program}" ; then
         echo ">>> Found executable: ${program}"
@@ -76,8 +84,12 @@ echo ''
 echo '>>> UnZip extraction test...'
 
 ../${prod}/unzip -b "../${test_archive}" "${member_1}"
+status=$?
 
-if test -f "${member_1}" -a ! -f "${member_2}" ; then
+if test ${status} -ne 0 ; then
+    echo ">>> Fail: UnZip exit status = ${status}."
+    fail=` expr $fail + 1 `
+elif test -f "${member_1}" -a ! -f "${member_2}" ; then
     echo ">>> Pass."
     pass=` expr $pass + 1 `
 else
@@ -92,8 +104,12 @@ echo ''
 echo '>>> UnZip "-x" extraction test...'
 
 ../${prod}/unzip -bo "../${test_archive}" -x "${member_1}"
+status=$?
 
-if test -f "${member_2}"; then
+if test ${status} -ne 0 ; then
+    echo ">>> Fail: UnZip exit status = ${status}."
+    fail=` expr $fail + 1 `
+elif test -f "${member_2}"; then
     echo ">>> Pass."
     pass=` expr $pass + 1 `
 else
@@ -107,10 +123,13 @@ echo ''
 echo '>>> UnZip "-d dest_dir" extraction test...'
 
 if test -f "${member_1}" ; then
-
     ../${prod}/unzip -bo "../${test_archive}" -d dest_dir "${member_1}"
+    status=$?
 
-    if test -f "dest_dir/${member_1}"; then
+    if test ${status} -ne 0 ; then
+        echo ">>> Fail: UnZip exit status = ${status}."
+        fail=` expr $fail + 1 `
+    elif test -f "dest_dir/${member_1}"; then
         if diff "${member_1}" "dest_dir/${member_1}" ; then
             echo ">>> Pass."
             pass=` expr $pass + 1 `
@@ -135,8 +154,12 @@ echo ''
 echo '>>> UnZip "-o" extraction test...'
 
 ../${prod}/unzip -bo "../${test_archive}" "${member_1}"
+status=$?
 
-if test -f "${member_1}"; then
+if test ${status} -ne 0 ; then
+    echo ">>> Fail: UnZip exit status = ${status}."
+    fail=` expr $fail + 1 `
+elif test -f "${member_1}"; then
     echo ">>> Pass."
     pass=` expr $pass + 1 `
 else
@@ -154,7 +177,12 @@ if test -f "${member_2}"; then
       cd ..
       ${prod}/unzip -Z "${test_archive}" > "${tmp_dir}/testmake.unzip-Z"
     )
-    if diff testmake.unzip-Z "${member_2}" ; then
+    status=$?
+
+    if test ${status} -ne 0 ; then
+        echo ">>> Fail: UnZip exit status = ${status}."
+        fail=` expr $fail + 1 `
+    elif diff testmake.unzip-Z "${member_2}" ; then
         echo ">>> Pass."
         pass=` expr $pass + 1 `
     else
@@ -175,66 +203,82 @@ fi
 
 # Test FunZip extraction.
 
-echo ''
-echo '>>> FunZip extraction test...'
-echo '>>>  (Expect a "zipfile has more than one entry" warning.)'
+if test -z "$3" ; then
+    echo ''
+    echo '>>> FunZip extraction test...'
+    echo '>>>  (Expect a "zipfile has more than one entry" warning.)'
 
-if test -f "${member_1}" ; then
+    if test -f "${member_1}" ; then
 
-    ../${prod}/funzip < "../${test_archive}" > "dest_dir/${member_1}_fun"
+        ../${prod}/funzip < "../${test_archive}" > "dest_dir/${member_1}_fun"
+        status=$?
 
-    if test -f "dest_dir/${member_1}_fun"; then
-        if diff "${member_1}" "dest_dir/${member_1}_fun" ; then
-            echo ">>> Pass."
-            pass=` expr $pass + 1 `
-        else
-            echo ">>> Fail: Extracted file contents mismatch."
+        if test ${status} -ne 0 ; then
+            echo ">>> Fail: FunZip exit status = ${status}."
             fail=` expr $fail + 1 `
-        fi
-    else
-        echo \
+        elif test -f "dest_dir/${member_1}_fun"; then
+            if diff "${member_1}" "dest_dir/${member_1}_fun" ; then
+                echo ">>> Pass."
+                pass=` expr $pass + 1 `
+            else
+                echo ">>> Fail: Extracted file contents mismatch."
+                fail=` expr $fail + 1 `
+            fi
+        else
+            echo \
  ">>> Fail: Can't find expected extracted file: dest_dir/${member_1}_fun"
-        fail=` expr $fail + 1 `
-    fi
-else
-    echo ">>> Fail: The FunZip test relies on success in the UnZip test."
-    fail=` expr $fail + 1 `
+             fail=` expr $fail + 1 `
+         fi
+     else
+         echo ">>> Fail: The FunZip test relies on success in the UnZip test."
+         fail=` expr $fail + 1 `
+     fi
 fi
 
 # Test UnZipSFX.
 
-echo ''
-echo '>>> UnZipSFX test...'
+if test -z "$3" ; then
+    echo ''
+    echo '>>> UnZipSFX test...'
 
-if test -f "dest_dir/${member_1}" ; then
+    if test -f "dest_dir/${member_1}" ; then
 
-    rm ${member_1} ${member_2}
-    cat ../${prod}/unzipsfx "../${test_archive}" > test_sfx
-    chmod 0700 test_sfx
-    ./test_sfx -b ${member_1}
+        rm ${member_1} ${member_2}
+        cat ../${prod}/unzipsfx "../${test_archive}" > test_sfx
+        chmod 0700 test_sfx
+        ./test_sfx -b ${member_1}
+        status=$?
 
-    if test -f "${member_1}"; then
-        if diff "${member_1}" "dest_dir/${member_1}" ; then
-            echo ">>> Pass."
-            pass=` expr $pass + 1 `
+        if test ${status} -ne 0 ; then
+            echo ">>> Fail: UnZipSFX exit status = ${status}."
+            fail=` expr $fail + 1 `
+        elif test -f "${member_1}"; then
+            if diff "${member_1}" "dest_dir/${member_1}" ; then
+                echo ">>> Pass."
+                pass=` expr $pass + 1 `
+            else
+                echo ">>> Fail: Extracted file contents mismatch."
+                fail=` expr $fail + 1 `
+            fi
         else
-            echo ">>> Fail: Extracted file contents mismatch."
+            echo ">>> Fail: Can't find expected extracted file: ${member_1}"
             fail=` expr $fail + 1 `
         fi
     else
-        echo ">>> Fail: Can't find expected extracted file: ${member_1}"
+        echo \
+ ">>> Fail: The UnZipSFX test relies on success in the UnZip \"-d\" test."
         fail=` expr $fail + 1 `
     fi
-else
-    echo \
- ">>> Fail: The UnZipSFX test relies on success in the UnZip \"-d\" test."
-    fail=` expr $fail + 1 `
 fi
 
 # Expected results.
 
 fail_expected=0
-pass_expected=7
+if test -z "$3" ; then
+    pass_expected=7
+else
+    pass_expected=5
+fi
 
 # Result summary.
 

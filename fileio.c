@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -135,7 +135,7 @@
 #  define WriteTxtErr(buf,len,strm)  WriteError(buf,len,strm)
 #endif
 
-#if (defined(USE_DEFLATE64) && defined(__16BIT__))
+#if (defined(DEFLATE64_SUPPORT) && defined(__16BIT__))
 static int partflush OF((__GPRO__ uch *rawbuf, ulg size, int unshrink));
 #endif
 #ifdef VMS_TEXT_CONV
@@ -291,7 +291,7 @@ int open_outfile(__G)           /* return 1 if fail */
         G.apl_dbl_hdr_len = 0;
         G.apl_dbl_hdr_bytes = APL_DBL_HDR_SIZE;
         /* Append "/rsrc" suffix to the AppleDouble file name. */
-        strcat( G.ad_filename, APL_DBL_SFX);
+        strcat( G.ad_filename, APL_DBL_SUFX);
 
         /* Re-aim pointer instead of copying? */
         strcpy( G.filename, G.ad_filename);
@@ -725,6 +725,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
         else
 #  endif /* def CRYPT_AES_WG */
         {
+#  ifdef CRYPT_TRAD
             uch *p;
             int n;
 
@@ -734,6 +735,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
          */
             for (n = G.incnt, p = G.inptr;  n--;  p++)
                 zdecode(*p);
+#  endif /* def CRYPT_TRAD */
         }
     }
 #endif /* CRYPT */
@@ -747,7 +749,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
 
 
 
-#if defined(USE_ZLIB) || defined(USE_BZIP2) || defined(USE_LZMA)
+#if defined(USE_ZLIB) || defined(BZIP2_SUPPORT) || defined(LZMA_SUPPORT)
 
 /************************/
 /* Function fillinbuf() */
@@ -771,18 +773,20 @@ int fillinbuf(__G) /* like readbyte() except returns number of bytes in inbuf */
         {
             int n;
 
-            n = IZ_MIN( G.incnt, G.ucsize_aes);
+            n = IZ_MIN( G.incnt, (long)G.ucsize_aes);
             fcrypt_decrypt( G.inptr, n, G.zcx);
             G.ucsize_aes -= n;
         }
         else
 #  endif /* def CRYPT_AES_WG */
         {
+#  ifdef CRYPT_TRAD
             uch *p;
             int n;
 
             for (n = G.incnt, p = G.inptr;  n--;  p++)
                 zdecode(*p);
+#  endif /* def CRYPT_TRAD */
         }
     }
 #endif /* CRYPT */
@@ -791,7 +795,7 @@ int fillinbuf(__G) /* like readbyte() except returns number of bytes in inbuf */
 
 } /* end function fillinbuf() */
 
-#endif /* USE_ZLIB || USE_BZIP2 */
+#endif /* USE_ZLIB || BZIP2_SUPPORT */
 
 
 
@@ -877,7 +881,7 @@ int flush(__G__ rawbuf, size, unshrink)
     uch *rawbuf;
     ulg size;
     int unshrink;
-#if (defined(USE_DEFLATE64) && defined(__16BIT__))
+#if (defined(DEFLATE64_SUPPORT) && defined(__16BIT__))
 {
     int ret;
 
@@ -905,7 +909,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
     uch *rawbuf;        /* cannot be ZCONST, gets passed to (*G.message)() */
     ulg size;
     int unshrink;
-#endif /* USE_DEFLATE64 && __16BIT__ */
+#endif /* DEFLATE64_SUPPORT && __16BIT__ */
 {
     register uch *p;
     register uch *q;
@@ -994,8 +998,8 @@ static int partflush(__G__ rawbuf, size, unshrink)
 
                 /* Truncate name at "/rsrc" for setattrlist(). */
                 btrbslash =
-                 G.filename[ strlen( G.filename)- strlen( APL_DBL_SFX)];
-                G.filename[ strlen( G.filename)- strlen( APL_DBL_SFX)] = '\0';
+                 G.filename[ strlen( G.filename)- strlen( APL_DBL_SUFX)];
+                G.filename[ strlen( G.filename)- strlen( APL_DBL_SUFX)] = '\0';
 
                 /* Clear attribute list structure. */
                 memset( &attr_list_fndr, 0, sizeof( attr_list_fndr));
@@ -1483,7 +1487,7 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
     {
         if (!((Uz_Globs *)pG)->sol)
         {
-            WriteTxtErr( "\n", 2, ((Uz_Globs *)pG)->outfp_prev);
+            (void)WriteTxtErr( "\n", 1, ((Uz_Globs *)pG)->outfp_prev);
             ((Uz_Globs *)pG)->sol = TRUE;
         }
         ((Uz_Globs *)pG)->outfp_prev = outfp;

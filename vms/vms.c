@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -52,12 +52,17 @@
 #endif
 #include <unixlib.h>
 
+#include <dcdef.h>
 #include <dvidef.h>
 #include <ssdef.h>
 #include <stsdef.h>
 
 #ifdef ENABLE_USER_PROGRESS
-#include <prdef.h>
+# include <prdef.h>
+/* Last-ditch attempt to get PR$C_PS_USER defined. */
+# ifndef PR$C_PS_USER
+#  define PR$C_PS_USER 3
+# endif /* ndef PR$C_PS_USER */
 #endif /* def ENABLE_USER_PROGRESS */
 
 /* Workaround for broken header files of older DECC distributions
@@ -3595,8 +3600,7 @@ static void uxtime2vmstime(  /* convert time_t value into 64 bit VMS bintime */
 /*  Function stamp_file()  */  /* adapted from VMSmunch...it just won't die! */
 /***************************/
 
-int stamp_file(__G__ fname, modtime)
-    __GDEF
+int stamp_file(fname, modtime)
     ZCONST char *fname;
     time_t modtime;
 {
@@ -3636,6 +3640,8 @@ int stamp_file(__G__ fname, modtime)
         {sizeof(jnl), ATR$C_JOURNAL, GVTC &jnl},
         {0, 0, 0}
     };
+
+    GETGLOBALS();                       /* Get "G" stuff (for REENTRANT). */
 
     fileblk = cc$rms_fab;               /* Initialize FAB. */
     nam = CC_RMS_NAMX;                  /* Initialize NAM[L]. */
@@ -5648,7 +5654,7 @@ void version(__G)
 
 #ifdef ENABLE_USER_PROGRESS
 
-/* 2011-11-17 SMS.
+/* 2011-12-05 SMS.
  *
  *       establish_ctrl_t().
  *
@@ -5683,22 +5689,34 @@ int establish_ctrl_t( void ctrl_t_ast())
     status = sys$assign( &term_name_descr, &term_chan, 0, 0);
     if ((status& STS$M_SEVERITY) != STS$K_SUCCESS)
     {
-        fprintf( stderr, " ECT $ASSIGN sts =  %%x%08x .\n", status);
+        fprintf( stderr, " establish_ctrl_t(): $ASSIGN sts =  %%x%08x .\n",
+         status);
         return status;
     }
 
     status = lib$getdvi( &((int)DVI$_DEVCLASS), /* Item code. */
                          &term_chan,            /* Channel. */
                          0,                     /* Device name. */
-                         &dev_class,            /* Longword value. */
+                         &dev_class,            /* Result buffer (int). */
                          0,                     /* Result string. */
-                         0,                     /* Result string len. */
-                         0);                    /* Pathname. */
+                         0);                    /* Result string len. */
 
     if ((status& STS$M_SEVERITY) != STS$K_SUCCESS)
     {
-        fprintf( stderr, " ECT $GETDVI sts =  %%x%08x .\n", status);
+        fprintf( stderr, " establish_ctrl_t(): $GETDVI sts =  %%x%08x .\n",
+         status);
+        sys$dassgn( term_chan);
         return status;
+    }
+
+    if (dev_class != DC$_TERM)
+    {
+        /* SYS$COMMAND is not a terminal.  (Batch job, for example.)
+         * Harmless, but we can't establish a Ctrl/T handler for it.
+         */
+        sys$dassgn( term_chan);
+        vaxc$errno = ENOTTY;
+        return EVMSERR;
     }
 
 #define FUN_AST_ENA (IO$_SETMODE| IO$M_OUTBAND)
@@ -5718,8 +5736,12 @@ int establish_ctrl_t( void ctrl_t_ast())
 
     if ((status& STS$M_SEVERITY) != STS$K_SUCCESS)
     {
-        fprintf( stderr, " ECT $QIOW sts =  %%x%08x .\n", status);
+        fprintf( stderr, " establish_ctrl_t(): $QIOW sts =  %%x%08x .\n",
+         status);
+        sys$dassgn( term_chan);
     }
+
+    /* If successful, then don't deassign the channel. */
     return status;
 }
 

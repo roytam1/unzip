@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -579,7 +579,10 @@ void free_G_buffers(__G)     /* releases all memory allocated in global vars */
     SYSTEM_SPECIFIC_DTOR(__G);
 #endif
 
+#ifdef DEFLATE_SUPPORT
     inflate_free(__G);
+#endif
+
 #if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
     if (G.has_win32_wide)
       checkdirw(__G__ (wchar_t *)NULL, END);
@@ -627,6 +630,26 @@ void free_G_buffers(__G)     /* releases all memory allocated in global vars */
         G.fnfull_bufsize = 0;
     }
 #endif /* UNICODE_SUPPORT */
+
+#ifdef LZMA_SUPPORT
+    /* Free any LZMA-related dynamic storage.
+     * (Note that LzmaDec_Free() does not check for pointer validity.)
+     */
+    if (G.state_lzma.probs != NULL)
+    {
+        LzmaDec_Free( &G.state_lzma, &G.g_Alloc);
+    }
+#endif /* def LZMA_SUPPORT */
+
+#ifdef PPMD_SUPPORT
+    /* Free any PPMd-related dynamic storage.
+     * (Note that Ppmd8_Free() does not check for pointer validity.)
+     */
+    if (G.ppmd8.Base != NULL)
+    {
+        Ppmd8_Free( &G.ppmd8, &G.g_Alloc);
+    }
+#endif /* def PPMD_SUPPORT */
 
 #ifndef SFX
     for (i = 0; i < DIR_BLKSIZ; i++) {
@@ -1011,7 +1034,7 @@ static int do_seekable(__G__ lastchance)        /* return PK-type error code */
 
 #ifdef TIMESTAMP
     if (uO.T_flag && !uO.zipinfo_mode && (nmember > 0L)) {
-# if defined(VMS) || defined(WIN32)
+# if defined(WIN32)
         if (stamp_file(__G__ G.zipfn, uxstamp)) {       /* TIME-STAMP 'EM */
 # else
         if (stamp_file(G.zipfn, uxstamp)) {             /* TIME-STAMP 'EM */

@@ -19,7 +19,7 @@
 
 #    define APL_DBL_PFX "._"
 #    define APL_DBL_PFX_SQR "__MACOSX/"
-#    define APL_DBL_SFX "/rsrc"
+#    define APL_DBL_SUFX "/rsrc"
 
 #    define APL_DBL_HDR_SIZE           82
 #    define APL_DBL_HDR_RSRC_FORK_SIZE 46

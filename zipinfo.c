@@ -1,5 +1,5 @@
-/* 
-  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
+/*
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -210,6 +210,7 @@ static ZCONST char Far MthdBZip2[] = "bzipped";
 static ZCONST char Far MthdLZMA[] = "LZMA-ed";
 static ZCONST char Far MthdTerse[] = "tersed (IBM)";
 static ZCONST char Far MthdLZ77[] = "LZ77-compressed (IBM)";
+static ZCONST char Far MthdJPEG[] = "JPEG-ed";
 static ZCONST char Far MthdWavPack[] = "WavPacked";
 static ZCONST char Far MthdPPMd[] = "PPMd-ed";
 static ZCONST char Far MthdAES_WG[] = "AES_WG-ed";
@@ -448,8 +449,8 @@ static ZCONST char Far DecimalTime[] = "%04u%02u%02u.%02u%02u%02u";
 static ZCONST char Far *method[NUM_METHODS] = {
     MthdNone, MthdShrunk, MthdRedF1, MthdRedF2, MthdRedF3, MthdRedF4,
     MthdImplode, MthdToken, MthdDeflate, MthdDeflat64, MthdDCLImplode,
-    MthdBZip2, MthdLZMA, MthdTerse, MthdLZ77, MthdWavPack, MthdPPMd,
-    MthdAES_WG
+    MthdBZip2, MthdLZMA, MthdTerse, MthdLZ77, MthdJPEG, MthdWavPack,
+    MthdPPMd, MthdAES_WG
 };
 
 
@@ -517,7 +518,7 @@ int zi_opts(__G__ pargc, pargv)
     G.wildzipfn = NULL;
 
     /* make copy of args that can use with insert_arg() used by get_option() */
-    args = copy_args(*pargv, 0);
+    args = copy_args( __G__ *pargv, 0);
 
 
     /* Initialize lists */
@@ -557,7 +558,7 @@ int zi_opts(__G__ pargc, pargv)
 #define o_so            0x104
 
 
-    while ((option = get_option(ZIO, &args, &argcnt, &argnum,
+    while ((option = get_option( __G__ ZIO, &args, &argcnt, &argnum,
                                 &optchar, &value, &negative,
                                 &fna, &optnum, 0)))
     {
@@ -755,7 +756,7 @@ int zi_opts(__G__ pargc, pargv)
     } /* get_option() */
 
     if (showhelp == -3) {
-      show_commandline(args);
+      show_commandline( args);
       return PK_OK;
     }
 
@@ -804,7 +805,7 @@ int zi_opts(__G__ pargc, pargv)
     }
 
     /* it's possible the arg count could have been changed by get_option() */
-    argc = arg_count(args);
+    argc = arg_count(__G__ args);
 
     if ((G.wildzipfn == NULL) || error) {
         argc = -1;      /* tell the caller to stop processing */
@@ -1213,8 +1214,7 @@ int zipinfo(__G)   /* return PK-type error code */
 /*  cmpr_mthd()  */
 /*****************/
 
-static ZCONST char *cmpr_mthd( __G__ methid)
-    __GDEF
+static ZCONST char *cmpr_mthd( methid)
     unsigned methid;
 {
     static char mthd[ 16];
@@ -2191,8 +2191,8 @@ static int zi_short(__G)   /* return PK-type error code */
 #endif
     static ZCONST char Far method[NUM_METHODS+1][5] = {
         "stor", "shrk", "re:1", "re:2", "re:3", "re:4", "i#:#", "tokn",
-        "def#", "d64#", "dcli", "bzp2", "lzma", "ters", "lz77", "wavp",
-        "ppmd", "u###"
+        "def#", "d64#", "dcli", "bzp2", "lzma", "ters", "lz77", "jpeg",
+        "wavp", "ppmd", "aesw", "u###"
     };
 
 

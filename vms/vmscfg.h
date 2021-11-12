@@ -13,9 +13,19 @@
 #ifndef __vmscfg_h   /* Prevent (unlikely) multiple inclusions. */
 #define __vmscfg_h
 
-/* Workaround for broken header files of older DECC distributions
- * that are incompatible with the /NAMES=AS_IS qualifier. */
-#define cma$tis_errno_get_addr CMA$TIS_ERRNO_GET_ADDR
+/* 2011-12-26 SMS.
+ * Added the whole cma$tis_* set instead of only cma$tis_errno_get_addr.
+ * (Needed cma$tis_vmserrno_get_addr for the user-triggered progress
+ * messages.)
+ *
+ * Workaround for broken header files of older DECC distributions
+ * that are incompatible with the /NAMES=AS_IS qualifier.
+ */
+#define cma$tis_errno_get_addr     CMA$TIS_ERRNO_GET_ADDR
+#define cma$tis_vmserrno_get_addr  CMA$TIS_VMSERRNO_GET_ADDR
+#define cma$tis_errno_set_value    CMA$TIS_ERRNO_SET_VALUE
+#define cma$tis_vmserrno_set_value CMA$TIS_VMSERRNO_SET_VALUE
+
 #define sys$assign SYS$ASSIGN
 #define sys$dassgn SYS$DASSGN
 #define sys$qiow SYS$QIOW

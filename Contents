@@ -17,6 +17,7 @@ at the end contain their own Contents listings:
   funzip.txt    fUnZip manual page, human-readable format
   file_id.diz   BBS-oriented file describing this archive
   testmake.zip  test archive for checking whether newly built UnZip works
+
   api.c         generic DLL entry points, support functions (required for DLLs)
   apihelp.c     API help text for DLL versions (currently OS/2 only)
   consts.h      global, initialized variables that never change (required)
@@ -53,6 +54,7 @@ at the end contain their own Contents listings:
   unzvers.h     header with UnZip/UnZipSFX and ZipInfo version info (required)
   zip.h         dummy header for use with crypt.c (required*)
   zipinfo.c     UnZip listing routines, ZipInfo mode (required)
+
   acorn/        support files for compiling under Acorn RISC OS
   amiga/        support files for compiling under AmigaDOS
   aosvs/        support files for compiling under Data General AOS/VS
@@ -75,8 +77,11 @@ at the end contain their own Contents listings:
   win32/        support files for compiling under Windows 9x and Windows NT
   wince/        support files for compiling under Windows CE (GUI version)
   windll/       support files for compiling Windows 3.x/9x/NT DLLs
-  bzip2/        source of optional, externally supplied bzip2 extension
-  lzma/         source of optional LZMA compression
+
+  aes_wg/       where source code for optional AES WG encryption goes
+  bzip2/        where source code for optional bzip2 compression goes
+  lzma/         where source code for optional LZMA compression goes
+
   man/          nroff man-page sources for the main user documentation
   proginfo/     programming docs, additional technical info, contributor list
 

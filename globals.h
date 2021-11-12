@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -146,9 +146,32 @@
 #  include "aes_wg/fileenc.h"
 #endif
 
-#ifdef USE_BZIP2
+#ifdef BZIP2_SUPPORT
 #  include "bzlib.h"
-#endif
+#endif /* def BZIP2_SUPPORT */
+
+#if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
+#  include "lzma/Types.h"
+#endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
+
+#ifdef LZMA_SUPPORT
+#  include "lzma/LzmaDec.h"
+#endif /* def LZMA_SUPPORT */
+
+#ifdef PPMD_SUPPORT
+#  include "lzma/Ppmd8.h"
+
+struct Globals;         /* Early (vacant) declaration. */
+
+/* 7-Zip I/O structure (reduced). */
+typedef struct
+{
+  IByteIn p;
+  Bool extra;
+  SRes res;
+  struct Globals *pG;
+} CByteInToLook;
+#endif /* def PPMD_SUPPORT */
 
 #if defined( UNIX) && defined( __APPLE__)
 #  include "unix/macosx.h"
@@ -217,7 +240,7 @@ typedef struct Globals {
      int redirect_text;   /* redirect text output to buffer */
 # ifndef NO_SLIDE_REDIR
      int redirect_slide;  /* redirect decompression area to mem buffer */
-#  if (defined(USE_DEFLATE64) && defined(INT_16BIT))
+#  if (defined(DEFLATE64_SUPPORT) && defined(INT_16BIT))
      ulg _wsize;          /* size of sliding window exceeds "unsigned" range */
 #  else
      unsigned _wsize;     /* sliding window size can be hold in unsigned */
@@ -354,7 +377,7 @@ typedef struct Globals {
     struct huft *fixed_tl;              /* inflate static */
     struct huft *fixed_td;              /* inflate static */
     unsigned fixed_bl, fixed_bd;        /* inflate static */
-#ifdef USE_DEFLATE64
+# ifdef DEFLATE64_SUPPORT
     struct huft *fixed_tl64;            /* inflate static */
     struct huft *fixed_td64;            /* inflate static */
     unsigned fixed_bl64, fixed_bd64;    /* inflate static */
@@ -364,7 +387,7 @@ typedef struct Globals {
     ZCONST ush *cplens;                 /* inflate static */
     ZCONST uch *cplext;                 /* inflate static */
     ZCONST uch *cpdext;                 /* inflate static */
-#endif
+# endif /* def DEFLATE64_SUPPORT */
     unsigned wp;              /* inflate static: current position in slide */
     ulg bb;                   /* inflate static: bit buffer */
     unsigned bk;              /* inflate static: bits count in bit buffer */
@@ -411,6 +434,24 @@ typedef struct Globals {
     zoff_t ucsize_aes;          /* AES uncompressed bytes left to decrypt. */
     fcrypt_ctx zcx[ 1];         /* AES context. */
 #endif /* def CRYPT_AES_WG */
+
+/* 7-Zip (LZMA, PPMd) memory allocation function structure. */
+#if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
+    ISzAlloc g_Alloc;
+#endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
+
+/* 7-Zip LZMA compression parameters. */
+#ifdef LZMA_SUPPORT
+    CLzmaProps clzma_props;     /* LZMA properties. */
+    CLzmaDec state_lzma;        /* LZMA context. */
+#endif /* def LZMA_SUPPORT */
+
+/* 7-Zip PPMd compression parameters. */
+#ifdef PPMD_SUPPORT
+    CPpmd8 ppmd8;               /* PPMd structure. */
+    int ppmd_constructed;       /* PPMd initialization flag. */
+    CByteInToLook szios;        /* 7-Zip-like I/O structure. */
+#endif /* def PPMD_SUPPORT */
 
 #ifdef SYSTEM_SPECIFIC_GLOBALS
     SYSTEM_SPECIFIC_GLOBALS

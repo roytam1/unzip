@@ -61,6 +61,14 @@ typedef int WRes;
 typedef unsigned char Byte;
 #endif
 
+/* 2012-03-20 EG, SMS for Info-ZIP.
+ * We need _7ZIP_ST for LzmaEnc.c (for Zip), and it's easier to define
+ * it here than in all the builders.
+ */
+#ifndef _7ZIP_ST
+# define _7ZIP_ST
+#endif
+
 /* ================================================================== */
 
 typedef short Int16;

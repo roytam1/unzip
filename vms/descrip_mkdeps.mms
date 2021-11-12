@@ -1,4 +1,4 @@
-#                                               18 July 2011.  SMS.
+#                                               15 March 2012.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS Dependency Description File.
 #
@@ -7,10 +7,12 @@
 #    is not specified.  Typical usage:
 #
 #    $ MMS /EXTEND /DESCRIP = [.VMS]DESCRIP_MKDEPS.MMS /SKIP -
-#       /MACRO = (AES_WG=1, LZMA=1)
+#       /MACRO = (AES_WG=1, IZ_BZIP2=iz_bzip2, IZ_ZLIB=iz_zlib, -
+#       LZMA=1, PPMD=1, -
+# "LOCAL_UNZIP=AES_WG_SFX=1,BZIP2_SFX=1,USE_OWN_CRCTAB=1,LZMA_SFX=1,PPMD_SFX=1")
 #
 # If the IZ_AES_WG encryption source kit has not been installed, then
-# the macro AES_WG should not be defined.
+# the macros AES_WG and AES_WG_SFX should not be defined.
 #
 # Note that this description file must be used from the main
 # distribution directory, not from the [.VMS] subdirectory.
@@ -112,6 +114,9 @@ MODS_LIB_UNZIP_AES = $(FILTER-OUT *], \
 MODS_LIB_UNZIP_LZMA = $(FILTER-OUT *], \
  $(PATSUBST *]*.OBJ, *] [.LZMA]*, $(MODS_OBJS_LIB_UNZIP_LZMA)))
 
+MODS_LIB_UNZIP_PPMD = $(FILTER-OUT *], \
+ $(PATSUBST *]*.OBJ, *] [.LZMA]*, $(MODS_OBJS_LIB_UNZIP_PPMD)))
+
 MODS_LIB_UNZIPCLI_V = $(FILTER-OUT *], \
  $(PATSUBST *]*.OBJ, *] [.VMS]*, $(MODS_OBJS_LIB_UNZIPCLI_C_V)))
 
@@ -140,6 +145,7 @@ DEPS = $(FOREACH NAME, \
  $(MODS_LIB_UNZIP_N) $(MODS_LIB_UNZIP_V) \
  $(MODS_LIB_UNZIP_AES) \
  $(MODS_LIB_UNZIP_LZMA) \
+ $(MODS_LIB_UNZIP_PPMD) \
  $(MODS_LIB_UNZIPCLI_V) \
  $(MODS_LIB_UNZIPSFX_N) $(MODS_LIB_UNZIPSFX_V) \
  $(MODS_UNZIP) $(MODS_UNZIP_CLI) \
@@ -164,7 +170,8 @@ $(DEPS_FILE) : $(DEPS) $(COMS)
 #
 	@$(COLLECT_DEPS) "UnZip for VMS" "$(MMS$TARGET)" -
          "[...]*.MMSD" "[.$ (DEST)]" $(MMSDESCRIPTION_FILE) -
-         "[.AES_WG/[.LZMA" "AES_WG/LZMA"
+         "[.AES_WG/[.LZMA]C/[.LZMA]P/[.LZMA]S/[.LZMA]T/[.LZMA" -
+         "AES_WG/LZMA_PPMD/PPMD/LZMA_PPMD/LZMA_PPMD/LZMA"
 	@ write sys$output -
          "Created a new dependency file: $(MMS$TARGET)"
 .IF DELETE_MMSD

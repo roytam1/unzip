@@ -25,6 +25,13 @@
  Issue Date: 20/12/2007
 */
 
+/**********************************************************************
+ * 2011-06-16 SMS for Info-ZIP.
+ * This "brg_endian.h" file was extracted from a newer AES kit, and
+ * modified (as described below) for use with an older AES kit.
+ **********************************************************************
+ */
+
 #ifndef _BRG_ENDIAN_H
 #define _BRG_ENDIAN_H
 
@@ -40,9 +47,14 @@
       defined( __CYGWIN32__ ) || defined( __DJGPP__ ) || defined( __osf__ )
 #  include <machine/endian.h>
 #elif defined( __linux__ )
- /* 2011-04-23 SMS.  __GNUC__ does _not_ ensure <endian.h>.    */
- /* || defined( __GNUC__ ) || defined( __GNU_LIBRARY__ )       */
- /* The problem is more general than the two exceptions below. */
+/**********************************************************************
+ * 2011-06-16 SMS for Info-ZIP.
+ * __GNUC__ does _not_ ensure <endian.h>, so we disable the following
+ * terms in the #elif directive above:
+ *    || defined( __GNUC__ ) || defined( __GNU_LIBRARY__ )
+ * The problem is more general than the exceptions below.
+ **********************************************************************
+ */
 #  if !defined( __MINGW32__ ) && !defined( _AIX )
 #    include <endian.h>
 #    if !defined( __BEOS__ )

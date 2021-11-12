@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -22,7 +22,7 @@
    - This is a result of the effort to synchronize/rationalize the build
      systems (such as unix/Makefile and unix/configure).
    - This will ensure that customization is as close as possible between Zip
-     and UnZip.  
+     and UnZip.
    - This in turn will make it much easier to safely share code between the
      Zip and UnZip source trees.
 
@@ -54,9 +54,9 @@
 #  ifdef SFX            /* fUnZip is NOT the sfx stub! */
 #    undef SFX
 #  endif
-#  ifdef USE_BZIP2      /* fUnZip does not support bzip2 decompression */
-#    undef USE_BZIP2
-#  endif
+#  ifdef BZIP2_SUPPORT  /* fUnZip does not support bzip2 decompression */
+#    undef BZIP2_SUPPORT
+#  endif /* def BZIP2_SUPPORT */
 #endif
 
 #if (defined(USE_ZLIB) && !defined(HAVE_ZL_INFLAT64) && !defined(NO_DEFLATE64))
@@ -66,14 +66,19 @@
 
 #ifdef NO_DEFLATE64
    /* disable support for Deflate64(tm) */
-#  ifdef USE_DEFLATE64
-#    undef USE_DEFLATE64
+#  ifdef DEFLATE64_SUPPORT
+#    undef DEFLATE64_SUPPORT
 #  endif
 #else
    /* enable Deflate64(tm) support unless compiling for SFX stub */
-#  if (!defined(USE_DEFLATE64) && !defined(SFX))
-#    define USE_DEFLATE64
+#  if (!defined(DEFLATE64_SUPPORT) && !defined(SFX))
+#    define DEFLATE64_SUPPORT
 #  endif
+#endif
+
+/* Enable Deflate support, unless SFX and explicitly disabled. */
+#if !(defined( SFX) && defined( NO_DEFLATE_SFX))
+#  define DEFLATE_SUPPORT
 #endif
 
 /* Disable AES_WG support for SFX stub, unless explicitly requested. */
@@ -81,14 +86,28 @@
 #  undef CRYPT_AES_WG
 #endif
 
+/* If traditional CRYPT is disabled, and no other encryption method is
+ * enabled, then ensure that all encryption is disabled.
+ */
+#ifdef NO_TRADITIONAL_CRYPT
+# ifndef CRYPT_AES_WG
+#  define NO_CRYPT
+# endif
+#endif
+
 /* Disable bzip2 support for SFX stub, unless explicitly requested. */
-#if (defined(SFX) && !defined(BZIP2_SFX) && defined(USE_BZIP2))
-#  undef USE_BZIP2
+#if (defined(SFX) && !defined(BZIP2_SFX) && defined(BZIP2_SUPPORT))
+#  undef BZIP2_SUPPORT
 #endif
 
 /* Disable LZMA support for SFX stub, unless explicitly requested. */
-#if (defined(SFX) && !defined(LZMA_SFX) && defined(USE_LZMA))
-#  undef USE_LZMA
+#if (defined(SFX) && !defined(LZMA_SFX) && defined(LZMA_SUPPORT))
+#  undef LZMA_SUPPORT
+#endif
+
+/* Disable PPMd support for SFX stub, unless explicitly requested. */
+#if (defined(SFX) && !defined(PPMD_SFX) && defined(PPMD_SUPPORT))
+#  undef PPMD_SUPPORT
 #endif
 
 #if (defined(NO_VMS_TEXT_CONV) || defined(VMS))
@@ -150,8 +169,9 @@
 
 /* UNICODE */
 #ifdef NO_UNICODE_SUPPORT
-/* NO_UNICODE_SUPPORT override disables Unicode support 
-   - Useful for environments like MS Visual Studio */
+/* NO_UNICODE_SUPPORT override disables Unicode support
+ * (Useful for environments like MS Visual Studio.)
+ */
 # ifdef UNICODE_SUPPORT
 #   undef UNICODE_SUPPORT
 # endif
@@ -186,8 +206,8 @@
 #ifdef UNICODE_SUPPORT
 # if !(defined(UNICODE_WCHAR))
 /* UNZIP had the following test (now synced to ZIP):
-# if !(defined(UTF8_MAYBE_NATIVE) || defined(UNICODE_WCHAR))
-*/
+ * # if !(defined(UTF8_MAYBE_NATIVE) || defined(UNICODE_WCHAR))
+ */
 #  undef UNICODE_SUPPORT
 # endif
 #endif
@@ -558,7 +578,7 @@
 #    ifndef INT_16BIT
 #      define INT_16BIT   /* report "int" size is 16-bit to inflate setup */
 #    endif
-#    ifdef USE_DEFLATE64
+#    ifdef DEFLATE64_SUPPORT
        /* Following required for 64k WSIZE of Deflate64 support */
 #      define MED_MEM     /* else OUTBUFSIZ is 64K and fails in do_string */
 #      define INBUFSIZ  8192  /* but larger buffer for real OSes */
@@ -694,7 +714,7 @@
 #endif
 
 #ifdef MINIX
-#  include <unistd.h>   /* For _POSIX_VERSION. */ 
+#  include <unistd.h>   /* For _POSIX_VERSION. */
 #else
 #  include <stdio.h>    /* Minix needs it after all the other includes (?) */
 #endif
@@ -750,22 +770,22 @@
 #define UNZIP_BZIP2_VERS    46  /* 4.6 for bzip2. */
 #define UNZIP_ZIP64_VERS    45  /* 4.5 for ZIP64. */
 
-#ifdef USE_LZMA
+#ifdef LZMA_SUPPORT
 # ifndef UNZIP_VERSION
 #  define UNZIP_VERSION UNZIP_LZMA_VERS
 # endif
-#endif
-#ifdef USE_BZIP2
+#endif /* def LZMA_SUPPORT */
+#ifdef BZIP2_SUPPORT
 # ifndef UNZIP_VERSION
 #  define UNZIP_VERSION UNZIP_BZIP2_VERS
-# endif
+# endif /* def BZIP2_SUPPORT */
 #endif
 #ifdef ZIP64_SUPPORT
 # ifndef UNZIP_VERSION
 #  define UNZIP_VERSION UNZIP_ZIP64_VERS
 # endif
 #endif
-#ifdef USE_DEFLATE64
+#ifdef DEFLATE64_SUPPORT
 # ifndef UNZIP_VERSION
 #  define UNZIP_VERSION 21      /* compatible with PKUNZIP 4.0 */
 # endif
@@ -966,7 +986,7 @@
 #endif
 
 #ifndef WSIZE
-#  ifdef USE_DEFLATE64
+#  ifdef DEFLATE64_SUPPORT
 #    define WSIZE   65536L  /* window size--must be a power of two, and */
 #  else                     /*  at least 64K for PKZip's deflate64 method */
 #    define WSIZE   0x8000  /* window size--must be a power of two, and */
@@ -1030,7 +1050,7 @@
 #  endif
 #endif
 
-#if (defined(INT_16BIT) && (defined(USE_DEFLATE64) || lenEOL > 1))
+#if (defined(INT_16BIT) && (defined(DEFLATE64_SUPPORT) || lenEOL > 1))
    /* For environments using 16-bit integers OUTBUFSIZ must be limited to
     * less than 64k (do_string() uses "unsigned" in calculations involving
     * OUTBUFSIZ).  This is achieved by defining MED_MEM when WSIZE = 64k (aka
@@ -1157,11 +1177,11 @@
 #  define COPYRIGHT_CLEAN
 #endif
 
-/* The LZW patent is expired worldwide since 2004-Jul-07, so USE_UNSHRINK
- * is now enabled by default.  See unshrink.c.
+/* The LZW patent is expired worldwide since 2004-Jul-07, so
+ * UNSHRINK_SUPPORT is now enabled by default.  See unshrink.c.
  */
-#if (!defined(LZW_CLEAN) && !defined(USE_UNSHRINK))
-#  define USE_UNSHRINK
+#if (!defined(LZW_CLEAN) && !defined(UNSHRINK_SUPPORT))
+#  define UNSHRINK_SUPPORT
 #endif
 
 #ifndef O_BINARY
@@ -1327,17 +1347,17 @@
         will use the OS-provided version (if found by a unix/configure
         test, or equivalent) or will use a generic minimally-functional
         version provided as a fileio.c function.
-      - All references to this function UnZip code are via the FUNCTION 
+      - All references to this function UnZip code are via the FUNCTION
         name.
       - If unix/configure finds the OS-provided function, it will define
-        a macro in the form FUNCTION=function. 
+        a macro in the form FUNCTION=function.
       - If not defined:
         - A replacement is defined below pointing to the generic version.
         - The prototype for the generic function will be defined (below).
         - A NEED_FUNCTION macro will also be defined, to enable compile
           of the fileio.c code to implement the generic function.
     */
-   
+
 #  include <stdlib.h>
 #  ifdef HAVE_LOCALE_H
 #   include <locale.h>
@@ -1520,28 +1540,6 @@ struct file_list {
   struct file_list *next;
 };
 
-
-/* function prototypes */
-
-/* get the next option from args */
-unsigned long get_option OF((int option_group,
-                             char ***pargs, int *argc, int *argnum,
-                             int *optchar,
-                             char **value, int *negated, int *first_nonopt_arg,
-                             int *option_num, int recursion_depth));
-
-/* copy args - copy an args array, allocating space as needed */
-char **copy_args OF((char **args, int max_args));
-
-/* arg count - count args in argv like array */
-int arg_count OF((char **args));
-
-/* free args - free args created with one of these functions */
-int free_args OF((char **args));
-
-/* insert arg - copy an arg into args */
-int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
-                   int free_args));
 
 /*--------------------------------------------------------------------
     End of Long option support
@@ -1944,10 +1942,11 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define LZMAED           14
 #define IBMTERSED        18
 #define IBMLZ77ED        19
+#define JPEGED           96
 #define WAVPACKED        97
 #define PPMDED           98
 #define AESENCRED        99
-#define NUM_METHODS      18     /* Number of known method IDs. */
+#define NUM_METHODS      19     /* Number of known method IDs. */
 /* Be sure to update list.c (list_files()), extract.c, and zipinfo.c
  * appropriately if NUM_METHODS changes. */
 
@@ -2505,6 +2504,28 @@ typedef struct _APIDocStruct {
    int    usage                  OF((__GPRO__ int error));
 #endif /* !WINDLL */
 
+/* Command-line option function prototypes. */
+
+/* get_option() - Get the next option from args. */
+unsigned long get_option OF((__GPRO__ int option_group,
+                             char ***pargs, int *argc, int *argnum,
+                             int *optchar,
+                             char **value, int *negated, int *first_nonopt_arg,
+                             int *option_num, int recursion_depth));
+
+/* copy_args() - Copy an args array, allocating space as needed. */
+char **copy_args OF((__GPRO__ char **args, int max_args));
+
+/* arg_count() - Count args in argv like array. */
+int arg_count OF((__GPRO__ char **args));
+
+/* free_args - Free args created with one of these functions. */
+int free_args OF((__GPRO__ char **args));
+
+/* insert_arg() - Copy an arg into args. */
+int insert_arg OF((__GPRO__ char ***args, ZCONST char *arg, int insert_at,
+                   int free_args));
+
 /*---------------------------------------------------------------------------
     Functions in process.c (main driver routines):
   ---------------------------------------------------------------------------*/
@@ -2693,14 +2714,9 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
 /* static void  partial_clear    OF((__GPRO));                  * unshrink.c */
 #endif /* !LZW_CLEAN */
 #endif /* !SFX && !FUNZIP */
-#ifdef USE_BZIP2
-   int    UZbunzip2              OF((__GPRO));                  /* extract.c */
+#ifdef BZIP2_SUPPORT
    void   bz_internal_error      OF((int bzerrcode));           /* ubz2err.c */
-#endif
-
-#ifdef USE_LZMA
-   int    UZlzma                 OF((__GPRO));                  /* extract.c */
-#endif
+#endif /* def BZIP2_SUPPORT */
 
 /*---------------------------------------------------------------------------
     Internal API functions (only included in DLL versions):

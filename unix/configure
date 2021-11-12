@@ -4,7 +4,7 @@
 
 #==============================================================================
 # unix/configure: Detect feature support and pass that information to Makefile.
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo          Last update:   16 Nov 2011
+# - For UnZip, UnZipSFX, fUnZip and ZipInfo          Last update:   17 Mar 2012
 #==============================================================================
 
 #==============================================================================
@@ -63,7 +63,7 @@
 # Supported ports include:
 #   msdos : DOS port built using the DJGPP native or cross-compiler
 #   os2   : OS/2 port
-#   qdos  : Sinclare Q-DOS port built using a gcc cross-compiler
+#   qdos  : Sinclair Q-DOS port built using a gcc cross-compiler
 #   zos   : z/OS MVS port built under z/OS UNIX
 #   zvm   : z/VM CMS port built under z/VM UNIX
 #
@@ -102,9 +102,10 @@
 #
 #   UnZip optional feature configuration:
 #    AES_WG      - Enable AES encryption (WinZip/Gladman)
-#    LZMA        - Enable LZMA compression
 #    IZ_BZIP2    - Enable BZIP2 compression
 #    IZ_ZLIB     - Use ZLIB for deflate compression
+#    LZMA        - Enable LZMA compression
+#    PPMD        - Enable PPMd compression
 #
 #==============================================================================
 # Build utility generated configuration flags:
@@ -129,11 +130,12 @@
 #  PROD        - Root build directory
 #  PORT        - Port name build control
 #  IZ_BZIP2    - BZIP2 compression build directory
-#  IZ_ZLIB     - ZLIB  compression build directory
+#  IZ_ZLIB     - ZLIB compression build directory
 #  LIB_AES_WG  - AES (WinZip/Gladman) encryption build dependencies
-#  LIB_LZMA    - LZMA  compression build dependencies
 #  LIB_BZ      - BZIP2 compression build dependencies
-#  LIB_Z       - ZLIB  compression build dependencies
+#  LIB_LZMA    - LZMA compression build dependencies
+#  LIB_PPMD    - PPMd compression build dependencies
+#  LIB_Z       - ZLIB compression build dependencies
 #  MK_BZ       - BZIP2 compression build makefile
 #  OSDEP_H     - OS-dependent C header file names
 #  OSDEP_OC    - OS-dependent C object file names
@@ -159,7 +161,7 @@ echo 'Generating system-dependent flags...'
 # Evaluate only variables in this list.  Complain about others, but continue.
 valid_vars1="|AES_WG|AFLAGS|AS|CC|CC_BZ|CFLAGS|CPP|DLLEXT|IZ_BZIP2|IZ_ZLIB"
 valid_vars2="|LD|LFLAGS1|LFLAGS2|LIST|LZMA|OSDEP_H|OSDEP_OC|OSDEP_OS"
-valid_vars3="|PGMEXT|PROD|RANLIB|"
+valid_vars3="|PGMEXT|PPMD|PROD|RANLIB|"
 valid_vars="${valid_vars1}${valid_vars2}${valid_vars3}"
 
 argc=$#
@@ -181,8 +183,8 @@ done
 CC=${CC:-cc}                               # C compiler name (core components)
 CC_BZ=${CC_BZ:-${CC}}                      # C compiler name (BZIP2 components)
 CC_LIST=''                                 # C compiler name, if LIST enabled
-CFLAGS=${CFLAGS:-"-I."}                    # C compiler flags (core components)
-CFLAGS_BZ=${CFLAGS_BZ:-"-I"}               # C cmplr flags (BZIP2 components)
+CFLAGS=${CFLAGS:-}' -I.'                   # C compiler flags (core components)
+CFLAGS_BZ=${CFLAGS_BZ:-}' -I'              # C cmplr flags (BZIP2 components)
 CFLAGS_OPT=''                              # C cmplr optimze (and list) options
 CFLAGS_USR=${LOCAL_UNZIP:-}                # C compiler user override options
 
@@ -227,15 +229,17 @@ PORT_SPEC=''                               # Port specification method
                                            #   Implicit ('I') via config test
 
 AES_WG=${AES_WG:-}                         # AES (WinZip/Gladman) encryption
-LZMA=${LZMA:-}                             # LZMA compression
 IZ_BZIP2=${IZ_BZIP2:-}                     # BZIP2 compression
 IZ_ZLIB=${IZ_ZLIB:-}                       # ZLIB compression
+LZMA=${LZMA:-}                             # LZMA compression
+PPMD=${PPMD:-}                             # PPMd compression
 
 # Generated Build Dependencies for make
 # - Contains archive library name, if enabled
 LIB_AES_WG=''                              # AES (WinZip/Gladman) encryption
-LIB_LZMA=''                                # LZMA compression
 LIB_BZ=''                                  # BZIP2 compression
+LIB_LZMA=''                                # LZMA compression
+LIB_PPMD=''                                # PPMd compression
 LIB_Z=''                                   # ZLIB compression
 
 # Build makefiles
@@ -712,7 +716,7 @@ _EOF_
         fi
         rm -f conftest
 
-        echo "  GNU C for OS/X Darwin ($CFLAGS_OPT)"
+        echo "  GNU C for Mac OS X Darwin ($CFLAGS_OPT)"
       fi
     fi
 
@@ -1211,17 +1215,17 @@ int main()
 {
    typedef int zoff_t;
 #include "lzma/LzmaDec.h"
-#ifndef USE_LZMA
+#ifndef LZMA_SUPPORT
    forget it
 #endif
    return 0;
 }
 _EOF_
-      $CC_TST $CFLAGS -DUSE_LZMA -c conftest.c >/dev/null 2>/dev/null
+      $CC_TST $CFLAGS -DLZMA_SUPPORT -c conftest.c >/dev/null 2>/dev/null
       status=$?
       if [ $status -eq 0 ]; then
         LIB_LZMA="liblzma.a"
-        CFLAGS_TST="${CFLAGS_TST} -DUSE_LZMA -D_7ZIP_ST"
+        CFLAGS_TST="${CFLAGS_TST} -DLZMA_SUPPORT"
         LFLAGS1="${LFLAGS1} -L."
         LFLAGS2="${LFLAGS2} -llzma"
         echo "-- Including LZMA compression support"
@@ -1240,6 +1244,51 @@ _EOF_
   fi
 else
   echo "No LZMA compression"
+fi
+
+#------------------------------------------------------------------------------
+# F') Configure optional PPMd compression library
+#------------------------------------------------------------------------------
+# PPMd compression.  (User must request: "PPMD=1".)
+if [ -n "${PPMD}" ]; then
+  echo "Check PPMd compression support"
+  if [ -d "lzma" ]; then
+    echo "  Check for PPMd header file in lzma"
+    if [ -f "lzma/Ppmd.h" ]; then
+      cat > conftest.c << _EOF_
+int main()
+{
+   typedef int zoff_t;
+#include "lzma/Ppmd.h"
+#ifndef PPMD_SUPPORT
+   forget it
+#endif
+   return 0;
+}
+_EOF_
+      $CC_TST $CFLAGS -DPPMD_SUPPORT -c conftest.c >/dev/null 2>/dev/null
+      status=$?
+      if [ $status -eq 0 ]; then
+        LIB_PPMD="libppmd.a"
+        CFLAGS_TST="${CFLAGS_TST} -DPPMD_SUPPORT"
+        LFLAGS1="${LFLAGS1} -L."
+        LFLAGS2="${LFLAGS2} -lppmd"
+        echo "-- Including PPMd compression support"
+        echo "-- Building libppmd.a in ${PROD}"
+      else
+        echo "^^ PPMd test build failed. Check lzma directory"
+        echo "^^ Unable to include PPMd compression support"
+      fi
+    else
+      echo "^^ PPMD source code not found in lzma directory"
+      echo "^^ Unable to include PPMd compression support"
+    fi
+  else
+    echo "^^ Directory lzma not found"
+    echo "^^ Unable to include PPMd compression support"
+  fi
+else
+  echo "No PPMd compression"
 fi
 
 #------------------------------------------------------------------------------
@@ -1265,7 +1314,7 @@ if [ -n "${IZ_BZIP2}" ]; then
           if [ $status -eq 0 ]; then
             echo "    Found BZIP2 BZ_NO_STDIO library, ${IZ_BZIP2}/libbz2.a"
             LIB_BZ="${IZ_BZIP2}/libbz2.a"
-            CFLAGS_TST="${CFLAGS_TST} -I${IZ_BZIP2} -DUSE_BZIP2"
+            CFLAGS_TST="${CFLAGS_TST} -I${IZ_BZIP2} -DBZIP2_SUPPORT"
             LFLAGS1="${LFLAGS1} -L${IZ_BZIP2}"
             LFLAGS2="${LFLAGS2} -lbz2"
             echo "-- Including BZIP2 compression support"
@@ -1287,7 +1336,7 @@ if [ -n "${IZ_BZIP2}" ]; then
           echo "  Check for BZIP2 Makefile in I_BZIP2 (${IZ_BZIP2})"
           if [ -f "${IZ_BZIP2}/Makefile" ]; then
             LIB_BZ="${IZ_BZIP2}/libbz2.a"
-            CFLAGS_TST="${CFLAGS_TST} -I${IZ_BZIP2} -DUSE_BZIP2"
+            CFLAGS_TST="${CFLAGS_TST} -I${IZ_BZIP2} -DBZIP2_SUPPORT"
             LFLAGS1="${LFLAGS1} -L${IZ_BZIP2}"
             LFLAGS2="${LFLAGS2} -lbz2"
             echo "-- Including BZIP2 compression support"
@@ -1311,7 +1360,7 @@ if [ -n "${IZ_BZIP2}" ]; then
           if [ $status -eq 0 ]; then
             echo "    Found BZIP2 BZ_NO_STDIO library, ${IZ_BZIP2}/libbz2.a"
             LIB_BZ="${IZ_BZIP2}/libbz2.a"
-            CFLAGS_TST="${CFLAGS_TST} -I${IZ_BZIP2} -DUSE_BZIP2"
+            CFLAGS_TST="${CFLAGS_TST} -I${IZ_BZIP2} -DBZIP2_SUPPORT"
             LFLAGS1="${LFLAGS1} -L${IZ_BZIP2}"
             LFLAGS2="${LFLAGS2} -lbz2"
             echo "-- Including BZIP2 compression support"
@@ -1351,7 +1400,7 @@ _EOF_
       status=$?
       if [ $status -eq 0 ]; then
         echo "  -- OS supports BZIP2 - linking in bzip2"
-        CFLAGS_TST="${CFLAGS_TST} -DUSE_BZIP2"
+        CFLAGS_TST="${CFLAGS_TST} -DBZIP2_SUPPORT"
         LFLAGS2="${LFLAGS2} -lbz2"
         echo "-- Including OS BZIP2 compression support"
       else
@@ -2273,8 +2322,9 @@ echo "CC=\"${CC}\" CF=\"${CFLAGS}\"" \
      "PROD=\"${PROD}\"" \
      "PORT=\"${PORT}\"" \
      "LIB_AES_WG=\"${LIB_AES_WG}\"" \
-     "LIB_LZMA=\"${LIB_LZMA}\"" \
      "LIB_BZ=\"${LIB_BZ}\"" \
+     "LIB_LZMA=\"${LIB_LZMA}\"" \
+     "LIB_PPMD=\"${LIB_PPMD}\"" \
      "LIB_Z=\"${LIB_Z}\"" \
      "MK_BZ=\"${MK_BZ}\"" \
      "OSDEP_H=\"${OSDEP_H}\"" \

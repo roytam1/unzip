@@ -1,4 +1,4 @@
-#                                               3 August 2011.  SMS.
+#                                               27 March 2012.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Source Description File.
 #
@@ -224,7 +224,7 @@ CDEFS_AES = , CRYPT_AES_WG
 # BZIP2 options.
 
 .IFDEF IZ_BZIP2                 # IZ_BZIP2
-CDEFS_BZ = , USE_BZIP2
+CDEFS_BZ = , BZIP2_SUPPORT
 CFLAGS_INCL = /include = ([], [.VMS])
 LIB_BZIP2_OPTS = lib_bzip2:$(BZ2_OLB) /library,
 .ENDIF                          # IZ_BZIP2
@@ -232,12 +232,36 @@ LIB_BZIP2_OPTS = lib_bzip2:$(BZ2_OLB) /library,
 # LZMA options.
 
 .IFDEF LZMA                     # LZMA
+LZMA_PPMD = 1
 .IFDEF __VAX__                      # __VAX__
-CDEFS_LZMA = , USE_LZMA, _7ZIP_ST, _SZ_NO_INT_64
+CDEFS_LZMA = , LZMA_SUPPORT, _SZ_NO_INT_64
 .ELSE                               # __VAX__
-CDEFS_LZMA = , USE_LZMA, _7ZIP_ST
+CDEFS_LZMA = , LZMA_SUPPORT
 .ENDIF                              # __VAX__
+.IFDEF CFLAGS_INCL                  # CFLAGS_INCL
+.ELSE                               # CFLAGS_INCL
+CFLAGS_INCL = /include = ([], [.VMS])
+.ENDIF                              # CFLAGS_INCL
 .ENDIF                          # LZMA
+
+# PPMd options.
+
+.IFDEF PPMD                     # PPMD
+.IFDEF LZMA                         # LZMA
+CDEFS_PPMD = , PPMD_SUPPORT
+.ELSE                               # LZMA
+LZMA_PPMD = 1
+.IFDEF __VAX__                          # __VAX__
+CDEFS_PPMD = , PPMD_SUPPORT, _SZ_NO_INT_64
+.ELSE                                   # __VAX__
+CDEFS_PPMD = , PPMD_SUPPORT
+.ENDIF                                  # __VAX__
+.ENDIF                              # LZMA
+.IFDEF CFLAGS_INCL                  # CFLAGS_INCL
+.ELSE                               # CFLAGS_INCL
+CFLAGS_INCL = /include = ([], [.VMS])
+.ENDIF                              # CFLAGS_INCL
+.ENDIF                          # PPMD
 
 # ZLIB options.
 
@@ -248,12 +272,13 @@ CDEFS_ZL = , USE_ZLIB
 CFLAGS_INCL = /include = ([], [.VMS])
 .ENDIF                              # CFLAGS_INCL
 LIB_ZLIB_OPTS = LIB_ZLIB:LIBZ.OLB /library,
-.ELSE                           # IZ_ZLIB
-.IFDEF CFLAGS_INCL                  # CFLAGS_INCL
-.ELSE                               # CFLAGS_INCL
-CFLAGS_INCL = /include = []
-.ENDIF                              # CFLAGS_INCL
 .ENDIF                          # IZ_ZLIB
+
+.IFDEF CFLAGS_INCL              # CFLAGS_INCL
+.ELSE                           # CFLAGS_INCL
+CFLAGS_INCL = /include = []
+.ENDIF                          # CFLAGS_INCL
+
 
 # DBG, TRC options.
 
@@ -282,7 +307,7 @@ C_LOCAL_UNZIP = , $(LOCAL_UNZIP)
 .ENDIF
 
 CDEFS = VMS $(CDEFS_AES) $(CDEFS_BZ) $(CDEFS_LARGE) $(CDEFS_LZMA) \
- $(CDEFS_ZL) $(C_LOCAL_UNZIP)
+ $(CDEFS_PPMD) $(CDEFS_ZL) $(C_LOCAL_UNZIP)
 
 CDEFS_UNX = /define = ($(CDEFS))
 
@@ -440,14 +465,21 @@ MODS_OBJS_LIB_UNZIP_AES = \
 
 .IFDEF LZMA                     # LZMA
 MODS_OBJS_LIB_UNZIP_LZMA = \
- SZFILE=[.$(DEST)]SZFILE.OBJ \
- ALLOC=[.$(DEST)]ALLOC.OBJ \
  LZFIND=[.$(DEST)]LZFIND.OBJ \
  LZMADEC=[.$(DEST)]LZMADEC.OBJ
 .ENDIF                          # LZMA
 
+#    Primary object library, [.PPMD].
+
+.IFDEF PPMD                     # PPMD
+MODS_OBJS_LIB_UNZIP_PPMD = \
+ PPMD8=[.$(DEST)]PPMD8.OBJ \
+ PPMD8DEC=[.$(DEST)]PPMD8DEC.OBJ
+.ENDIF                          # PPMD
+
 MODS_OBJS_LIB_UNZIP = $(MODS_OBJS_LIB_UNZIP_N) $(MODS_OBJS_LIB_UNZIP_V) \
- $(MODS_OBJS_LIB_UNZIP_AES) $(MODS_OBJS_LIB_UNZIP_LZMA)
+ $(MODS_OBJS_LIB_UNZIP_AES) $(MODS_OBJS_LIB_UNZIP_LZMA) \
+ $(MODS_OBJS_LIB_UNZIP_PPMD)
 
 #    CLI object library, [.VMS].
 
@@ -498,17 +530,24 @@ MODS_OBJS_LIB_UNZIPSFX_AES = \
 
 .IFDEF LZMA                     # LZMA
 MODS_OBJS_LIB_UNZIPSFX_LZMA = \
- SZFILE=[.$(DEST)]SZFILE.OBJ \
- ALLOC=[.$(DEST)]ALLOC.OBJ \
  LZFIND=[.$(DEST)]LZFIND.OBJ \
  LZMADEC=[.$(DEST)]LZMADEC.OBJ
 .ENDIF                          # LZMA
+
+#    Primary object library, [.PPMD].
+
+.IFDEF PPMD                     # PPMD
+MODS_OBJS_LIB_UNZIPSFX_PPMD = \
+ PPMD8=[.$(DEST)]PPMD8.OBJ \
+ PPMD8DEC=[.$(DEST)]PPMD8DEC.OBJ
+.ENDIF                          # PPMD
 
 MODS_OBJS_LIB_UNZIPSFX = \
  $(MODS_OBJS_LIB_UNZIPSFX_N) \
  $(MODS_OBJS_LIB_UNZIPSFX_V) \
  $(MODS_OBJS_LIB_UNZIPSFX_AES) \
- $(MODS_OBJS_LIB_UNZIPSFX_LZMA)
+ $(MODS_OBJS_LIB_UNZIPSFX_LZMA) \
+ $(MODS_OBJS_LIB_UNZIPSFX_PPMD)
 
 # SFX object library, [.VMS] (no []).
 

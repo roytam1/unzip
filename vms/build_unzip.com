@@ -2,7 +2,7 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2011-08-09  SMS.
+$!     Last revised:  2012-03-28  SMS.
 $!
 $!     Command arguments:
 $!     - suppress C compilation (re-link): "NOCOMPILE"
@@ -29,6 +29,10 @@ $!     - select LZMA compression support: "LZMA"
 $!       By default, the SFX programs are built without LZMA support.
 $!       Add "LZMA_SFX=1" to the LOCAL_UNZIP C macros to enable it.
 $!       (See LOCAL_UNZIP, below.)
+$!     - select PPMd compression support: "PPMD"
+$!       By default, the SFX programs are built without PPMd support.
+$!       Add "PPMD_SFX=1" to the LOCAL_UNZIP C macros to enable it.
+$!       (See LOCAL_UNZIP, below.)
 $!     - use ZLIB compression library: "IZ_ZLIB=dev:[dir]", where
 $!       "dev:[dir]" (or a suitable logical name) tells where to find
 $!       "zlib.h".  The ZLIB object library (LIBZ.OLB) is expected to be
@@ -54,7 +58,7 @@ $!     - select installation of CLI interface version of UnZip:
 $!       "VMSCLI" or "CLI"
 $!     - force installation of UNIX interface version of UnZip
 $!       (override LOCAL_UNZIP environment): "NOVMSCLI" or "NOCLI"
-$!     - run basic UnZip tests: TEST
+$!     - run basic UnZip tests: TEST, TEST_PPMD
 $!
 $!     To specify additional options, define the symbol LOCAL_UNZIP
 $!     as a comma-separated list of the C macros to be defined, and
@@ -138,7 +142,9 @@ $ MAKE_MSG = 1
 $ MAKE_OBJ = 1
 $ MAY_USE_DECC = 1
 $ MAY_USE_GNUC = 0
+$ PPMD = 0
 $ TEST = 0
+$ TEST_PPMD = 0
 $!
 $! Process command line parameters requesting optional features.
 $!
@@ -238,6 +244,12 @@ $         MAKE_MSG = 0
 $         goto argloop_end
 $     endif
 $!
+$     if (f$extract( 0, 4, curr_arg) .eqs. "PPMD")
+$     then
+$         PPMD = 1
+$         goto argloop_end
+$     endif
+$!
 $     if (curr_arg .eqs. "VAXC")
 $     then
 $         MAY_USE_DECC = 0
@@ -274,6 +286,12 @@ $!
 $     if (curr_arg .eqs. "TEST")
 $     then
 $         TEST = 1
+$         goto argloop_end
+$     endif
+$!
+$     if (curr_arg .eqs. "TEST_PPMD")
+$     then
+$         TEST_PPMD = 1
 $         goto argloop_end
 $     endif
 $!
@@ -387,7 +405,7 @@ $ endif
 $!
 $ if (IZ_BZIP2 .nes. "")
 $ then
-$     defs = "USE_BZIP2, ''defs'"
+$     defs = "BZIP2_SUPPORT, ''defs'"
 $ endif
 $!
 $! Set AES_WG-related data.
@@ -401,10 +419,29 @@ $! Set LZMA-related data.
 $!
 $ if (LZMA .ne. 0)
 $ then
-$     defs = defs+ ", USE_LZMA, _7ZIP_ST"
+$     defs = defs+ ", LZMA_SUPPORT"
 $     if (arch .eqs. "VAX")
 $     then
 $         defs = defs+ ", _SZ_NO_INT_64"
+$     endif
+$     if (f$locate( "[.VMS]", cc_incl) .ge. f$length( cc_incl))
+$     then
+$         cc_incl = cc_incl+ ", [.VMS]"
+$     endif
+$ endif
+$!
+$! Set PPMD-related data.
+$!
+$ if (PPMD .ne. 0)
+$ then
+$     defs = defs+ ", PPMD_SUPPORT"
+$     if ((arch .eqs. "VAX") .and. (LZMA .eq. 0))
+$     then
+$         defs = defs+ ", _SZ_NO_INT_64"
+$     endif
+$     if (f$locate( "[.VMS]", cc_incl) .ge. f$length( cc_incl))
+$     then
+$         cc_incl = cc_incl+ ", [.VMS]"
 $     endif
 $ endif
 $!
@@ -416,11 +453,19 @@ $ then
 $     dest = "''dest'L"
 $ endif
 $!
-$! If TEST was requested, then run the tests (and exit).
+$! If TEST was requested, then run the basic tests (and exit).
 $!
 $ if (test)
 $ then
 $     @ [.vms]test_unzip.com "" [.'dest']
+$     goto error
+$ endif
+$!
+$! If TEST_PPMD was requested, then run the PPMd tests (and exit).
+$!
+$ if (test_ppmd)
+$ then
+$     @ [.vms]test_unzip.com "" [.'dest'] NOSFX
 $     goto error
 $ endif
 $!
@@ -667,9 +712,14 @@ $!
 $     if (LZMA .ne. 0)
 $     then
 $         cc 'DEF_UNX' /object = [.'dest']7ZFILE.OBJ [.LZMA]7ZFILE.C
-$         cc 'DEF_UNX' /object = [.'dest']ALLOC.OBJ [.LZMA]ALLOC.C
 $         cc 'DEF_UNX' /object = [.'dest']LZFIND.OBJ [.LZMA]LZFIND.C
 $         cc 'DEF_UNX' /object = [.'dest']LZMADEC.OBJ [.LZMA]LZMADEC.C
+$     endif
+$!
+$     if (PPMD .ne. 0)
+$     then
+$         cc 'DEF_UNX' /object = [.'dest']PPMD8.OBJ [.LZMA]PPMD8.C
+$         cc 'DEF_UNX' /object = [.'dest']PPMD8DEC.OBJ [.LZMA]PPMD8DEC.C
 $     endif
 $!
 $! Create the object library.
@@ -713,9 +763,15 @@ $     if (LZMA .ne. 0)
 $     then
 $         libr /object /replace [.'dest']UNZIP.OLB -
            [.'dest']7ZFILE.OBJ, -
-           [.'dest']ALLOC.OBJ, -
            [.'dest']LZFIND.OBJ, -
            [.'dest']LZMADEC.OBJ
+$     endif
+$!
+$     if (PPMD .ne. 0)
+$     then
+$         libr /object /replace [.'dest']UNZIP.OLB -
+           [.'dest']PPMD8.OBJ, -
+           [.'dest']PPMD8DEC.OBJ
 $     endif
 $!
 $ endif
@@ -855,9 +911,15 @@ $     if (LZMA .ne. 0)
 $     then
 $         libr /object /replace [.'dest']UNZIP.OLB -
            [.'dest']7ZFILE.OBJ, -
-           [.'dest']ALLOC.OBJ, -
            [.'dest']LZFIND.OBJ, -
            [.'dest']LZMADEC.OBJ
+$     endif
+$!
+$     if (PPMD .ne. 0)
+$     then
+$         libr /object /replace [.'dest']UNZIP.OLB -
+           [.'dest']PPMD8.OBJ, -
+           [.'dest']PPMD8DEC.OBJ
 $     endif
 $!
 $ endif

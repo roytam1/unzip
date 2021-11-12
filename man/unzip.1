@@ -1,4 +1,4 @@
-.\"  Copyright (c) 1990-2009 Info-ZIP.  All rights reserved.
+.\"  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 .\"
 .\"  See the accompanying file LICENSE, version 2009-Jan-02 or later
 .\"  (the contents of which are also included in unzip.h) for terms of use.
@@ -20,7 +20,7 @@
 .in -4n
 ..
 .\" =========================================================================
-.TH UNZIP 1L "20 April 2009 (v6.0)" "Info-ZIP"
+.TH UNZIP 1L "10 September 2011 (v6.10)" "Info-ZIP"
 .SH NAME
 unzip \- list, test and extract compressed files in a ZIP archive
 .PD
@@ -38,6 +38,24 @@ specified ZIP archive.  A companion program, \fIzip\fP(1L), creates ZIP
 archives; both programs are compatible with archives created by PKWARE's
 \fIPKZIP\fP and \fIPKUNZIP\fP for MS-DOS, but in many cases the program
 options or default behaviors differ.
+.TP
+Currently this manual page is being updated for release.  However be aware
+that the command line parser has been replaced by one similar to the one
+used for \fIzip\fP.  In particular, \fIoption negation now uses a TRAILING
+dash (\"\-\")\fP, so \-B\- negates the \-B option.  This is needed as
+a double dash (\"\-\-\") now introduces long options.  Use the command
+.EX
+unzip \-\-show\-options
+.EE
+to list all available options for a particular \fIunzip\fP executable,
+including the long options.
+.TP
+The command
+.EX
+unzip \-hh
+.EE
+displays extended help, which may be more current than this manual page,
+especially before release.
 .PD
 .\" =========================================================================
 .SH ARGUMENTS
@@ -152,6 +170,9 @@ are stored (no conversions).
 test archive files.  This option extracts each specified file in memory
 and compares the CRC (cyclic redundancy check, an enhanced checksum) of
 the expanded file with the original file's stored CRC value.
+.TP
+Adding \-v to \-t adds some diagnostic information to the report for
+archive members with LZMA or PPMd compression.
 .TP
 .B \-T
 [most OSes] set the timestamp on the archive(s) to that of the newest file
@@ -482,7 +503,7 @@ decimal  number) as if they were VMS version numbers (``;nnn'').
 .\" Amiga support possible eventually, but not yet
 [MS-DOS, OS/2, NT] restore the volume label if the extraction medium is
 removable (e.g., a diskette).  Doubling the option (\fB\-$$\fP) allows fixed
-media (hard disks) to be labelled as well.  By default, volume labels are
+media (hard disks) to be labeled as well.  By default, volume labels are
 ignored.
 .IP \fB\-/\fP\ \fIextensions\fP
 [Acorn only] overrides the extension list supplied by Unzip$Ext environment
@@ -1024,4 +1045,6 @@ Info-ZIP (Zip-Bugs subgroup, SPC)
 Info-ZIP (Zip-Bugs subgroup, SPC)
 .IP "v6.0\t20 Apr 09"
 Info-ZIP (Zip-Bugs subgroup, SPC)
+.IP "v6.10\t10 Sep 11"
+Info-ZIP (Zip-Bugs subgroup, EG)
 .PD

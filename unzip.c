@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -75,9 +75,9 @@
 # include "aes_wg/iz_aes_wg.h"
 #endif /* def CRYPT_AES_WG */
 
-#ifdef USE_LZMA
+#if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
 # include "lzma/SzVersion.h"
-#endif /* def USE_LZMA */
+#endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
 
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
 
@@ -92,7 +92,7 @@ typedef struct _sign_info
         void (*sighandler)(int);
         int sigtype;
     } savsigs_info;
-# endif
+# endif /* (defined(REENTRANT) && !defined(NO_EXCEPT_SIGNALS)) WINDLL */
 
 /*******************/
 /* Local Functions */
@@ -109,21 +109,21 @@ static void  show_version_info  OF((__GPRO));
 # endif
 static void  show_license       OF((__GPRO));
 
-#ifdef ENABLE_USER_PROGRESS
-# ifdef VMS
-#  define USER_PROGRESS_CLASS extern
-# else /* def VMS */
-#  define USER_PROGRESS_CLASS static
-# endif /* def VMS [else] */
+# ifdef ENABLE_USER_PROGRESS
+#  ifdef VMS
+#   define USER_PROGRESS_CLASS extern
+#  else /* def VMS */
+#   define USER_PROGRESS_CLASS static
+#  endif /* def VMS [else] */
 USER_PROGRESS_CLASS void user_progress OF((int));
-#endif /* def ENABLE_USER_PROGRESS */
+# endif /* def ENABLE_USER_PROGRESS */
 
 
 /*************/
 /* Constants */
 /*************/
 
-#include "consts.h"  /* all constant global variables are in here */
+# include "consts.h" /* all constant global variables are in here */
                      /* (non-constant globals were moved to globals.c) */
 
 /* constant local variables: */
@@ -389,193 +389,207 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
 # ifdef SFX
 #  ifdef VMSCLI
    /* UnzipSFXBanner[] is also used in vms/cmdline.c:  do not make it static */
-     ZCONST char Far UnzipSFXBanner[] =
+    ZCONST char Far UnzipSFXBanner[] =
 #  else
-     static ZCONST char Far UnzipSFXBanner[] =
+    static ZCONST char Far UnzipSFXBanner[] =
 #  endif
      "UnZipSFX %d.%d%d%s of %s, by Info-ZIP (http://www.info-zip.org).\n";
 #  ifdef SFX_EXDIR
-     static ZCONST char Far UnzipSFXOpts[] =
-    "Valid options are -tfupcz and -d <exdir>; modifiers are -abjnoqCL%sV%s.\n";
+    static ZCONST char Far UnzipSFXOpts[] =
+   "Valid options are -tfupcz and -d <exdir>; modifiers are -abjnoqCL%sV%s.\n";
 #  else
-     static ZCONST char Far UnzipSFXOpts[] =
-       "Valid options are -tfupcz; modifiers are -abjnoqCL%sV%s.\n";
+    static ZCONST char Far UnzipSFXOpts[] =
+     "Valid options are -tfupcz; modifiers are -abjnoqCL%sV%s.\n";
 #  endif
-     static ZCONST char Far UnzipSFXOpts2[] =
-       "For license info: \"--license\".\n";
+#  ifdef VMS
+    static ZCONST char Far UnzipSFXOptsV[] =
+"(Must quote upper-case options, like \"-V\", unless SET PROC/PARSE=EXTEND.)\n";
+#  endif /* def VMS */
+    static ZCONST char Far UnzipSFXOpts2[] =
+     "For license info: \"--license\".\n";
 # else /* !SFX */
-   static ZCONST char Far CompileOptions[] =
+    static ZCONST char Far CompileOptions[] =
      "UnZip special compilation options:\n";
-   static ZCONST char Far CompileOptFormat[] = "        %s\n";
+    static ZCONST char Far CompileOptFormat[] = "        %s\n";
 #  ifndef _WIN32_WCE /* Win CE does not support environment variables */
-   static ZCONST char Far EnvOptions[] =
+    static ZCONST char Far EnvOptions[] =
      "\nUnZip and ZipInfo environment options:\n";
-   static ZCONST char Far EnvOptFormat[] = "%16s:  %.1024s\n";
+    static ZCONST char Far EnvOptFormat[] = "%16s:  %.1024s\n";
 #  endif
-   static ZCONST char Far None[] = "[none]";
+    static ZCONST char Far None[] = "[none]";
 #  ifdef ACORN_FTYPE_NFS
-     static ZCONST char Far AcornFtypeNFS[] = "ACORN_FTYPE_NFS";
+    static ZCONST char Far AcornFtypeNFS[] = "ACORN_FTYPE_NFS";
 #  endif
 #  ifdef ASM_CRC
-     static ZCONST char Far AsmCRC[] = "ASM_CRC";
+    static ZCONST char Far AsmCRC[] = "ASM_CRC";
 #  endif
 #  ifdef ASM_INFLATECODES
-     static ZCONST char Far AsmInflateCodes[] = "ASM_INFLATECODES";
+    static ZCONST char Far AsmInflateCodes[] = "ASM_INFLATECODES";
 #  endif
 #  ifdef CHECK_VERSIONS
-     static ZCONST char Far Check_Versions[] = "CHECK_VERSIONS";
+    static ZCONST char Far Check_Versions[] = "CHECK_VERSIONS";
 #  endif
 #  ifdef COPYRIGHT_CLEAN
-     static ZCONST char Far Copyright_Clean[] =
-     "COPYRIGHT_CLEAN (PKZIP 0.9x unreducing method not supported)";
+    static ZCONST char Far Copyright_Clean[] =
+     "COPYRIGHT_CLEAN      (PKZIP 0.9x unreducing method not supported)";
 #  endif
 #  ifdef DEBUG
-     static ZCONST char Far UDebug[] = "DEBUG";
+    static ZCONST char Far UDebug[] = "DEBUG";
 #  endif
 #  ifdef DEBUG_TIME
-     static ZCONST char Far DebugTime[] = "DEBUG_TIME";
+    static ZCONST char Far DebugTime[] = "DEBUG_TIME";
+#  endif
+#  ifdef DEFLATE64_SUPPORT
+    static ZCONST char Far Deflate64_Sup[] =
+     "DEFLATE64_SUPPORT    (PKZIP 4.x Deflate64(tm) supported)";
 #  endif
 #  ifdef DLL
-     static ZCONST char Far Dll[] = "DLL";
+    static ZCONST char Far Dll[] = "DLL";
 #  endif
 #  ifdef DOSWILD
-     static ZCONST char Far DosWild[] = "DOSWILD";
+    static ZCONST char Far DosWild[] = "DOSWILD";
 #  endif
 #  ifdef LZW_CLEAN
-     static ZCONST char Far LZW_Clean[] =
-     "LZW_CLEAN (PKZIP/Zip 1.x unshrinking method not supported)";
+    static ZCONST char Far LZW_Clean[] =
+     "LZW_CLEAN            (PKZIP/Zip 1.x unshrink method not supported)";
 #  endif
 #  ifndef MORE
-     static ZCONST char Far No_More[] = "NO_MORE";
+    static ZCONST char Far No_More[] = "NO_MORE";
 #  endif
 #  ifdef NO_ZIPINFO
-     static ZCONST char Far No_ZipInfo[] = "NO_ZIPINFO";
+    static ZCONST char Far No_ZipInfo[] = "NO_ZIPINFO";
 #  endif
 #  ifdef NTSD_EAS
-     static ZCONST char Far NTSDExtAttrib[] = "NTSD_EAS";
+    static ZCONST char Far NTSDExtAttrib[] = "NTSD_EAS";
 #  endif
 #  if defined(WIN32) && defined(NO_W32TIMES_IZFIX)
-     static ZCONST char Far W32NoIZTimeFix[] = "NO_W32TIMES_IZFIX";
+    static ZCONST char Far W32NoIZTimeFix[] = "NO_W32TIMES_IZFIX";
 #  endif
 #  ifdef OLD_THEOS_EXTRA
-     static ZCONST char Far OldTheosExtra[] =
-     "OLD_THEOS_EXTRA (handle also old Theos port extra field)";
+    static ZCONST char Far OldTheosExtra[] =
+     "OLD_THEOS_EXTRA      (Handle also old Theos port extra field)";
 #  endif
 #  ifdef OS2_EAS
-     static ZCONST char Far OS2ExtAttrib[] = "OS2_EAS";
+    static ZCONST char Far OS2ExtAttrib[] = "OS2_EAS";
 #  endif
 #  ifdef QLZIP
-     static ZCONST char Far SMSExFldOnUnix[] = "QLZIP";
+    static ZCONST char Far SMSExFldOnUnix[] = "QLZIP";
 #  endif
 #  ifdef REENTRANT
-     static ZCONST char Far Reentrant[] = "REENTRANT";
+    static ZCONST char Far Reentrant[] = "REENTRANT";
 #  endif
 #  ifdef REGARGS
-     static ZCONST char Far RegArgs[] = "REGARGS";
+    static ZCONST char Far RegArgs[] = "REGARGS";
 #  endif
 #  ifdef RETURN_CODES
-     static ZCONST char Far Return_Codes[] = "RETURN_CODES";
+    static ZCONST char Far Return_Codes[] = "RETURN_CODES";
 #  endif
 #  ifdef SET_DIR_ATTRIB
-     static ZCONST char Far SetDirAttrib[] = "SET_DIR_ATTRIB";
+    static ZCONST char Far SetDirAttrib[] =
+     "SET_DIR_ATTRIB       (Setting directory attributes supported)";
 #  endif
 #  ifdef SYMLINKS
-     static ZCONST char Far SymLinkSupport[] =
-     "SYMLINKS (symbolic links supported, if RTL and file system permit)";
+    static ZCONST char Far SymLinkSupport[] =
+     "SYMLINKS             (Symbolic links supported, if RTL and file sys do)";
 #  endif
 #  ifdef TIMESTAMP
-     static ZCONST char Far TimeStamp[] = "TIMESTAMP";
+    static ZCONST char Far TimeStamp[] =
+     "TIMESTAMP            (Restoring file timestamps supported)";
 #  endif
 #  ifdef UNIXBACKUP
-     static ZCONST char Far UnixBackup[] = "UNIXBACKUP (-B creates backup files)";
+    static ZCONST char Far UnixBackup[] =
+     "UNIXBACKUP           (-B creates backup files)";
 #  endif
 #  ifdef USE_EF_UT_TIME
-     static ZCONST char Far Use_EF_UT_time[] = "USE_EF_UT_TIME";
+    static ZCONST char Far Use_EF_UT_time[] =
+     "USE_EF_UT_TIME       (Use Universal Time, if available)";
 #  endif
 #  ifndef LZW_CLEAN
-     static ZCONST char Far Use_Unshrink[] =
-     "USE_UNSHRINK (PKZIP/Zip 1.x unshrinking method supported)";
+    static ZCONST char Far Unshrink_Sup[] =
+     "UNSHRINK_SUPPORT     (PKZIP/Zip 1.x unshrinking method supported)";
 #  endif
 #  ifndef COPYRIGHT_CLEAN
-     static ZCONST char Far Use_Smith_Code[] =
-     "USE_SMITH_CODE (PKZIP 0.9x unreducing method supported)";
-#  endif
-#  ifdef USE_DEFLATE64
-     static ZCONST char Far Use_Deflate64[] =
-     "USE_DEFLATE64 (PKZIP 4.x Deflate64(tm) supported)";
+    static ZCONST char Far Use_Smith_Code[] =
+     "USE_SMITH_CODE       (PKZIP 0.9x unreducing method supported)";
 #  endif
 #  ifdef UNICODE_SUPPORT
 #   ifdef UTF8_MAYBE_NATIVE
 #    ifdef UNICODE_WCHAR
        /* direct native UTF-8 check AND charset transform via wchar_t */
-       static ZCONST char Far Use_Unicode[] =
-       "UNICODE_SUPPORT [wide-chars, char coding: %s] (handle UTF-8 paths)";
+    static ZCONST char Far Unicode_Sup[] =
+     "UNICODE_SUPPORT [wide-chars, char coding: %s] (handle UTF-8 paths)";
 #    else
        /* direct native UTF-8 check, only */
-       static ZCONST char Far Use_Unicode[] =
-       "UNICODE_SUPPORT [char coding: %s] (handle UTF-8 paths)";
+    static ZCONST char Far Unicode_Sup[] =
+     "UNICODE_SUPPORT [char coding: %s] (handle UTF-8 paths)";
 #    endif
-       static ZCONST char Far SysChUTF8[] = "UTF-8";
-       static ZCONST char Far SysChOther[] = "other";
+    static ZCONST char Far SysChUTF8[] = "UTF-8";
+    static ZCONST char Far SysChOther[] = "other";
 #   else /* !UTF8_MAYBE_NATIVE */
        /* charset transform via wchar_t, no native UTF-8 support */
-       static ZCONST char Far Use_Unicode[] =
-       "UNICODE_SUPPORT [wide-chars] (handle UTF-8 paths)";
+    static ZCONST char Far Unicode_Sup[] =
+     "UNICODE_SUPPORT [wide-chars] (handle UTF-8 paths)";
 #   endif /* ?UTF8_MAYBE_NATIVE */
 #  endif /* UNICODE_SUPPORT */
 #  ifdef WIN32_WIDE
-     static ZCONST char Far Use_Win32_Wide[] = "WIN32_WIDE (wide characters supported)";
+    static ZCONST char Far Win32_Wide_Sup[] =
+     "WIN32_WIDE           (Wide characters supported)";
 #  endif
 #  ifdef _MBCS
-     static ZCONST char Far Have_MBCS_Support[] =
-     "MBCS-support (multibyte character support, MB_CUR_MAX = %u)";
+    static ZCONST char Far Have_MBCS_Support[] =
+     "MBCS-support         (Multibyte character support, MB_CUR_MAX = %u)";
 #  endif
 #  ifdef MULT_VOLUME
-     static ZCONST char Far Use_MultiVol[] =
-     "MULT_VOLUME (multi-volume archives supported)";
+    static ZCONST char Far MultiVol_Sup[] =
+     "MULT_VOLUME          (Multi-volume archives supported)";
 #  endif
 #  ifdef LARGE_FILE_SUPPORT
-     static ZCONST char Far Use_LFS[] =
-     "LARGE_FILE_SUPPORT (large files over 2 GiB supported)";
+    static ZCONST char Far LFS_Sup[] =
+     "LARGE_FILE_SUPPORT   (Large files over 2 GiB supported)";
 #  endif
 #  ifdef ZIP64_SUPPORT
-     static ZCONST char Far Use_Zip64[] =
-     "ZIP64_SUPPORT (archives using Zip64 for large files supported)";
+    static ZCONST char Far Zip64_Sup[] =
+     "ZIP64_SUPPORT        (Archives using Zip64 for large files supported)";
 #  endif
 #  if (defined(__DJGPP__) && (__DJGPP__ >= 2))
 #   ifdef USE_DJGPP_ENV
-       static ZCONST char Far Use_DJGPP_Env[] = "USE_DJGPP_ENV";
+    static ZCONST char Far Use_DJGPP_Env[] = "USE_DJGPP_ENV";
 #   endif
 #   ifdef USE_DJGPP_GLOB
-       static ZCONST char Far Use_DJGPP_Glob[] = "USE_DJGPP_GLOB";
+    static ZCONST char Far Use_DJGPP_Glob[] = "USE_DJGPP_GLOB";
 #   endif
 #  endif /* __DJGPP__ && (__DJGPP__ >= 2) */
 #  ifdef USE_VFAT
-     static ZCONST char Far Use_VFAT_support[] = "USE_VFAT";
+    static ZCONST char Far Use_VFAT_support[] = "USE_VFAT";
 #  endif
 #  ifdef USE_ZLIB
-     static ZCONST char Far UseZlib[] =
-     "USE_ZLIB (compiled with version %s; using version %s)";
-#  endif
-#  ifdef USE_BZIP2
-     static ZCONST char Far UseBZip2[] =
-     "USE_BZIP2 (PKZIP 4.6+, using bzip2 lib version %s)";
-#  endif
-#  ifdef USE_LZMA
-    static ZCONST char Far UseLZMA[] =
-     "LZMA (LZMA compression, ver %s)";
-#  endif
+    static ZCONST char Far UseZlib[] =
+     "USE_ZLIB             (Using ZLIB, build ver %s, run-time %s)";
+#  endif /* def USE_ZLIB */
+#  ifdef BZIP2_SUPPORT
+    static ZCONST char Far BZip2_Sup[] =
+     "BZIP2_SUPPORT        (PKZIP 4.6+, bzip2 lib ver %s)";
+#  endif /* def BZIP2_SUPPORT */
+#  ifdef LZMA_SUPPORT
+    static ZCONST char Far LZMA_Sup[] =
+     "LZMA_SUPPORT         (PKZIP 6.3+, LZMA compression, ver %s)";
+#  endif /* def LZMA_SUPPORT */
+#  ifdef PPMD_SUPPORT
+    static ZCONST char Far PPMD_Sup[] =
+     "PPMD_SUPPORT         (PKZIP 6.3+, PPMd compression, ver %s)";
+#  endif /* def PPMD_SUPPORT */
 #  ifdef VMS_TEXT_CONV
-     static ZCONST char Far VmsTextConv[] = "VMS_TEXT_CONV";
+    static ZCONST char Far VmsTextConv[] =
+     "VMS_TEXT_CONV        (Conversion of VMS var-len rec fmt text supported)";
 #  endif
 #  ifdef VMSCLI
-     static ZCONST char Far VmsCLI[] = "VMSCLI";
+    static ZCONST char Far VmsCLI[] = "VMSCLI";
 #  endif
 #  ifdef VMSWILD
-     static ZCONST char Far VmsWild[] = "VMSWILD";
+    static ZCONST char Far VmsWild[] = "VMSWILD";
 #  endif
 #  ifdef WILD_STOP_AT_DIR
-     static ZCONST char Far WildStopAtDir[] = "WILD_STOP_AT_DIR";
+    static ZCONST char Far WildStopAtDir[] = "WILD_STOP_AT_DIR";
 #  endif
 #  ifdef CRYPT_AES_WG
     static ZCONST char Far AesWgEncryptionNotice1[] =
@@ -585,10 +599,11 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
         This executable includes 256-bit AES strong encryption and may be\n\
         subject to export restrictions in many countries, including the USA.\n";
 
-     static ZCONST char Far AesWgDecryption[] =
-       "        CRYPT_AES_WG (AES encryption (WinZip/Gladman), ver %d.%d%s)\n";
+    static ZCONST char Far AesWgDecryption[] =
+"        CRYPT_AES_WG         (AES encryption (WinZip/Gladman), ver %d.%d%s)\n";
 #  endif
 #  if CRYPT
+#   ifdef CRYPT_TRAD
     static ZCONST char Far TraditionalEncryptionNotice1[] =
      "\nTraditional Zip Encryption notice:\n";
     static ZCONST char Far TraditionalEncryptionNotice2[] =
@@ -599,47 +614,48 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
         distributed in both source and object forms from any country,\n\
         including the USA under License Exception TSU of the U.S. Export\n\
         Administration Regulations (section 740.13(e)) of 6 June 2002.\n";
+    static ZCONST char Far Decryption[] =
+"        CRYPT                (Traditional (weak) encryption, ver %d.%d%s)\n";
+    static ZCONST char Far CryptDate[] = CR_VERSION_DATE;
+#   endif /* def CRYPT_TRAD */
 #   ifdef PASSWD_FROM_STDIN
-     static ZCONST char Far PasswdStdin[] = "PASSWD_FROM_STDIN";
+    static ZCONST char Far PasswdStdin[] = "PASSWD_FROM_STDIN";
 #   endif
-     static ZCONST char Far Decryption[] =
-       "        CRYPT (traditional (weak) encryption, ver %d.%d%s)\n";
-     static ZCONST char Far CryptDate[] = CR_VERSION_DATE;
 #  endif
 #  ifndef __RSXNT__
 #   ifdef __EMX__
-       static ZCONST char Far EnvEMX[] = "EMX";
-       static ZCONST char Far EnvEMXOPT[] = "EMXOPT";
+    static ZCONST char Far EnvEMX[] = "EMX";
+    static ZCONST char Far EnvEMXOPT[] = "EMXOPT";
 #   endif
 #   if (defined(__GO32__) && (!defined(__DJGPP__) || (__DJGPP__ < 2)))
-       static ZCONST char Far EnvGO32[] = "GO32";
-       static ZCONST char Far EnvGO32TMP[] = "GO32TMP";
+    static ZCONST char Far EnvGO32[] = "GO32";
+    static ZCONST char Far EnvGO32TMP[] = "GO32TMP";
 #   endif
 #  endif /* !__RSXNT__ */
 
 #  ifdef VMS
 /* UnzipUsageLine1[] is also used in vms/cmdline.c:  do not make it static */
-   ZCONST char Far UnzipUsageLine1[] = "\
+    ZCONST char Far UnzipUsageLine1[] = "\
 UnZip %d.%d%d%s of %s, by Info-ZIP.  For more details see: unzip -v.\n\n";
 #   ifdef COPYRIGHT_CLEAN
-   static ZCONST char Far UnzipUsageLine1v[] = "\
+    static ZCONST char Far UnzipUsageLine1v[] = "\
 UnZip %d.%d%d%s of %s, by Info-ZIP.  Maintained by C. Spieler.  Send\n\
 bug reports using http://www.info-zip.org/zip-bug.html; see README for details.\
 \n\n";
 #   else
-   static ZCONST char Far UnzipUsageLine1v[] = "\
+    static ZCONST char Far UnzipUsageLine1v[] = "\
 UnZip %d.%d%d%s of %s, by Info-ZIP.  UnReduce (c) 1989 by S. H. Smith.\n\
 Send bug reports using //www.info-zip.org/zip-bug.html; see README for details.\
 \n\n";
 #   endif /* ?COPYRIGHT_CLEAN */
 #  else /* !VMS */
 #   ifdef COPYRIGHT_CLEAN
-   static ZCONST char Far UnzipUsageLine1[] = "\
+    static ZCONST char Far UnzipUsageLine1[] = "\
 UnZip %d.%d%d%s of %s, by Info-ZIP.  Maintained by C. Spieler.  Send\n\
 bug reports using http://www.info-zip.org/zip-bug.html; see README for details.\
 \n\n";
 #   else
-   static ZCONST char Far UnzipUsageLine1[] = "\
+    static ZCONST char Far UnzipUsageLine1[] = "\
 UnZip %d.%d%d%s of %s, by Info-ZIP.  UnReduce (c) 1989 by S. H. Smith.\n\
 Send bug reports using //www.info-zip.org/zip-bug.html; see README for details.\
 \n\n";
@@ -683,7 +699,7 @@ Usage: unzip %s[-opts[modifiers]] file[.zip] [list] [-x xlist] [-d exdir]\n \
 
 #  ifdef VMS
    static ZCONST char Far VMSusageLine2b[] = "\
-=> define foreign command symbol in LOGIN.COM: \
+=> Define foreign command symbol in LOGIN.COM: \
 unzip == \"$ dev:[dir]unzip.exe\"\n";
 #  endif
 
@@ -722,7 +738,7 @@ static ZCONST char Far UnzipUsageLine3[] = "\n\
 #  if (defined(UNICODE_SUPPORT) && !defined(WIN32))
 #   ifdef VMS
 static ZCONST char Far UnzipUsageLine4[] = "\
-modifiers:\n\
+Modifiers:\n\
   -n  never overwrite or make a new version of an existing file\n\
   -o  always make a new version (-oo: overwrite original) of an existing file\n\
   -q  quiet mode (-qq => quieter)            -a  auto-convert any text files\n\
@@ -732,7 +748,7 @@ modifiers:\n\
 lowercase\n %-42s  -V  retain VMS version numbers\n%s";
 #   else /* !VMS */
 static ZCONST char Far UnzipUsageLine4[] = "\
-modifiers:\n\
+Modifiers:\n\
   -n  never overwrite existing files         -q  quiet mode (-qq => quieter)\n\
   -o  overwrite files WITHOUT prompting      -a  auto-convert any text files\n\
   -j  junk paths (do not make directories)   -aa treat ALL files as text\n\
@@ -743,7 +759,7 @@ lowercase\n %-42s  -V  retain VMS version numbers\n%s";
 #  else /* !UNICODE_SUPPORT */
 #   ifdef VMS
 static ZCONST char Far UnzipUsageLine4[] = "\
-modifiers:\n\
+Modifiers:\n\
   -n  never overwrite or make a new version of an existing file\n\
   -o  always make a new version (-oo: overwrite original) of an existing file\n\
   -q  quiet mode (-qq => quieter)            -a  auto-convert any text files\n\
@@ -752,7 +768,7 @@ modifiers:\n\
 lowercase\n %-42s  -V  retain VMS version numbers\n%s";
 #   else /* !VMS */
 static ZCONST char Far UnzipUsageLine4[] = "\
-modifiers:\n\
+Modifiers:\n\
   -n  never overwrite existing files         -q  quiet mode (-qq => quieter)\n\
   -o  overwrite files WITHOUT prompting      -a  auto-convert any text files\n\
   -j  junk paths (do not make directories)   -aa treat ALL files as text\n\
@@ -2487,7 +2503,7 @@ int uz_opts(__G__ pargc, pargv)
 
 
     /* it's possible the arg count could have been changed by get_option() */
-    argc = arg_count(args);
+    argc = arg_count(__G__ args);
 
 
 
@@ -2596,7 +2612,7 @@ opts_done:  /* yes, very ugly...but only used by UnZipSFX with -x xlist */
     } else if (showhelp == -3) {
       /* show command line args */
       *pargc = -1;
-      show_commandline(__G__ args);
+      show_commandline( args);
       return PK_OK;
 # endif /* ndef SFX */
     }
@@ -2689,8 +2705,7 @@ opts_done:  /* yes, very ugly...but only used by UnZipSFX with -x xlist */
 
 # ifdef SFX
 #  ifdef VMS
-#    define LOCAL "X.\n\
-(Must quote upper-case options, like \"-V\", unless SET PROC/PARSE=EXTEND.)"
+#    define LOCAL "X"
 #  endif
 #  ifdef UNIX
 #    define LOCAL "X"
@@ -2732,6 +2747,9 @@ int usage(__G__ error)   /* return PK-type error code */
       LoadFarStringSmall(VersionDate)));
     Info(slide, error? 1 : 0, ((char *)slide, LoadFarString(UnzipSFXOpts),
       SFXOPT1, LOCAL));
+#  ifdef VMS
+    Info(slide, error? 1 : 0, ((char *)slide, LoadFarString(UnzipSFXOptsV)));
+#  endif /* def VMS */
     Info(slide, error? 1 : 0, ((char *)slide, LoadFarString(UnzipSFXOpts2)));
 #  ifdef BETA
     Info(slide, error? 1 : 0, ((char *)slide, LoadFarString(BetaVersion), "\n",
@@ -3123,7 +3141,7 @@ static void show_license(__G)
 
     /* license array */
     static ZCONST char *text[] = {
-  "Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.",
+  "Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.",
   "",
   "This is version 2009-Jan-02 of the Info-ZIP license.",
   "",
@@ -3278,12 +3296,14 @@ static void show_options(__G)
 } /* end function show_options() */
 
 /* Print processed command line. */
-void show_commandline(__G__ args)
+void show_commandline( args)
     char *args[];
 {
 #define MAX_CARG_LEN (WSIZE>>2)
+
     extent i;
     char argtext[MAX_CARG_LEN + 1];
+    GETGLOBALS();
 
     Info(slide, 0, ((char *)slide, "%s\n\n", "Processed command line:"));
 
@@ -3464,23 +3484,23 @@ static void show_version_info(__G)
 #  endif
 #  ifndef LZW_CLEAN
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_Unshrink)));
+          LoadFarStringSmall(Unshrink_Sup)));
         ++numopts;
 #  endif
-#  ifdef USE_DEFLATE64
+#  ifdef DEFLATE64_SUPPORT
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_Deflate64)));
+          LoadFarStringSmall(Deflate64_Sup)));
         ++numopts;
-#  endif
+#  endif /* def DEFLATE64_SUPPORT */
 #  ifdef UNICODE_SUPPORT
 #   ifdef UTF8_MAYBE_NATIVE
-        sprintf((char *)(slide+256), LoadFarStringSmall(Use_Unicode),
+        sprintf((char *)(slide+256), LoadFarStringSmall(Unicode_Sup),
           LoadFarStringSmall2(G.native_is_utf8 ? SysChUTF8 : SysChOther));
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           (char *)(slide+256)));
 #   else
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_Unicode)));
+          LoadFarStringSmall(Unicode_Sup)));
 #   endif
         ++numopts;
 #  endif
@@ -3498,17 +3518,17 @@ static void show_version_info(__G)
 #  endif
 #  ifdef MULT_VOLUME
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_MultiVol)));
+          LoadFarStringSmall(MultiVol_Sup)));
         ++numopts;
 #  endif
 #  ifdef LARGE_FILE_SUPPORT
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_LFS)));
+          LoadFarStringSmall(LFS_Sup)));
         ++numopts;
 #  endif
 #  ifdef ZIP64_SUPPORT
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(Use_Zip64)));
+          LoadFarStringSmall(Zip64_Sup)));
         ++numopts;
 #  endif
 #  if (defined(__DJGPP__) && (__DJGPP__ >= 2))
@@ -3535,20 +3555,27 @@ static void show_version_info(__G)
           (char *)(slide+256)));
         ++numopts;
 #  endif
-#  ifdef USE_BZIP2
-        sprintf((char *)(slide+256), LoadFarStringSmall(UseBZip2),
+#  ifdef BZIP2_SUPPORT
+        sprintf((char *)(slide+256), LoadFarStringSmall(BZip2_Sup),
           BZ2_bzlibVersion());
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           (char *)(slide+256)));
         ++numopts;
-#  endif
-#  ifdef USE_LZMA
-        sprintf((char *)(slide+256), LoadFarStringSmall(UseLZMA),
+#  endif /* def BZIP2_SUPPORT */
+#  ifdef LZMA_SUPPORT
+        sprintf((char *)(slide+256), LoadFarStringSmall(LZMA_Sup),
          MY_VERSION);
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
          (char *)(slide+256)));
         ++numopts;
-#  endif
+#  endif /* def LZMA_SUPPORT */
+#  ifdef PPMD_SUPPORT
+        sprintf((char *)(slide+256), LoadFarStringSmall(PPMD_Sup),
+         MY_VERSION);
+        Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
+         (char *)(slide+256)));
+        ++numopts;
+#  endif /* def PPMD_SUPPORT */
 #  ifdef VMS_TEXT_CONV
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           LoadFarStringSmall(VmsTextConv)));
@@ -3569,31 +3596,34 @@ static void show_version_info(__G)
           LoadFarStringSmall(WildStopAtDir)));
         ++numopts;
 #  endif
-#  if CRYPT_AES_WG
-        Info(slide, 0, ((char *)slide, LoadFarStringSmall(AesWgDecryption),
-          IZ_AES_WG_MAJORVER, IZ_AES_WG_MINORVER, IZ_AES_WG_BETA_VER));
-        ++numopts;
-#  endif
 #  if CRYPT
 #   ifdef PASSWD_FROM_STDIN
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           LoadFarStringSmall(PasswdStdin)));
+        ++numopts;
 #   endif
+#   ifdef CRYPT_TRAD
         Info(slide, 0, ((char *)slide, LoadFarString(Decryption),
           CR_MAJORVER, CR_MINORVER, CR_BETA_VER));
         ++numopts;
+#   endif /* def CRYPT_TRAD */
+#   if CRYPT_AES_WG
+        Info(slide, 0, ((char *)slide, LoadFarStringSmall(AesWgDecryption),
+          IZ_AES_WG_MAJORVER, IZ_AES_WG_MINORVER, IZ_AES_WG_BETA_VER));
+        ++numopts;
+#   endif
 #  endif /* CRYPT */
         if (numopts == 0)
             Info(slide, 0, ((char *)slide,
               LoadFarString(CompileOptFormat),
               LoadFarStringSmall(None)));
 
-#  if CRYPT
+#  ifdef CRYPT_TRAD
         Info(slide, 0, ((char *)slide,
          LoadFarString(TraditionalEncryptionNotice1)));
         Info(slide, 0, ((char *)slide,
          LoadFarString(TraditionalEncryptionNotice2)));
-#  endif /* CRYPT */
+#  endif /* def CRYPT_TRAD */
 
 #  if CRYPT_AES_WG
         Info(slide, 0, ((char *)slide,
@@ -3828,6 +3858,7 @@ static int optionerr(options, buf, err, optind, islong)
  * will properly work.
  */
 char **copy_args(__G__ args, max_args)
+  __GDEF
   char **args;
   int max_args;
 {
@@ -3853,7 +3884,7 @@ char **copy_args(__G__ args, max_args)
       break;
     }
     if ((new_args[j] = malloc(strlen(args[j]) + 1)) == NULL) {
-      free_args(new_args);
+      free_args(__G__ new_args);
       oWARN("memory - ca");
       return NULL;
     }
@@ -3866,7 +3897,8 @@ char **copy_args(__G__ args, max_args)
 
 
 /* count args - count args in argv like array */
-int arg_count(args)
+int arg_count(__G__ args)
+  __GDEF
   char **args;
 {
   int i;
@@ -3882,7 +3914,8 @@ int arg_count(args)
 
 
 /* free args - free args created with one of these functions */
-int free_args(args)
+int free_args(__G__ args)
+  __GDEF
   char **args;
 {
   int i;
@@ -3911,80 +3944,81 @@ int free_args(args)
  */
 
 int insert_arg(__G__ pargs, arg, at_arg, free_args)
-   char ***pargs;
-   ZCONST char *arg;
-   int at_arg;
-   int free_args;
+  __GDEF
+  char ***pargs;
+  ZCONST char *arg;
+  int at_arg;
+  int free_args;
 {
-   char *newarg = NULL;
-   char **args;
-   char **newargs = NULL;
-   int argnum;
-   int newargnum;
-   int argcnt;
-   int newargcnt;
+  char *newarg = NULL;
+  char **args;
+  char **newargs = NULL;
+  int argnum;
+  int newargnum;
+  int argcnt;
+  int newargcnt;
 
-   if (pargs == NULL) {
-     return 0;
-   }
-   args = *pargs;
+  if (pargs == NULL) {
+    return 0;
+  }
+  args = *pargs;
 
-   /* count args */
-   if (args == NULL) {
-     argcnt = 0;
-   } else {
-     for (argcnt = 0; args[argcnt]; argcnt++) ;
-   }
-   if (arg == NULL) {
-     /* done */
-     return argcnt;
-   }
-   if (at_arg == -1) {
-     at_arg = argcnt;
-   }
-   newargcnt = argcnt + 1;
+  /* count args */
+  if (args == NULL) {
+    argcnt = 0;
+  } else {
+    for (argcnt = 0; args[argcnt]; argcnt++) ;
+  }
+  if (arg == NULL) {
+    /* done */
+    return argcnt;
+  }
+  if (at_arg == -1) {
+    at_arg = argcnt;
+  }
+  newargcnt = argcnt + 1;
 
-   /* get storage for new args */
-   if ((newargs = (char **) malloc((newargcnt + 1) * sizeof(char *))) == NULL)
-   {
-     oWARN("memory - ia");
-     return 0;
-   }
+  /* get storage for new args */
+  if ((newargs = (char **) malloc((newargcnt + 1) * sizeof(char *))) == NULL)
+  {
+    oWARN("memory - ia");
+    return 0;
+  }
 
-   /* copy argument pointers from args to position at_arg, copy the new arg,
-      then copy the rest of the args */
-   argnum = 0;
-   newargnum = 0;
-   if (args) {
-     for (; args[argnum] && argnum < at_arg; argnum++) {
-       newargs[newargnum++] = args[argnum];
-     }
-   }
-   /* copy new arg */
-   if ((newarg = (char *) malloc(strlen(arg) + 1)) == NULL) {
-     oWARN("memory - ia");
-     return 0;
-   }
-   strcpy(newarg, arg);
+  /* copy argument pointers from args to position at_arg, copy the new arg,
+     then copy the rest of the args */
+  argnum = 0;
+  newargnum = 0;
+  if (args) {
+    for (; args[argnum] && argnum < at_arg; argnum++) {
+      newargs[newargnum++] = args[argnum];
+    }
+  }
+  /* copy new arg */
+  if ((newarg = (char *) malloc(strlen(arg) + 1)) == NULL) {
+    oWARN("memory - ia");
+    return 0;
+  }
+  strcpy(newarg, arg);
 
-   newargs[newargnum++] = newarg;
-   if (args) {
-     for ( ; args[argnum]; argnum++) {
-       newargs[newargnum++] = args[argnum];
-     }
-   }
-   newargs[newargnum] = NULL;
+  newargs[newargnum++] = newarg;
+  if (args) {
+    for ( ; args[argnum]; argnum++) {
+      newargs[newargnum++] = args[argnum];
+    }
+  }
+  newargs[newargnum] = NULL;
 
-   /* free old args array but not component strings - this assumes that
-      args was allocated with malloc as copy_args does.  DO NOT DO THIS
-      on the original argv.
-    */
-   if (free_args)
-     free(args);
+  /* free old args array but not component strings - this assumes that
+   * args was allocated with malloc as copy_args does.  DO NOT DO THIS
+   * on the original argv.
+   */
+  if (free_args)
+    free(args);
 
-   *pargs = newargs;
+  *pargs = newargs;
 
-   return newargnum;
+  return newargnum;
 }
 
 /* ------------------------------------- */
@@ -4010,8 +4044,9 @@ int insert_arg(__G__ pargs, arg, at_arg, free_args)
  *                   value lists.
  *    depth        - recursion depth (0 at top level, 1 or more in arg files)
  */
-static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar, negated,
-                                  value, option_num, depth)
+static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
+                                  negated, value, option_num, depth)
+  __GDEF
   int option_group;
   ZCONST char **args;
   int argnum;
@@ -4265,6 +4300,7 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar, neg
 
 static unsigned long get_longopt(__G__ option_group, args, argnum, optchar,
                                  negated, value, option_num, depth)
+  __GDEF
   int option_group;
   ZCONST char **args;
   int argnum;
@@ -4653,6 +4689,7 @@ static unsigned long get_longopt(__G__ option_group, args, argnum, optchar,
 
 unsigned long get_option(__G__ option_group, pargs, argc, argnum, optchar, value,
                          negated, first_nonopt_arg, option_num, recursion_depth)
+  __GDEF
   int option_group;
   char ***pargs;
   int *argc;
@@ -5030,7 +5067,7 @@ unsigned long get_option(__G__ option_group, pargs, argc, argnum, optchar, value
 
 /* Ctrl/T (VMS) AST or SIGUSR1 handler for user-triggered progress
  * message.
- * UNIX: arg = signal number. 
+ * UNIX: arg = signal number.
  * VMS:  arg = Out-of-band character mask.
  */
 #ifdef ENABLE_USER_PROGRESS
@@ -5051,7 +5088,11 @@ int arg;
    * (host::tty local_time program cpu_time page_faults I/O_ops phys_mem)
    * We do something vaguely similar on non-VMS systems.
    */
-# ifndef VMS
+# ifdef VMS
+
+  GETGLOBALS();
+
+# else /* def VMS */
 
 #  ifdef CLK_TCK
 #   define clk_tck CLK_TCK
@@ -5060,20 +5101,20 @@ int arg;
 #  endif /* def CLK_TCK [else] */
 #  define U_P_NODENAME_LEN 32
 
-
   static int not_first = 0;                             /* First time flag. */
-  static char u_p_nodename[ U_P_NODENAME_LEN+ 1];       /* "hoat::tty". */
+  static char u_p_nodename[ U_P_NODENAME_LEN+ 1];       /* "host::tty". */
   static char u_p_prog_name[] = "unzip";                /* Program name. */
 
   struct utsname u_p_utsname;
   struct tm u_p_loc_tm;
   struct tms u_p_tms;
-  char u_p_intro[ 128];
   char *cp;
   char *tty_name;
   time_t u_p_time;
   float stime_f;
   float utime_f;
+
+  GETGLOBALS();
 
   /* On the first time through, get the host name and tty name, and form
    * the "host::tty" string (in u_p_nodename) for the intro line.
@@ -5116,9 +5157,9 @@ int arg;
 
   /* CPU time. */
   times( &u_p_tms);
-#ifndef CLK_TCK
+#  ifndef CLK_TCK
   clk_tck = sysconf( _SC_CLK_TCK);
-#endif /* ndef CLK_TCK */
+#  endif /* ndef CLK_TCK */
   utime_f = ((float)u_p_tms.tms_utime)/ clk_tck;
   stime_f = ((float)u_p_tms.tms_stime)/ clk_tck;
 
@@ -5129,7 +5170,12 @@ int arg;
    u_p_prog_name,
    (stime_f+ utime_f));
 
-# endif /* ndef VMS */
+# endif /* def VMS [else] */
+
+  if (G.zipfn != NULL)
+  {
+    fprintf( stderr, "   Archive: %s\n", G.zipfn);
+  }
 
   if (G.filename != NULL)
   {
@@ -5138,7 +5184,8 @@ int arg;
 
 # ifndef VMS
   /* Re-establish this SIGUSR1 handler.
-   * (On VMS, the Ctrl/T handler persists.) */
+   * (On VMS, the Ctrl/T handler persists.)
+   */
   signal( SIGUSR1, user_progress);
 # endif /* ndef VMS */
 }

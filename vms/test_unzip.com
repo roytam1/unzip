@@ -1,9 +1,13 @@
 $!
-$!    UnZip test procedure.
+$!    Info-ZIP UnZip test procedure.
 $!
 $!    P1 = test archive name.  Default: testmake.zip
 $!    P2 = program directory.  Default: "" (current directory)
+$!    P3 = non-null to skip funzip and SFX tests.
 $!
+$!    2012-02-24  SMS.  Added P3 check for PPMd test.
+$!                      Added lrl and mrs attributes to set on SFX EXE.
+$!                      Added exit status tests.
 $!    2011-06-10  SMS.  New.
 $!
 $ test_archive = f$edit( p1, "trim")
@@ -37,7 +41,12 @@ $ loop_var_bot:
 $!
 $! Check for existence of expected programs.  Define appropriate symbols.
 $!
-$ program_list = "unzip, unzipsfx, unzip_cli, unzipsfx_cli"
+$ if (p3 .eqs. "")
+$ then
+$     program_list = "unzip, unzipsfx, unzip_cli, unzipsfx_cli"
+$ else
+$     program_list = "unzip, unzip_cli"
+$ endif
 $!
 $ elt = 0
 $ loop_program_top:
@@ -156,7 +165,12 @@ $!
 $! Expected results.
 $!
 fail_expected = 0
-pass_expected = 12
+$ if (p3 .eqs. "")
+$ then
+$     pass_expected = 12
+$ else
+$     pass_expected = 10
+$ endif
 $!
 $! Result summary.
 $!
@@ -184,19 +198,27 @@ $ on error then continue
 $ if (cli)
 $ then
 $     unzip_cli /text = stmlf [-]'test_archive' "''member_1'"
+$     status = $status
 $ else
 $     unzip "-S" [-]'test_archive' 'member_1'
+$     status = $status
 $ endif
 $ on error then goto clean_up
 $!
-$ if ((f$search( member_1) .nes. "") .and. (f$search( member_2) .eqs. ""))
+$ if (status)
 $ then
-$     echo ">>> Pass."
-$     pass = pass+ 1
+$     if ((f$search( member_1) .nes. "") .and. (f$search( member_2) .eqs. ""))
+$     then
+$         echo ">>> Pass."
+$         pass = pass+ 1
+$     else
+$         echo ">>> Fail: Can't find (only) expected extracted file: ''member_1'"
+$         show default
+$         dire /date /prot /size
+$         fail = fail+ 1
+$     endif
 $ else
-$     echo ">>> Fail: Can't find (only) expected extracted file: ''member_1'"
-$     show default
-$     dire /date /prot /size
+$     echo ">>> Fail: UnZip exit status = ''status'"
 $     fail = fail+ 1
 $ endif
 $!
@@ -216,17 +238,25 @@ $ if (cli)
 $ then
 $     unzip_cli /text = stmlf /existing = new_version [-]'test_archive' -
        /exclude = "''member_1'"
+$     status = $status
 $ else
 $     unzip "-So" [-]'test_archive' -x "''member_1'"
+$     status = $status
 $ endif
 $ on error then goto clean_up
 $!
-$ if (f$search( member_2) .nes. "")
+$ if (status)
 $ then
-$     echo ">>> Pass."
-$     pass = pass+ 1
+$     if (f$search( member_2) .nes. "")
+$     then
+$         echo ">>> Pass."
+$         pass = pass+ 1
+$     else
+$         echo ">>> Fail: Can't find expected extracted file: ''member_2'"
+$         fail = fail+ 1
+$     endif
 $ else
-$     echo ">>> Fail: Can't find expected extracted file: ''member_2'"
+$     echo ">>> Fail: UnZip exit status = ''status'"
 $     fail = fail+ 1
 $ endif
 $!
@@ -246,32 +276,40 @@ $ if (cli)
 $ then
 $     unzip_cli /text = stmlf /existing = new_vers /direct = [.dest_dir] -
        [-]'test_archive' "''member_1'"
+$     status = $status
 $ else
 $     unzip "-So" [-]'test_archive' -d [.dest_dir] "''member_1'"
+$     status = $status
 $ endif
 $ on error then goto clean_up
 $!
-$ if (f$search( member_1) .nes. "")
+$ if (status)
 $ then
-$     if (f$search( "[.dest_dir]''member_1'") .nes. "")
+$     if (f$search( member_1) .nes. "")
 $     then
-$         differences 'member_1' [.dest_dir]'member_1'
-$         if ($status .eq. %X006C8009)
+$         if (f$search( "[.dest_dir]''member_1'") .nes. "")
 $         then
-$             echo ">>> Pass."
-$             pass = pass+ 1
+$             differences 'member_1' [.dest_dir]'member_1'
+$             if ($status .eq. %X006C8009)
+$             then
+$                 echo ">>> Pass."
+$                 pass = pass+ 1
+$             else
+$                 echo ">>> Fail: Extracted file contents mismatch."
+$                 fail = fail+ 1
+$             endif
 $         else
-$             echo ">>> Fail: Extracted file contents mismatch."
+$             echo -
+ ">>> Fail: Can't find expected extracted file: [.dest_dir]''member_1'"
 $             fail = fail+ 1
 $         endif
 $     else
 $         echo -
- ">>> Fail: Can't find expected extracted file: [.dest_dir]''member_1'"
+ ">>> Fail: The UnZip ""-d"" test relies on success in the UnZip ""-x"" test."
 $         fail = fail+ 1
 $     endif
 $ else
-$     echo -
- ">>> Fail: The UnZip ""-d"" test relies on success in the UnZip ""-x"" test."
+$     echo ">>> Fail: UnZip exit status = ''status'"
 $     fail = fail+ 1
 $ endif
 $!
@@ -291,17 +329,25 @@ $ if (cli)
 $ then
 $     unzip_cli /text = stmlf /existing = new_vers [-]'test_archive' -
        "''member_1'"
+$     status = $status
 $ else
 $     unzip "-So" [-]'test_archive' "''member_1'"
+$     status = $status
 $ endif
 $ on error then goto clean_up
 $!
-$ if (f$search( member_1) .nes. "")
+$ if (status)
 $ then
-$     echo ">>> Pass."
-$     pass = pass+ 1
+$     if (f$search( member_1) .nes. "")
+$     then
+$         echo ">>> Pass."
+$         pass = pass+ 1
+$     else
+$         echo ">>> Fail: Can't find expected extracted file: ''member_1'"
+$         fail = fail+ 1
+$     endif
 $ else
-$     echo ">>> Fail: Can't find expected extracted file: ''member_1'"
+$     echo ">>> Fail: UnZip exit status = ''status'"
 $     fail = fail+ 1
 $ endif
 $!
@@ -328,52 +374,62 @@ $     on error then continue
 $     if (cli)
 $     then
 $         unzip_cli /zipinfo test_dir:[000000]'test_archive'
+$         status = $status
 $     else
 $         unzip "-Z" test_dir:[000000]'test_archive'
+$         status = $status
 $     endif
 $     on error then goto clean_up
 $!
-$!    Simplify the full VMS archive name in the report heading.
-$     open /read /error = error_r unzip_z_in testmake.unzip-Z
-$     open /write /error = error_w unzip_z_out testmake.unzip-Z2
-$     line_nr = 0
-$     loop_read_top:
-$         read /error = error_c unzip_z_in line
-$         if (line_nr .eq. 0)
-$         then
-$             line_nr = 1
-$             if (f$element( 0, " ", line) .eqs. "Archive:")
-$             then
-$                 archv = f$element( 1, " ", f$edit( line, "compress, trim"))
-$                 archv = f$parse( archv, , , "name", "syntax_only")+ -
-                   f$parse( archv, , , "type", "syntax_only")
-$                 archv = f$edit( archv, "lowercase")
-$                 loc_archv = f$locate( "test_dir", f$edit( line,"lowercase"))
-$                 line = f$extract( 0, loc_archv, line)+ archv
-$             endif
-$         endif
-$         write /error = error_c unzip_z_out line
-$     goto loop_read_top
-$     error_c:
-$     close unzip_z_out
-$     error_w:
-$     close unzip_z_in
-$     error_r:
-$!
-$     differences testmake.unzip-Z2 'member_2'
-$     if ($status .eq. %X006C8009)
+$     if (status)
 $     then
-$         echo ">>> Pass."
-$         pass = pass+ 1
-$     else
-$         echo ">>> Fail: ZipInfo output mismatch."
-$         type sys$input
+$!        Simplify the full VMS archive name in the report heading.
+$         open /read /error = error_r unzip_z_in testmake.unzip-Z
+$         open /write /error = error_w unzip_z_out testmake.unzip-Z2
+$         line_nr = 0
+$         loop_read_top:
+$             read /error = error_c unzip_z_in line
+$             if (line_nr .eq. 0)
+$             then
+$                 line_nr = 1
+$                 if (f$element( 0, " ", line) .eqs. "Archive:")
+$                 then
+$                     archv = f$element( 1, " ", -
+                       f$edit( line, "compress, trim"))
+$                     archv = f$parse( archv, , , "name", "syntax_only")+ -
+                       f$parse( archv, , , "type", "syntax_only")
+$                     archv = f$edit( archv, "lowercase")
+$                     loc_archv = f$locate( "test_dir", -
+                       f$edit( line,"lowercase"))
+$                     line = f$extract( 0, loc_archv, line)+ archv
+$                 endif
+$             endif
+$             write /error = error_c unzip_z_out line
+$         goto loop_read_top
+$         error_c:
+$         close unzip_z_out
+$         error_w:
+$         close unzip_z_in
+$         error_r:
+$!
+$         differences testmake.unzip-Z2 'member_2'
+$         if ($status .eq. %X006C8009)
+$         then
+$             echo ">>> Pass."
+$             pass = pass+ 1
+$         else
+$             echo ">>> Fail: ZipInfo output mismatch."
+$             type sys$input
 
 >>> ###   ZipInfo output does not match the expected output.
 >>> ###   (If the only difference is in the date-time values, then this may
 >>> ###   be caused by a time-zone difference, which may not be important.)
 
-$         eod
+$             eod
+$             fail = fail+ 1
+$         endif
+$     else
+$         echo ">>> Fail: UnZip exit status = ''status'"
 $         fail = fail+ 1
 $     endif
 $ else
@@ -383,54 +439,65 @@ $ endif
 $!
 $! Test UnZipSFX.
 $!
-$ echo ""
-$ echo ">>> UnZipSFX test..."
-$!
-$ if (f$search( "[.dest_dir]''member_1'") .nes. "")
+$ if (p3 .eqs. "")
 $ then
-$     delete 'member_1';*, 'member_2';*
-$!    Adjust attributes of ".exe" for compatibilty with stored test archive.
-$     set noon
-$     if (cli)
-$     then
-$         copy 'unzipsfx_cli' sys$disk:[]unzipsfx.exe
-$     else
-$         copy 'unzipsfx' sys$disk:[]unzipsfx.exe
-$     endif
-$     set file /attributes = (rfm:stmlf) unzipsfx.exe
-$     copy unzipsfx.exe, [-]'test_archive' []test_sfx.exe
-$     set protection = o:re test_sfx.exe
+$     echo ""
+$     echo ">>> UnZipSFX test..."
 $!
-$     if (cli)
+$     if (f$search( "[.dest_dir]''member_1'") .nes. "")
 $     then
-$         mcr sys$disk:[]test_sfx /text = stmlf "''member_1'"
-$     else
-$         mcr sys$disk:[]test_sfx -b "''member_1'"
-$     endif
-$!
-$     on control_y then goto clean_up
-$     on error then goto clean_up
-$!
-$     if (f$search( member_1) .nes. "")
-$     then
-$         differences 'member_1' [.dest_dir]'member_1'
-$         if ($status .eq. %X006C8009)
+$         delete 'member_1';*, 'member_2';*
+$!        Adjust attributes of ".exe" for compatibilty with stored test archive.
+$         set noon
+$         if (cli)
 $         then
-$             echo ">>> Pass."
-$             pass = pass+ 1
+$             copy 'unzipsfx_cli' sys$disk:[]unzipsfx.exe
 $         else
-$             echo ">>> Fail: Extracted file contents mismatch."
+$             copy 'unzipsfx' sys$disk:[]unzipsfx.exe
+$         endif
+$         set file /attributes = (rfm:stmlf, mrs:0, lrl:32767) unzipsfx.exe
+$         copy unzipsfx.exe, [-]'test_archive' []test_sfx.exe
+$         set protection = o:re test_sfx.exe
+$!
+$         if (cli)
+$         then
+$             mcr sys$disk:[]test_sfx /text = stmlf "''member_1'"
+$             status = $status
+$         else
+$             mcr sys$disk:[]test_sfx -b "''member_1'"
+$             status = $status
+$         endif
+$!
+$         on control_y then goto clean_up
+$         on error then goto clean_up
+$!
+$         if (status)
+$         then
+$             if (f$search( member_1) .nes. "")
+$             then
+$                 differences 'member_1' [.dest_dir]'member_1'
+$                 if ($status .eq. %X006C8009)
+$                 then
+$                     echo ">>> Pass."
+$                     pass = pass+ 1
+$             else
+$                 echo ">>> Fail: Extracted file contents mismatch."
+$                 fail = fail+ 1
+$             endif
+$             else
+$                 echo -
+ ">>> Fail: Can't find expected extracted file: [.dest_dir]''member_1'"
+$                 fail = fail+ 1
+$             endif
+$         else
+$             echo ">>> Fail: UnZip exit status = ''status'"
 $             fail = fail+ 1
 $         endif
 $     else
 $         echo -
- ">>> Fail: Can't find expected extracted file: [.dest_dir]''member_1'"
+ ">>> Fail: The UnZipSFX test relies on success in the UnZip ""-d"" test."
 $         fail = fail+ 1
 $     endif
-$ else
-$     echo -
- ">>> Fail: The UnZipSFX test relies on success in the UnZip ""-d"" test."
-$     fail = fail+ 1
 $ endif
 $!
 $ return

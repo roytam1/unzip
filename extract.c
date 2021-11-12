@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -27,7 +27,9 @@
              set_deferred_symlink()   (SYMLINKS only)
              fnfilter()
              dircomp()                (SET_DIR_ATTRIB only)
-             UZbunzip2()              (USE_BZIP2 only)
+             UZbunzip2()              (BZIP2_SUPPORT only)
+             UZlzma()                 (LZMA_SUPPORT only)
+             UZppmd()                 (PPMD_SUPPORT only)
 
   ---------------------------------------------------------------------------*/
 
@@ -44,6 +46,18 @@
 #endif
 #include "crc32.h"
 #include "crypt.h"
+
+#ifdef BZIP2_SUPPORT
+static int UZbunzip2 OF((__GPRO));
+#endif
+
+#ifdef LZMA_SUPPORT
+static int UZlzma OF((__GPRO));
+#endif
+
+#ifdef PPMD_SUPPORT
+static int UZppmd OF((__GPRO));
+#endif
 
 #define GRRDUMP(buf,len) { \
     int i, j; \
@@ -148,20 +162,21 @@ static ZCONST char Far ComprMsgNum[] =
    static ZCONST char Far CmprLZMA[]       = "LZMA";
    static ZCONST char Far CmprIBMTerse[]   = "IBM/Terse";
    static ZCONST char Far CmprIBMLZ77[]    = "IBM LZ77";
+   static ZCONST char Far CmprJPEG[]       = "JPEG";
    static ZCONST char Far CmprWavPack[]    = "WavPack";
    static ZCONST char Far CmprPPMd[]       = "PPMd";
    static ZCONST char Far CmprAES[]        = "AES_WG encr";
    static ZCONST char Far *ComprNames[NUM_METHODS] = {
      CmprNone, CmprShrink, CmprReduce, CmprReduce, CmprReduce, CmprReduce,
      CmprImplode, CmprTokenize, CmprDeflate, CmprDeflat64, CmprDCLImplode,
-     CmprBzip, CmprLZMA, CmprIBMTerse, CmprIBMLZ77, CmprWavPack, CmprPPMd,
-     CmprAES
+     CmprBzip, CmprLZMA, CmprIBMTerse, CmprIBMLZ77, CmprJPEG, CmprWavPack,
+     CmprPPMd, CmprAES
    };
    static ZCONST unsigned ComprIDs[NUM_METHODS] = {
      STORED, SHRUNK, REDUCED1, REDUCED2, REDUCED3, REDUCED4,
      IMPLODED, TOKENIZED, DEFLATED, ENHDEFLATED, DCLIMPLODED,
-     BZIPPED, LZMAED, IBMTERSED, IBMLZ77ED, WAVPACKED, PPMDED,
-     AESENCRED
+     BZIPPED, LZMAED, IBMTERSED, IBMLZ77ED, JPEGED, WAVPACKED,
+     PPMDED, AESENCRED
    };
 #endif /* !SFX */
 static ZCONST char Far FilNamMsg[] =
@@ -290,18 +305,23 @@ static ZCONST char Far NoErrInCompData[] =
 static ZCONST char Far NoErrInTestedFiles[] =
   "No errors detected in %s for the %lu file%s tested.\n";
 static ZCONST char Far FilesSkipped[] =
-  "%lu file%s skipped because of unsupported compression or encoding.\n";
+  "%lu file%s skipped because of unsupported compression or encryption.\n";
 
 static ZCONST char Far ErrUnzipFile[] = "ERROR:  %s%s %s\n";
 static ZCONST char Far ErrUnzipNoFile[] = "ERROR:  %s%s\n";
 static ZCONST char Far NotEnoughMem[] = "not enough memory to ";
 static ZCONST char Far InvalidComprData[] = "invalid compressed data to ";
+#ifdef DEFLATE_SUPPORT
 static ZCONST char Far Inflate[] = "inflate";
-#ifdef USE_BZIP2
+#endif
+#ifdef BZIP2_SUPPORT
   static ZCONST char Far BUnzip[] = "bunzip";
 #endif
-#ifdef USE_LZMA
+#ifdef LZMA_SUPPORT
   static ZCONST char Far UnLZMA[] = "unLZMA";
+#endif
+#ifdef PPMD_SUPPORT
+  static ZCONST char Far UnPPMd[] = "unPPMd";
 #endif
 #ifndef SFX
    static ZCONST char Far Explode[] = "explode";
@@ -349,6 +369,11 @@ static ZCONST char Far UnsupportedExtraField[] =
 static ZCONST char Far BadExtraFieldCRC[] =
   "ERROR [%s]:  bad extra-field CRC %08lx (should be %08lx)\n";
 
+/* Data-dependent info for verbose test (-tv) report. */
+static ZCONST char Far InfoMsgLZMA[] =
+  "\n     LZMA: dicSize = %u, lc = %u, lp = %u, pb = %u. ";
+static ZCONST char Far InfoMsgPPMd[] =
+  "\n     PPMd: flags = 0x%04x.  Order = %d, Mem = %dMB, Restore = %d. ";
 
 
 
@@ -941,67 +966,65 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
 #  define UNKN_AES TRUE       /* AES unknown */
 #endif
 
-#ifdef USE_BZIP2
-#  define UNKN_BZ2 (G.crec.compression_method!=BZIPPED)
+#ifdef BZIP2_SUPPORT
+#  define UNKN_BZ2 (G.crec.compression_method != BZIPPED)
 #else
 #  define UNKN_BZ2 TRUE       /* bzip2 unknown */
 #endif
 
-#ifdef USE_LZMA
-#  define UNKN_LZMA (G.crec.compression_method!=LZMAED)
+#ifdef DEFLATE_SUPPORT
+#  ifdef DEFLATE64_SUPPORT
+#    define UNKN_DEFL ((G.crec.compression_method != DEFLATED) && \
+      (G.crec.compression_method != ENHDEFLATED))
+#  else
+#    define UNKN_DEFL (G.crec.compression_method != DEFLATED)
+#  endif
+#else
+#  define UNKN_DEFL TRUE
+#endif
+
+#ifdef LZMA_SUPPORT
+#  define UNKN_LZMA (G.crec.compression_method != LZMAED)
 #else
 #  define UNKN_LZMA TRUE      /* LZMA unknown */
 #endif
 
-#ifdef USE_PPMD
-#  define UNKN_PPMD (G.crec.compression_method!=PPMDED)
+#ifdef PPMD_SUPPORT
+#  define UNKN_PPMD (G.crec.compression_method != PPMDED)
 #else
 #  define UNKN_PPMD TRUE      /* PPMd unknown */
 #endif
 
 #ifdef USE_WAVP
-#  define UNKN_WAVP (G.crec.compression_method!=WAVPACKED)
+#  define UNKN_WAVP (G.crec.compression_method != WAVPACKED)
 #else
 #  define UNKN_WAVP TRUE      /* WavPack unknown */
 #endif
 
 #ifdef SFX
-# ifdef USE_DEFLATE64
-#    define UNKN_COMPR \
-     (G.crec.compression_method!=STORED && G.crec.compression_method<DEFLATED \
-      && G.crec.compression_method>ENHDEFLATED \
-      && UNKN_AES && UNKN_BZ2 && UNKN_PPMD && UNKN_LZMA && UNKN_WAVP)
-# else
-#    define UNKN_COMPR \
-     (G.crec.compression_method!=STORED && G.crec.compression_method!=DEFLATED\
-      && UNKN_AES && UNKN_BZ2 && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP)
-# endif
+   /* Fewer tests are needed for SFX, because Zip can't do everything. */
+#  define UNKN_COMPR \
+    ((G.crec.compression_method != STORED) && \
+    UNKN_AES && UNKN_BZ2 && UNKN_DEFL && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP)
 #else
-# ifdef COPYRIGHT_CLEAN  /* no reduced files */
+#  ifdef COPYRIGHT_CLEAN  /* no reduced files */
 #    define UNKN_RED (G.crec.compression_method >= REDUCED1 && \
                       G.crec.compression_method <= REDUCED4)
-# else
+#  else
 #    define UNKN_RED  FALSE  /* reducing not unknown */
-# endif
-# ifdef LZW_CLEAN  /* no shrunk files */
+#  endif
+#  ifdef LZW_CLEAN  /* no shrunk files */
 #    define UNKN_SHR (G.crec.compression_method == SHRUNK)
-# else
+#  else
 #    define UNKN_SHR  FALSE  /* unshrinking not unknown */
-# endif
-# ifdef USE_DEFLATE64
-#    define UNKN_COMPR (UNKN_RED || UNKN_SHR || \
-      G.crec.compression_method==TOKENIZED || \
-      (G.crec.compression_method>ENHDEFLATED \
-      && UNKN_AES && UNKN_BZ2 && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP))
-# else
-#    define UNKN_COMPR (UNKN_RED || UNKN_SHR || \
-      G.crec.compression_method==TOKENIZED || \
-      (G.crec.compression_method>DEFLATED \
-      && UNKN_AES && UNKN_BZ2 && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP))
-# endif
+#  endif
+#  define UNKN_COMPR ((UNKN_RED || UNKN_SHR || \
+    (G.crec.compression_method == TOKENIZED) || \
+    (G.crec.compression_method != STORED)) && \
+    UNKN_AES && UNKN_BZ2 && UNKN_DEFL && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP)
 #endif
 
-#if (defined(USE_BZIP2) && (UNZIP_VERSION < UNZIP_BZIP2_VERS))
+#if (defined(BZIP2_SUPPORT) && (UNZIP_VERSION < UNZIP_BZIP2_VERS))
     int unzvers_support = (UNKN_BZ2 ? UNZIP_VERSION : UNZIP_BZIP2_VERS);
 #   define UNZVERS_SUPPORT  unzvers_support
 #else
@@ -1031,6 +1054,27 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
             break;
     }
 
+    /* First, complain about an unsupported compression method. */
+    if (UNKN_COMPR) {
+        if (!((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))) {
+#ifndef SFX
+            unsigned cmpridx;
+
+            if ((cmpridx = find_compr_idx(G.crec.compression_method))
+                < NUM_METHODS)
+                Info(slide, 0x401, ((char *)slide, LoadFarString(ComprMsgName),
+                  FnFilter1(G.filename),
+                  LoadFarStringSmall(ComprNames[cmpridx])));
+            else
+#endif
+                Info(slide, 0x401, ((char *)slide, LoadFarString(ComprMsgNum),
+                  FnFilter1(G.filename),
+                  G.crec.compression_method));
+        }
+        return 0;
+    }
+
+    /* Second, complain about an insufficient version number. */
     if (G.crec.version_needed_to_extract[1] == VMS_) {
         if (G.crec.version_needed_to_extract[0] > VMS_UNZIP_VERSION) {
             if (!((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2)))
@@ -1061,25 +1105,8 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
         return 0;
     }
 
-    if (UNKN_COMPR) {
-        if (!((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))) {
-#ifndef SFX
-            unsigned cmpridx;
-
-            if ((cmpridx = find_compr_idx(G.crec.compression_method))
-                < NUM_METHODS)
-                Info(slide, 0x401, ((char *)slide, LoadFarString(ComprMsgName),
-                  FnFilter1(G.filename),
-                  LoadFarStringSmall(ComprNames[cmpridx])));
-            else
-#endif
-                Info(slide, 0x401, ((char *)slide, LoadFarString(ComprMsgNum),
-                  FnFilter1(G.filename),
-                  G.crec.compression_method));
-        }
-        return 0;
-    }
 #if (!CRYPT)
+    /* Third, complain about missing encryption support. */
     if (G.pInfo->encrypted) {
         if (!((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2)))
             Info(slide, 0x401, ((char *)slide, LoadFarString(SkipEncrypted),
@@ -1523,11 +1550,11 @@ static int extract_or_test_entrylist(__G__ numchunk,
             if (G.apple_double)
             {
                 /* Check that the file name will not be too long when the
-                 * "/rsrc" (APL_DBL_SFX) string is appended (fileio.c:
-                 * open_outfile()).  (strlen() ignores its NUL, sizeof() 
+                 * "/rsrc" (APL_DBL_SUFX) string is appended (fileio.c:
+                 * open_outfile()).  (strlen() ignores its NUL, sizeof()
                  * includes its NUL.  FILNAMSIZ includes a NUL.)
                  */
-                if (strlen( G.ad_filename)+ sizeof( APL_DBL_SFX) > FILNAMSIZ)
+                if (strlen( G.ad_filename)+ sizeof( APL_DBL_SUFX) > FILNAMSIZ)
                 {
                     Info(slide, 0x401, ((char *)slide, AplDblNameTooLong,
                      G.ad_filename));
@@ -1538,14 +1565,14 @@ static int extract_or_test_entrylist(__G__ numchunk,
                 /* If current file is the AppleDouble file for the previous
                  * file (their names match), then arrange to handle this
                  * AppleDouble file the way the previous file was handled.
-                 */ 
+                 */
                 else if (strcmp( G.ad_filename, G.pq_filename) == 0)
                 {
                     if (renamed)
                     {
                         /* Replace this AppleDouble file name, too.
                          * Without extra effort, the "renamed" flag will
-                         * be misleadingly FALSE for mapname() below, but 
+                         * be misleadingly FALSE for mapname() below, but
                          * the preceding normal file should have paved
                          * the way by getting all the directories created
                          * as needed.
@@ -1645,7 +1672,7 @@ startover:
              * has sent us onto a volume with different attributes.
              * Otherwise, we'd need to do more complex, rename-aware
              * volume attribute determination.
-             */ 
+             */
             if ((G.exdir_attr_ok < 0) && (error& MPN_CREATED_DIR))
             {
                 G.exdir_attr_ok = vol_attr_ok( uO.exdir);
@@ -2832,14 +2859,14 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 } else if (r < PK_DISK) {
                     if ((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(Explode),
                           FnFilter1(G.filename)));
                     else
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipNoFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipNoFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(Explode)));
@@ -2851,33 +2878,34 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
             break;
 #endif /* !SFX */
 
+#ifdef DEFLATE_SUPPORT
         case DEFLATED:
-#ifdef USE_DEFLATE64
+#  ifdef DEFLATE64_SUPPORT
         case ENHDEFLATED:
-#endif
+#  endif
             if (!uO.tflag && QCOND2) {
                 Info(slide, 0, ((char *)slide, LoadFarString(ExtractMsg),
                   "inflat", FnFilter1(G.filename),
                   (uO.aflag != 1 /* && G.pInfo->textfile==G.pInfo->textmode */)?
                   "" : (G.pInfo->textfile? txt : bin), uO.cflag? NEWLINE : ""));
             }
-#ifndef USE_ZLIB  /* zlib's function is called inflate(), too */
-#  define UZinflate inflate
-#endif
+#  ifndef USE_ZLIB  /* zlib's function is called inflate(), too */
+#    define UZinflate inflate
+#  endif
             if ((r = UZinflate(__G__
                                (G.lrec.compression_method == ENHDEFLATED)))
                 != 0) {
                 if (r < PK_DISK) {
                     if ((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(Inflate),
                           FnFilter1(G.filename)));
                     else
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipNoFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipNoFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(Inflate)));
@@ -2887,8 +2915,9 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 }
             }
             break;
+#endif
 
-#ifdef USE_BZIP2
+#ifdef BZIP2_SUPPORT
         case BZIPPED:
             if (!uO.tflag && QCOND2) {
                 Info(slide, 0, ((char *)slide, LoadFarString(ExtractMsg),
@@ -2914,14 +2943,14 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 if (r < PK_DISK) {
                     if ((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(BUnzip),
                           FnFilter1(G.filename)));
                     else
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipNoFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipNoFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(BUnzip)));
@@ -2931,9 +2960,9 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 }
             }
             break;
-#endif /* USE_BZIP2 */
+#endif /* BZIP2_SUPPORT */
 
-#ifdef USE_LZMA
+#ifdef LZMA_SUPPORT
         case LZMAED:
             if (!uO.tflag && QCOND2) {
                 Info(slide, 0, ((char *)slide, LoadFarString(ExtractMsg),
@@ -2959,14 +2988,14 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 if (r < PK_DISK) {
                     if ((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(UnLZMA),
                           FnFilter1(G.filename)));
                     else
                         Info(slide, 0x401, ((char *)slide,
-                          LoadFarStringSmall(ErrUnzipNoFile), r == 3?
+                          LoadFarStringSmall(ErrUnzipNoFile), r == PK_MEM3 ?
                           LoadFarString(NotEnoughMem) :
                           LoadFarString(InvalidComprData),
                           LoadFarStringSmall2(UnLZMA)));
@@ -2976,7 +3005,52 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 }
             }
             break;
-#endif /* USE_LZMA */
+#endif /* LZMA_SUPPORT */
+
+#ifdef PPMD_SUPPORT
+        case PPMDED:
+            if (!uO.tflag && QCOND2) {
+                Info(slide, 0, ((char *)slide, LoadFarString(ExtractMsg),
+                  "unPPMd", FnFilter1(G.filename),
+                  (uO.aflag != 1 /* && G.pInfo->textfile==G.pInfo->textmode */)?
+                  "" : (G.pInfo->textfile? txt : bin), uO.cflag? NEWLINE : ""));
+            }
+
+#  if CRYPT && defined( CRYPT_AES_WG)
+            if (G.lrec.compression_method == AESENCRED)
+            {
+                /* Subtract the MAC data size from G.csize, to keep
+                 * the MAC data away from UZlzma().  Remember doing
+                 * this, so that G.csize can be restored later, before
+                 * trying to read the MAC data.
+                 */
+                g_csize_adj = MAC_LENGTH( G.pInfo->cmpr_mode_aes);
+                G.csize -= g_csize_adj;
+            }
+#  endif /* CRYPT && defined( CRYPT_AES_WG) */
+
+            if ((r = UZppmd(__G)) != 0) {
+                if (r < PK_DISK) {
+                    if ((uO.tflag && uO.qflag) || (!uO.tflag && !QCOND2))
+                        Info(slide, 0x401, ((char *)slide,
+                          LoadFarStringSmall(ErrUnzipFile), r == PK_MEM3 ?
+                          LoadFarString(NotEnoughMem) :
+                          LoadFarString(InvalidComprData),
+                          LoadFarStringSmall2(UnPPMd),
+                          FnFilter1(G.filename)));
+                    else
+                        Info(slide, 0x401, ((char *)slide,
+                          LoadFarStringSmall(ErrUnzipNoFile), r == PK_MEM3 ?
+                          LoadFarString(NotEnoughMem) :
+                          LoadFarString(InvalidComprData),
+                          LoadFarStringSmall2(UnPPMd)));
+                    error = ((r == 3) ? PK_MEM3 : PK_ERR);
+                } else {
+                    error = r;
+                }
+            }
+            break;
+#endif /* PPMD_SUPPORT */
 
         default:   /* should never get to this point */
             Info(slide, 0x401, ((char *)slide,
@@ -3027,17 +3101,17 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
     if (!uO.tflag)           /* don't close NULL file */
         close_outfile(__G);
 #else
-#ifdef DLL
+#  ifdef DLL
     if (!uO.tflag && (!uO.cflag || G.redirect_data)) {
         if (G.redirect_data)
             FINISH_REDIRECT();
         else
             close_outfile(__G);
     }
-#else
+#  else
     if (!uO.tflag && !uO.cflag)   /* don't close NULL file or stdout */
         close_outfile(__G);
-#endif
+#  endif
 #endif /* VMS */
 
             /* GRR: CONVERT close_outfile() TO NON-VOID:  CHECK FOR ERRORS! */
@@ -3412,10 +3486,12 @@ int memextract(__G__ tgt, tgtsize, src, srcsize)  /* extract compressed */
             memcpy((char *)tgt, (char *)G.inptr, (extent)G.incnt);
             G.outcnt = (ulg)G.csize;    /* for CRC calculation */
             break;
+
+#ifdef DEFLATE_SUPPORT
         case DEFLATED:
-#ifdef USE_DEFLATE64
+#  ifdef DEFLATE64_SUPPORT
         case ENHDEFLATED:
-#endif
+#  endif
             G.outcnt = 0L;
             if ((r = UZinflate(__G__ (method == ENHDEFLATED))) != 0) {
                 if (!uO.tflag)
@@ -3429,6 +3505,7 @@ int memextract(__G__ tgt, tgtsize, src, srcsize)  /* extract compressed */
             if (G.outcnt == 0L)   /* inflate's final FLUSH sets outcnt */
                 break;
             break;
+#endif
         default:
             if (uO.tflag)
                 error = PK_ERR | ((int)method << 8);
@@ -3779,7 +3856,7 @@ char *fnfilter(raw, space, size)   /* convert name to safely printable form */
         } else {
             *woc++ = *wc;
         }
-        *wc++;
+        wc++;
     }
     *woc = (wchar_t)0;
 
@@ -3967,13 +4044,13 @@ static int Cdecl dircompw(a, b)  /* used by qsort(); swiped from Zip */
 #endif /* SET_DIR_ATTRIB */
 
 
-#ifdef USE_BZIP2
+#ifdef BZIP2_SUPPORT
 
 /**************************/
 /*  Function UZbunzip2()  */
 /**************************/
 
-int UZbunzip2(__G)
+static int UZbunzip2(__G)
 __GDEF
 /* decompress a bzipped entry using the libbz2 routines */
 {
@@ -4098,21 +4175,34 @@ uzbunzip_cleanup_exit:
 
     return retval;
 } /* end function UZbunzip2() */
-#endif /* USE_BZIP2 */
+#endif /* BZIP2_SUPPORT */
 
 
-#ifdef USE_LZMA
+#if defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT)
 
-#include "lzma/Alloc.h"
-#include "lzma/LzmaDec.h"
+#include "lzma/Types.h"
 
-/* 7-ZIP memory allocation functions with _SZ_ALLOC_DEBUG diagnostics.
- * We could probably switch  MyAlloc() and MyFree() to plain malloc() and
- * free().
+/* 2011-12-24  SMS.
+ * 7-ZIP offers memory allocation functions with diagnostics conditional
+ * on _SZ_ALLOC_DEBUG: lzma/Alloc.c: MyAlloc(), MyFree().  Using these
+ * functions complicates linking with separately conditional LZMA and
+ * PPMd support, so it's easier to use plain malloc() and free() here,
+ * or else add the diagnostic messages to these Sz* functions, rather
+ * than drag lzma/Alloc.c into the picture.  To use the lzma/Alloc.c
+ * functions, add
+ *    #include "lzma/Alloc.h"
+ * above, change malloc() and free() below to MyAlloc() and MyFree(),
+ * and add lzma/Alloc.* back to the builders.  (And then solve the other
+ * problems.)
  */
-static void *SzAlloc(void *p, size_t size) { p = p; return MyAlloc(size); }
-static void SzFree(void *p, void *address) { p = p; MyFree(address); }
-static ISzAlloc g_Alloc = { SzAlloc, SzFree };
+void *SzAlloc(void *p, size_t size) { p = p; return malloc(size); }
+void SzFree(void *p, void *address) { p = p; free(address); }
+#endif /* defined( LZMA_SUPPORT) || defined( PPMD_SUPPORT) */
+
+
+#ifdef LZMA_SUPPORT
+
+#include "lzma/LzmaDec.h"
 
 /***********************/
 /*  Function UZlzma()  */
@@ -4123,13 +4213,12 @@ static ISzAlloc g_Alloc = { SzAlloc, SzFree };
  * probably defined in a 7-ZIP header file.
  */
 
-int UZlzma(__G)
+static int UZlzma(__G)
 __GDEF
 /* Decompress an LZMA-compressed entry using the LZMA routines. */
 {
     SRes sts;
     ELzmaStatus sts2;
-    CLzmaProps clzma_props;
     ELzmaFinishMode finishMode = LZMA_FINISH_ANY;
 
     SizeT avail_in;
@@ -4149,7 +4238,15 @@ __GDEF
     int b;
 
     zusz_t ucsize_lzma;         /* LZMA uncompressed bytes left to put out. */
-    CLzmaDec state_lzma;        /* LZMA context. */
+
+    /* Initialize 7-Zip (LZMA, PPMd) memory allocation function pointer
+     * structure (once).
+     */
+    if ((G.g_Alloc.Alloc == NULL) || (G.g_Alloc.Free == NULL))
+    {
+        G.g_Alloc.Alloc = SzAlloc;
+        G.g_Alloc.Free = SzFree;
+    }
 
     /* Uncompressed bytes to put out. */
     ucsize_lzma = G.lrec.ucsize;
@@ -4183,29 +4280,36 @@ __GDEF
     if (lzma_props_len != LZMA_PROPS_SIZE)
         return PK_ERR;
 
-    sts = LzmaProps_Decode( &clzma_props, lzma_props, LZMA_PROPS_SIZE);
+    sts = LzmaProps_Decode( &G.clzma_props, lzma_props, LZMA_PROPS_SIZE);
 
     Trace(( stderr,
-     "LzmaProps_Decode() = %d, dicSize = %d, lc = %d, pb = %d, lp = %d.\n",
-     sts, clzma_props.dicSize, clzma_props.lc, clzma_props.pb,
-     clzma_props.lp));
+     "LzmaProps_Decode() = %d, dicSize = %u, lc = %u, lp = %u, pb = %u.\n",
+     sts, G.clzma_props.dicSize, G.clzma_props.lc,
+     G.clzma_props.lp, G.clzma_props.pb));
+
+    /* Verbose test (-tv) information. */
+    if (uO.tflag && uO.vflag)
+    {
+        Info( slide, 0, ((char *)slide, LoadFarString( InfoMsgLZMA),
+         G.clzma_props.dicSize, G.clzma_props.lc,
+         G.clzma_props.lp, G.clzma_props.pb));
+    }
 
     /* Require valid LZMA properties. */
     if (sts != SZ_OK)
         return PK_ERR;
 
     /* Set up LZMA decode. */
-    LzmaDec_Construct( &state_lzma);
-    sts = LzmaDec_Allocate( &state_lzma, lzma_props,
-     LZMA_PROPS_SIZE, &g_Alloc);
+    LzmaDec_Construct( &G.state_lzma);
+    sts = LzmaDec_Allocate( &G.state_lzma, lzma_props,
+     LZMA_PROPS_SIZE, &G.g_Alloc);
 
     if (sts != SZ_OK)
     {
-        DESTROYGLOBALS();
-        EXIT(PK_MEM3);
+        return PK_MEM3;
     }
 
-    LzmaDec_Init( &state_lzma);
+    LzmaDec_Init( &G.state_lzma);
 
 #if (defined(DLL) && !defined(NO_SLIDE_REDIR))
     if (G.redirect_slide)
@@ -4233,7 +4337,7 @@ __GDEF
             out_buf_size_len = (SizeT)ucsize_lzma;
         }
 
-        sts = LzmaDec_DecodeToBuf( &state_lzma, next_out, &out_buf_size_len,
+        sts = LzmaDec_DecodeToBuf( &G.state_lzma, next_out, &out_buf_size_len,
          next_in, &in_buf_size_len, finishMode, &sts2);
         avail_in -= in_buf_size_len;    /* Input unused. */
         avail_out -= out_buf_size_len;  /* Output unused. */
@@ -4274,9 +4378,189 @@ __GDEF
     } /* while ((G.csize > 0) || (G.incnt > 0)) */
 
 uzlzma_cleanup_exit:
-    LzmaDec_Free( &state_lzma, &g_Alloc);
+
+    LzmaDec_Free( &G.state_lzma, &G.g_Alloc);
 
     return sts;
 }
-#endif /* def USE_LZMA */
+#endif /* def LZMA_SUPPORT */
 
+
+#ifdef PPMD_SUPPORT
+
+#include "lzma/Ppmd8.h"
+
+/* 7-Zip-compatible I/O Read function. */
+static Byte ppmd_read_byte( void *pp)
+{
+    int b;
+
+    /* 2012-03-17 SMS.
+     * Note that if REENTRANT and USETHREADID are defined (globals.h),
+     * then GETGLOBALS() is actually a function call, to
+     * getGlobalPointer().  It might be smarter to add a "G" pointer to
+     * the CByteInToLook structure (done), set it once (done), and then
+     * use it here (not done), instead of calling getGlobalPointer() for
+     * every byte fetched.  (Add a "G" parameter to NEXTBYTE?)
+     */
+    CByteInToLook *p = (CByteInToLook *)pp;
+    GETGLOBALS();
+
+    b = NEXTBYTE;
+    if (b == EOF)
+    {
+        p->extra = True;
+        p->res = SZ_ERROR_INPUT_EOF;
+        b = 0;
+    }
+    return b;
+}
+
+
+/***********************/
+/*  Function UZppmd()  */
+/***********************/
+
+static int UZppmd(__G)
+__GDEF
+/* Decompress a PPMd-compressed entry using the PPMd routines. */
+{
+    int sts;
+    int sts2;
+
+    unsigned avail_out;         /* Output buffer size. */
+    unsigned char *next_out;    /* Output buffer pointer. */
+
+    /* PPMd Header. */
+    unsigned char ppmd_props[ 2];       /* PPMd properties. */
+    unsigned short ppmd_prop_word;
+    int b;
+
+    /* PPMd parameters. */
+    unsigned order;
+    unsigned memSize;
+    unsigned restor;
+
+    /* Initialize 7-Zip (LZMA, PPMd) memory allocation function pointer
+     * structure (once).
+     */
+
+    if ((G.g_Alloc.Alloc == NULL) || (G.g_Alloc.Free == NULL))
+    {
+        G.g_Alloc.Alloc = SzAlloc;
+        G.g_Alloc.Free = SzFree;
+    }
+
+    /* Initialize PPMd8 structure (once). */
+    if (G.ppmd_constructed == 0)
+    {
+        Ppmd8_Construct( &G.ppmd8);
+        G.ppmd_constructed = 1;
+    }
+
+    /* Initialize simulated 7-Zip I/O structure. */
+    G.szios.p.Read = ppmd_read_byte;
+    G.szios.extra = False;
+    G.szios.res = SZ_OK;
+    G.szios.pG = &G;
+
+    sts = 0;
+    /* Extract PPMd properties. */
+    if ((b = NEXTBYTE) == EOF)
+        return PK_ERR;
+    ppmd_props[ 0] = b;
+    if ((b = NEXTBYTE) == EOF)
+        return PK_ERR;
+    ppmd_props[ 1] = b;
+    ppmd_prop_word = makeword( ppmd_props);
+
+/* wPPMd = (Model order - 1) +
+ *         ((Sub-allocator size - 1) << 4) +
+ *         (Model restoration method << 12)
+ *
+ *  15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
+ *  Mdl_Res_Mth ___Sub-allocator_size-1 Mdl_Order-1
+ */
+    order = (ppmd_prop_word& 0xf)+ 1;
+    memSize = ((ppmd_prop_word>> 4)& 0xff)+ 1;
+    restor = (ppmd_prop_word>> 12);
+
+    /* Verbose test (-tv) information. */
+    if (uO.tflag && uO.vflag)
+    {
+        Info( slide, 0, ((char *)slide, LoadFarString( InfoMsgPPMd),
+         ppmd_prop_word, order, memSize, restor));
+    }
+
+    /* Convert archive MB value into raw byte value. */
+    memSize <<= 20;
+
+    if ((order < PPMD8_MIN_ORDER) || (order > PPMD8_MAX_ORDER))
+        return PK_ERR;
+
+    if (!Ppmd8_Alloc( &G.ppmd8, memSize, &G.g_Alloc))
+        return PK_MEM3;
+
+    G.ppmd8.Stream.In = &G.szios.p;
+
+    sts = Ppmd8_RangeDec_Init( &G.ppmd8);
+    if (!sts)
+        return PK_ERR;
+    else if (G.szios.extra)
+      sts = ((G.szios.res != SZ_OK) ? G.szios.res : SZ_ERROR_DATA);
+    else
+    {
+        int sym;
+
+        Ppmd8_Init( &G.ppmd8, order, restor);
+        sym = 0;
+        while ((sym >= 0) && (G.szios.extra == 0))
+        {
+            /* Reset output buffer pointer. */
+            next_out = redirSlide;
+
+            /* Decode input to fill the output buffer. */
+            for (avail_out = wsize; avail_out > 0; avail_out--)
+            {
+                sym = Ppmd8_DecodeSymbol( &G.ppmd8);
+                if (G.szios.extra || sym < 0)
+                    break;
+                *(next_out++) = sym;
+            }
+
+            /* Flush the output (slide[]). */
+            if ((sts = FLUSH( wsize- avail_out)) != 0)
+                goto uzppmd_cleanup_exit;
+            Trace((stderr,
+             "inside loop:  flushing %ld bytes (ptr diff = %ld)\n",
+             (wsize- avail_out),
+             (next_out- redirSlide)));
+        }
+
+        if (G.szios.extra)
+        {
+            /* Insufficient input data. */
+            sts = PK_ERR;
+        }
+        else if ((sym < 0) && (sym != -1))
+        {
+            /* Invalid end of input data? */
+            sts = PK_ERR;
+        }
+        else
+        {
+            sts2 = Ppmd8_RangeDec_IsFinishedOK( &G.ppmd8);
+            if (sts2 == 0)
+            {
+                sts = PK_ERR;
+            }
+        }
+    }
+
+uzppmd_cleanup_exit:
+
+    Ppmd8_Free( &G.ppmd8, &G.g_Alloc);
+
+    return sts;
+}
+#endif /* def PPMD_SUPPORT */

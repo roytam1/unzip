@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2012 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -2384,7 +2384,7 @@ int mapname(__G__ renamed)
         drive[0] = (char)('a' + G.nLabelDrive - 1);
         strcpy(drive + 1, ":\\");
         if (QCOND2)
-            Info(slide, 0, ((char *)slide, "labelling %s %-22s\n", drive,
+            Info(slide, 0, ((char *)slide, "labeling %s %-22s\n", drive,
               FnFilter1(G.filename)));
         if (!SetVolumeLabelA(drive, Ansi_Fname)) {
             Info(slide, 1, ((char *)slide,
@@ -2622,7 +2622,7 @@ int mapnamew(__G__ renamed)
         drivew[0] = (wchar_t)('a' + G.nLabelDrive - 1);
         wcscpy(drivew + 1, L":\\");
         if (QCOND2)
-            Info(slide, 0, ((char *)slide, "labelling %s %-22s\n", drive,
+            Info(slide, 0, ((char *)slide, "labeling %s %-22s\n", drive,
               FnFilter1(G.filename)));
         if (!SetVolumeLabelW(drivew, G.unipath_widefilename)) {
             Info(slide, 1, ((char *)slide,
