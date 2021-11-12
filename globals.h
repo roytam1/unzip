@@ -421,7 +421,7 @@ typedef struct Globals {
     PauseFn *mpause;
     PasswdFn *decr_passwd;
     StatCBFn *statreportcb;
-#ifdef WINDLL
+#if defined( WINDLL)
     LPUSERFUNCTIONS lpUserFunctions;
 #endif
 

@@ -1,4 +1,4 @@
-#                                               27 March 2012.  SMS.
+#                                               16 June 2012.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Source Description File.
 #
@@ -83,8 +83,10 @@ SEEK_BZ = $(DESTM)
 
 .IFDEF GNUC                     # GNUC
 GCC_ = _
+GCC_L = _L
 .ELSE                           # GNUC
 GCC_ =
+GCC_L =
 .ENDIF                          # GNUC
 
 # Check for option problems.
@@ -316,6 +318,8 @@ CDEFS_CLI = /define = ($(CDEFS), VMSCLI)
 CDEFS_SFX = /define = ($(CDEFS), SFX)
 
 CDEFS_SFX_CLI = /define = ($(CDEFS), SFX, VMSCLI)
+
+CDEFS_LIBUNZIP = /define = ($(CDEFS), DLL)
 
 # Other C compiler options.
 
@@ -560,6 +564,52 @@ MODS_OBJS_LIB_UNZIPSFX_CLI_CLD_V = \
 MODS_OBJS_LIB_UNZIPSFX_CLI = \
  $(MODS_OBJS_LIB_UNZIPSFX_CLI_C_V) \
  $(MODS_OBJS_LIB_UNZIPSFX_CLI_CLD_V)
+
+# LIBUNZIP object library.
+
+.IFDEF LIBUNZIP                 # LIBUNZIP
+
+#    Modules sensitive to DLL/REENTRANT.
+
+MODS_OBJS_LIB_LIBUNZIP_NL = \
+ API$(GCC_L)=[.$(DEST)]API_L.OBJ \
+ CRYPT$(GCC_L)=[.$(DEST)]CRYPT_L.OBJ \
+ EXPLODE$(GCC_L)=[.$(DEST)]EXPLODE_L.OBJ \
+ EXTRACT$(GCC_L)=[.$(DEST)]EXTRACT_L.OBJ \
+ FILEIO$(GCC_L)=[.$(DEST)]FILEIO_L.OBJ \
+ GLOBALS$(GCC_L)=[.$(DEST)]GLOBALS_L.OBJ \
+ INFLATE$(GCC_L)=[.$(DEST)]INFLATE_L.OBJ \
+ LIST$(GCC_L)=[.$(DEST)]LIST_L.OBJ \
+ PROCESS$(GCC_L)=[.$(DEST)]PROCESS_L.OBJ \
+ TTYIO$(GCC_L)=[.$(DEST)]TTYIO_L.OBJ \
+ UBZ2ERR$(GCC_L)=[.$(DEST)]UBZ2ERR_L.OBJ \
+ UNSHRINK$(GCC_L)=[.$(DEST)]UNSHRINK_L.OBJ \
+ UNZIP$(GCC_L)=[.$(DEST)]UNZIP_L.OBJ \
+ ZIPINFO$(GCC_L)=[.$(DEST)]ZIPINFO_L.OBJ
+
+MODS_OBJS_LIB_LIBUNZIP_V = \
+ VMS$(GCC_)=[.$(DEST)]VMS_L.OBJ
+
+#    Modules insensitive to DLL/REENTRANT.
+
+MODS_OBJS_LIB_LIBUNZIP_N = \
+ CRC32=[.$(DEST)]CRC32.OBJ \
+ ENVARGS=[.$(DEST)]ENVARGS.OBJ \
+ MATCH=[.$(DEST)]MATCH.OBJ \
+ UNREDUCE=[.$(DEST)]UNREDUCE.OBJ
+
+MODS_OBJS_LIB_LIBUNZIP_A = $(MODS_OBJS_LIB_UNZIP_AES)
+MODS_OBJS_LIB_LIBUNZIP_L = $(MODS_OBJS_LIB_UNZIP_LZMA)
+MODS_OBJS_LIB_LIBUNZIP_P = $(MODS_OBJS_LIB_UNZIP_PPMD)
+
+MODS_OBJS_LIB_LIBUNZIP = \
+ $(MODS_OBJS_LIB_LIBUNZIP_NL) \
+ $(MODS_OBJS_LIB_LIBUNZIP_V) \
+ $(MODS_OBJS_LIB_LIBUNZIP_N) \
+ $(MODS_OBJS_LIB_LIBUNZIP_A) \
+ $(MODS_OBJS_LIB_LIBUNZIP_L) \
+ $(MODS_OBJS_LIB_LIBUNZIP_P)
+.ENDIF                          # LIBUNZIP
 
 # Executables.
 

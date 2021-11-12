@@ -333,7 +333,8 @@ freely, subject to the above disclaimer and the following restrictions:
 #    undef WIN32_LEAN_AND_MEAN
 #    undef IZ_HASDEFINED_WIN32LEAN
 #  endif
-#endif
+#endif /* def WINDLL */
+
 
 /*---------------------------------------------------------------------------
     Grab system-dependent definition of EXPENTRY for prototypes below.
@@ -686,6 +687,7 @@ typedef struct _Uzp_cdir_Rec {
 
 int      UZ_EXP UzpMain            OF((int argc, char **argv));
 int      UZ_EXP UzpAltMain         OF((int argc, char **argv, UzpInit *init));
+int      UZ_EXP UzpMainI           OF((int argc, char **argv, UzpCB *init));
 ZCONST UzpVer * UZ_EXP UzpVersion  OF((void));
 void     UZ_EXP UzpFreeMemBuffer   OF((UzpBuffer *retstr));
 #ifndef WINDLL
@@ -716,6 +718,11 @@ int      UZ_EXP UzpPassword      OF((zvoid *pG, int *rcnt, char *pwbuf,
                                      int size, ZCONST char *zfn,
                                      ZCONST char *efn));
 
+#ifdef VMS
+int      vms_status              OF((int err));                 /* vms.c */
+void     decc_init               OF((void));                    /* vms.c */
+#endif
+
 #define UTF8_BIT (1<<11)
 
 #ifdef __cplusplus
@@ -730,7 +737,6 @@ int      UZ_EXP UzpPassword      OF((zvoid *pG, int *rcnt, char *pwbuf,
 #ifdef UNZIP_INTERNAL
 #  include "unzpriv.h"
 #endif
-
 
 #endif /* !__unzip_h */
 

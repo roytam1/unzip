@@ -60,6 +60,9 @@
 #define __FILEIO_C      /* identifies this source module */
 #define UNZIP_INTERNAL
 #include "unzip.h"
+#ifdef DLL
+#  include <api.h>
+#endif /* def DLL */
 #ifdef WINDLL
 #  ifdef POCKET_UNZIP
 #    include "wince/intrface.h"
@@ -698,7 +701,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
               (uch *)LoadFarString(ReadError),
               (ulg)strlen(LoadFarString(ReadError)), 0x401);
             echon();
-#ifdef WINDLL
+#if defined( WINDLL) || defined( DLL)
             longjmp(dll_error_return, 1);
 #else
             DESTROYGLOBALS();
@@ -1692,7 +1695,7 @@ int UZ_EXP UzpInput(pG, buf, size, flag)
 
 
 
-#if (!defined(WINDLL) && !defined(MACOS))
+#if (!defined(WINDLL) && !defined(MACOS) && !defined( DLL))
 
 /***************************/
 /* Function UzpMorePause() */
@@ -1753,7 +1756,6 @@ void UZ_EXP UzpMorePause(pG, prompt, flag)
 
 
 
-
 #ifndef WINDLL
 
 /**************************/
@@ -1768,15 +1770,15 @@ int UZ_EXP UzpPassword (pG, rcnt, pwbuf, size, zfn, efn)
     ZCONST char *zfn;  /* name of zip archive */
     ZCONST char *efn;  /* name of archive entry being processed */
 {
-#if CRYPT
+# if CRYPT
     int r = IZ_PW_ENTERED;
     char *m;
     char *prompt;
 
-#ifndef REENTRANT
+#  ifndef REENTRANT
     /* tell picky compilers to shut up about "unused variable" warnings */
     pG = pG;
-#endif
+#  endif
 
     if (*rcnt == 0) {           /* First call for current entry */
         *rcnt = 2;
@@ -1804,18 +1806,19 @@ int UZ_EXP UzpPassword (pG, rcnt, pwbuf, size, zfn, efn)
     }
     return r;
 
-#else /* !CRYPT */
+# else /* !CRYPT */
     /* tell picky compilers to shut up about "unused variable" warnings */
     pG = pG; rcnt = rcnt; pwbuf = pwbuf; size = size; zfn = zfn; efn = efn;
 
     return IZ_PW_ERROR;  /* internal error; function should never get called */
-#endif /* ?CRYPT */
+# endif /* ?CRYPT */
 
 } /* end function UzpPassword() */
 
+#endif /* ndef WINDLL */
 
 
-
+#if !defined( WINDLL) && !defined( DLL)
 
 /**********************/
 /* Function handler() */
@@ -1826,50 +1829,49 @@ void handler(signal)   /* upon interrupt, turn on echo and exit cleanly */
 {
     GETGLOBALS();
 
-#if !(defined(SIGBUS) || defined(SIGSEGV))      /* add a newline if not at */
+# if !(defined(SIGBUS) || defined(SIGSEGV))     /* add a newline if not at */
     (*G.message)((zvoid *)&G, slide, 0L, 0x41); /*  start of line (to stderr; */
-#endif                                          /*  slide[] should be safe) */
+# endif                                         /*  slide[] should be safe) */
 
     /* Restore the original terminal echo setting. */
     echorig();
 
-#ifdef SIGBUS
+# ifdef SIGBUS
     if (signal == SIGBUS) {
         Info(slide, 0x421, ((char *)slide, LoadFarString(ZipfileCorrupt),
           "bus error"));
         DESTROYGLOBALS();
         EXIT(PK_BADERR);
     }
-#endif /* SIGBUS */
+# endif /* SIGBUS */
 
-#ifdef SIGILL
+# ifdef SIGILL
     if (signal == SIGILL) {
         Info(slide, 0x421, ((char *)slide, LoadFarString(ZipfileCorrupt),
           "illegal instruction"));
         DESTROYGLOBALS();
         EXIT(PK_BADERR);
     }
-#endif /* SIGILL */
+# endif /* SIGILL */
 
-#ifdef SIGSEGV
+# ifdef SIGSEGV
     if (signal == SIGSEGV) {
         Info(slide, 0x421, ((char *)slide, LoadFarString(ZipfileCorrupt),
           "segmentation violation"));
         DESTROYGLOBALS();
         EXIT(PK_BADERR);
     }
-#endif /* SIGSEGV */
+# endif /* SIGSEGV */
 
     /* probably ctrl-C */
     DESTROYGLOBALS();
-#if defined(AMIGA) && defined(__SASC)
+# if defined(AMIGA) && defined(__SASC)
     _abort();
-#endif
+# endif
     EXIT(IZ_CTRLC);       /* was EXIT(0), then EXIT(PK_ERR) */
 }
 
-#endif /* !WINDLL */
-
+#endif /* !defined( WINDLL) && !defined( DLL) */
 
 
 

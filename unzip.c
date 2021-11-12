@@ -81,6 +81,10 @@
 
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
 
+# ifdef DLL
+#  define NO_EXCEPT_SIGNALS
+# endif /* def DLL */
+
 /***************************/
 /* Local type declarations */
 /***************************/
@@ -92,7 +96,7 @@ typedef struct _sign_info
         void (*sighandler)(int);
         int sigtype;
     } savsigs_info;
-# endif /* (defined(REENTRANT) && !defined(NO_EXCEPT_SIGNALS)) WINDLL */
+# endif /* (defined(REENTRANT) && !defined(NO_EXCEPT_SIGNALS)) */
 
 /*******************/
 /* Local Functions */
@@ -438,13 +442,16 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
 #  endif /* defined( UNIX) && defined( __APPLE__) */
 
 #  ifdef ASM_CRC
-    static ZCONST char Far AsmCRC[] = "ASM_CRC";
+    static ZCONST char Far AsmCRC[] =
+     "ASM_CRC              (Assembly code used for CRC)";
 #  endif
 #  ifdef ASM_INFLATECODES
-    static ZCONST char Far AsmInflateCodes[] = "ASM_INFLATECODES";
+    static ZCONST char Far AsmInflateCodes[] =
+     "ASM_INFLATECODES     (Assembly code used for Inflate)";
 #  endif
 #  ifdef CHECK_VERSIONS
-    static ZCONST char Far Check_Versions[] = "CHECK_VERSIONS";
+    static ZCONST char Far Check_Versions[] =
+     "CHECK_VERSIONS       (Check VMS versions, build v. run-time)";
 #  endif
 #  ifdef COPYRIGHT_CLEAN
     static ZCONST char Far Copyright_Clean[] =
@@ -461,7 +468,8 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
      "DEFLATE64_SUPPORT    (PKZIP 4.x Deflate64(tm) supported)";
 #  endif
 #  ifdef DLL
-    static ZCONST char Far Dll[] = "DLL";
+    static ZCONST char Far Dll[] =
+     "DLL                  (UnZip built as DLL or object library)";
 #  endif
 #  ifdef DOSWILD
     static ZCONST char Far DosWild[] = "DOSWILD";
@@ -471,13 +479,16 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
      "LZW_CLEAN            (PKZIP/Zip 1.x unshrink method not supported)";
 #  endif
 #  ifndef MORE
-    static ZCONST char Far No_More[] = "NO_MORE";
+    static ZCONST char Far No_More[] =
+     "NO_MORE              (Built-n -M pager (\"more\") disabled)";
 #  endif
 #  ifdef NO_ZIPINFO
-    static ZCONST char Far No_ZipInfo[] = "NO_ZIPINFO";
+    static ZCONST char Far No_ZipInfo[] =
+     "NO_ZIPINFO           (ZipInfo -Z mode disabled)";
 #  endif
 #  ifdef NTSD_EAS
-    static ZCONST char Far NTSDExtAttrib[] = "NTSD_EAS";
+    static ZCONST char Far NTSDExtAttrib[] =
+     "NTSD_EAS             (Windows NT extended attributes supported)";
 #  endif
 #  if defined(WIN32) && defined(NO_W32TIMES_IZFIX)
     static ZCONST char Far W32NoIZTimeFix[] = "NO_W32TIMES_IZFIX";
@@ -487,19 +498,23 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
      "OLD_THEOS_EXTRA      (Handle also old Theos port extra field)";
 #  endif
 #  ifdef OS2_EAS
-    static ZCONST char Far OS2ExtAttrib[] = "OS2_EAS";
+    static ZCONST char Far OS2ExtAttrib[] =
+     "OS2_EAS              (OS/2 extended attributes supported)";
+     "NTSD_EAS             (Windows NT extended attributes supported)";
 #  endif
 #  ifdef QLZIP
     static ZCONST char Far SMSExFldOnUnix[] = "QLZIP";
 #  endif
 #  ifdef REENTRANT
-    static ZCONST char Far Reentrant[] = "REENTRANT";
+    static ZCONST char Far Reentrant[] =
+     "REENTRANT            (UnZip built for reentrancy)";
 #  endif
 #  ifdef REGARGS
     static ZCONST char Far RegArgs[] = "REGARGS";
 #  endif
 #  ifdef RETURN_CODES
-    static ZCONST char Far Return_Codes[] = "RETURN_CODES";
+    static ZCONST char Far Return_Codes[] =
+     "RETURN_CODES         (Display error message at exit)";
 #  endif
 #  ifdef SET_DIR_ATTRIB
     static ZCONST char Far SetDirAttrib[] =
@@ -600,10 +615,12 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
      "VMS_TEXT_CONV        (Conversion of VMS var-len rec fmt text supported)";
 #  endif
 #  ifdef VMSCLI
-    static ZCONST char Far VmsCLI[] = "VMSCLI";
+    static ZCONST char Far VmsCLI[] =
+     "VMSCLI               (Use VMS command-line interface)";
 #  endif
 #  ifdef VMSWILD
-    static ZCONST char Far VmsWild[] = "VMSWILD";
+    static ZCONST char Far VmsWild[] =
+     "VMSWILD              (Use VMS-style wildcard characters)";
 #  endif
 #  ifdef WILD_STOP_AT_DIR
     static ZCONST char Far WildStopAtDir[] =
@@ -1277,25 +1294,34 @@ int unzip(__G__ argc, argv)
     /* convert MSDOS-style 'backward slash' directory separators to Unix-style
      * 'forward slashes' for user's convenience (include zipfile name itself)
      */
+    {
+        /* 2012-06-23 SMS.
+         * Use a local variable here to avoid damage to the global
+         * G.pfnames, which may be used later by UnZipSFX (at least).
+         */
+        char **G_pfnames;
+
 #  ifdef SFX
-    for (G.pfnames = argv, i = argc;  i > 0;  --i) {
+        for (G_pfnames = argv, i = argc;  i > 0;  --i)
 #  else
     /* argc does not include the zipfile specification */
-    for (G.pfnames = argv, i = argc;  i > 0;  --i) {
+        for (G_pfnames = argv, i = argc;  i > 0;  --i)
 #  endif
+        {
 #  ifdef __human68k__
-        extern char *_toslash(char *);
-        _toslash(*G.pfnames);
+            extern char *_toslash(char *);
+            _toslash(*G_pfnames);
 #  else /* !__human68k__ */
-        char *q = *G.pfnames;
+            char *q = *G_pfnames;
 
-        while (*q != '\0') {
-            if (*q == '\\')
-                *q = '/';
-            INCSTR(q);
-        }
+            while (*q != '\0') {
+                if (*q == '\\')
+                    *q = '/';
+                INCSTR(q);
+            }
 #  endif /* ?__human68k__ */
-        ++G.pfnames;
+            ++G_pfnames;
+        }
     }
 # endif /* DOS_FLX_H68_NLM_OS2_W32 */
 

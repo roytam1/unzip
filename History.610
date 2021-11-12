@@ -313,7 +313,7 @@ Features added (or removed):
    UnZip process ID, for convenience in forming a "kill -USR1 <pid>"
    command.  (unzip.c, unzpriv.h, vms/vms.c) [SMS]
 
-6.10c09 (xx Xxx 201x):
+6.10c09 (15 Jun 2012):
  - Add optional support for PPMd compression (method 98).  (extract.c,
    lzma/Ppmd.h, lzma/Ppmd8.c, lzma/Ppmd8.h, lzma/Ppmd8Dec.c,
    lzma/README_LZMA.txt, unix/configure, unix/Makefile,
@@ -328,6 +328,17 @@ Features added (or removed):
  - Add archive name to user-triggered progress message.  (unzip.c) [SMS]
  - Add data-dependent supplementary info to verbose test (-tv) report
    for LZMA- and PPMd-compressed data.  (extract.c, man/unzip.1) [SMS]
+ - Initial attempt to provide a callable-UnZip interface on UNIX and VMS
+   systems.  Specifying LIBUNZIP at build time creates libizunzip.a or
+   LIBIZUNZIP.OLB and LIBIZUNZIP.OPT, which may be linked with a
+   user-supplied program.
+ - Initial attempt to support Windows MinGW environment with UNIX
+   builders ("generic" target).  No DLL.  (unix/configure, unix/Makefile)
+   [SMS]
+ - Added support for BAE Systems STOP OS, which lacks chown().  The
+   "configure" script now checks for chmod() and chown(), and unix.c now
+   honors the resulting NO_CHMOD and NO_CHOWN macros.  (unix/configure,
+   unix/unix.c) [SMS]
 
 
 
@@ -732,7 +743,7 @@ Bugs fixed:
    sprintf() lines for specific compiler versions.  Change (bad) Mac OS X
    message string '" (Mac OS X")' to '" (Mac OS X)"'.  (unix/unix.c) [AD]
 
-6.10c09 (23 May 2012):
+6.10c09 (21 Jun 2012):
  - Minor code tidying: UZbunzip2() and UZlzma() are now static.  (extract.c,
    unzpriv.h) [SMS]
  - A bare "#if" directive embedded in a multi-line comment block confused
@@ -834,6 +845,9 @@ Bugs fixed:
  - Added Java "CAFE" extra field type to ZipInfo reports.  (zipinfo.c) [SMS]
  - Changed some declarations to accommodate a type change in zlib
    version 1.2.7.  (globals.h) [SMS]
+ - UnZipSFX could fail (SEGV) on systems with backslash ("\") file path
+   separators (DOS, Windows, ...), if a list of member names to be
+   extracted was specified on the command line.  (unzip.c) [SMS]
 
 ==================
 

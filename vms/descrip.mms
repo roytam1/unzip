@@ -1,4 +1,4 @@
-#                                               1 December 2011.  SMS.
+#                                               16 June 2012.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
@@ -44,6 +44,8 @@
 #                   directory itself.
 #
 #    LARGE=1        Enable large-file (>2GB) support.  Non-VAX only.
+#
+#    LIBUNZIP=1     Build LIBIZUNZIP.OLB as a callable UnZip library.
 #
 #    LINKOPTS=xxx   Link with LINK options xxx.  For example:
 #                   LINKOPTS=/NOINFO
@@ -144,10 +146,21 @@ INCL_DESCRIP_SRC = 1
 
 # Object library names.
 
-LIB_UNZIP = SYS$DISK:[.$(DEST)]UNZIP.OLB
-LIB_UNZIP_CLI = SYS$DISK:[.$(DEST)]UNZIPCLI.OLB
-LIB_UNZIPSFX = SYS$DISK:[.$(DEST)]UNZIPSFX.OLB
-LIB_UNZIPSFX_CLI = SYS$DISK:[.$(DEST)]UNZSFXCLI.OLB
+LIB_UNZIP_NAME = UNZIP.OLB
+LIB_UNZIP_CLI_NAME = UNZIPCLI.OLB
+LIB_UNZIPSFX_NAME = UNZIPSFX.OLB
+LIB_UNZIPSFX_CLI_NAME = UNZSFXCLI.OLB
+.IFDEF LIBUNZIP                 # LIBUNZIP
+LIB_LIBUNZIP_NAME = LIBIZUNZIP.OLB
+.ENDIF                          # LIBUNZIP
+
+LIB_UNZIP = SYS$DISK:[.$(DEST)]$(LIB_UNZIP_NAME)
+LIB_UNZIP_CLI = SYS$DISK:[.$(DEST)]$(LIB_UNZIP_CLI_NAME)
+LIB_UNZIPSFX = SYS$DISK:[.$(DEST)]$(LIB_UNZIPSFX_NAME)
+LIB_UNZIPSFX_CLI = SYS$DISK:[.$(DEST)]$(LIB_UNZIPSFX_CLI_NAME)
+.IFDEF LIBUNZIP                 # LIBUNZIP
+LIB_LIBUNZIP = SYS$DISK:[.$(DEST)]$(LIB_LIBUNZIP_NAME)
+.ENDIF                          # LIBUNZIP
 
 # Help file names.
 
@@ -159,6 +172,11 @@ UNZIP_MSG_MSG = [.VMS]UNZIP_MSG.MSG
 UNZIP_MSG_EXE = [.$(DEST)]UNZIP_MSG.EXE
 UNZIP_MSG_OBJ = [.$(DEST)]UNZIP_MSG.OBJ
 
+# Library link options file.
+
+.IFDEF LIBUNZIP                 # LIBUNZIP
+LIBUNZIP_OPT = [.$(DEST)]LIB_IZUNZIP.OPT
+.ENDIF                          # LIBUNZIP
 
 # TARGETS.
 
@@ -166,7 +184,7 @@ UNZIP_MSG_OBJ = [.$(DEST)]UNZIP_MSG.OBJ
 # and help files.
 
 ALL : $(UNZIP) $(UNZIP_CLI) $(UNZIPSFX) $(UNZIPSFX_CLI) $(UNZIP_HELP) \
-      $(UNZIP_MSG_EXE)
+      $(UNZIP_MSG_EXE) $(LIB_LIBUNZIP) $(LIBUNZIP_OPT)
 	@ write sys$output "Done."
 
 # CLEAN target.  Delete the [.$(DEST)] directory and everything in it.
@@ -284,6 +302,8 @@ $(LIB_UNZIPSFX) : $(LIB_UNZIPSFX)($(MODS_OBJS_LIB_UNZIPSFX))
 $(LIB_UNZIPSFX_CLI) : $(LIB_UNZIPSFX_CLI)($(MODS_OBJS_LIB_UNZIPSFX_CLI))
 	@ write sys$output "$(MMS$TARGET) updated."
 
+$(LIB_LIBUNZIP) : $(LIB_LIBUNZIP)($(MODS_OBJS_LIB_LIBUNZIP))
+	@ write sys$output "$(MMS$TARGET) updated."
 
 # Module ID options files.
 
@@ -294,7 +314,6 @@ OPT_ID_SFX = SYS$DISK:[.$(DEST)]UNZIPSFX.OPT
 
 .C.OBJ :
         $(CC) $(CFLAGS) $(CDEFS_UNX) $(MMS$SOURCE)
-
 
 # Normal sources in [.VMS].
 
@@ -355,6 +374,55 @@ OPT_ID_SFX = SYS$DISK:[.$(DEST)]UNZIPSFX.OPT
 
 [.$(DEST)]UNZSFXCLI.OBJ : UNZIP.C
 	$(CC) $(CFLAGS) $(CDEFS_SFX_CLI) $(MMS$SOURCE)
+
+# LIBUNZIP variant sources in [].
+
+[.$(DEST)]API_L.OBJ : API.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]CRYPT_L.OBJ : CRYPT.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]EXPLODE_L.OBJ : EXPLODE.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]EXTRACT_L.OBJ : EXTRACT.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]FILEIO_L.OBJ : FILEIO.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]GLOBALS_L.OBJ : GLOBALS.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]INFLATE_L.OBJ : INFLATE.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]LIST_L.OBJ : LIST.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]PROCESS_L.OBJ : PROCESS.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]TTYIO_L.OBJ : TTYIO.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]UNSHRINK_L.OBJ : UNSHRINK.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]UBZ2ERR_L.OBJ : UBZ2ERR.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]UNZIP_L.OBJ : UNZIP.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+[.$(DEST)]ZIPINFO_L.OBJ : ZIPINFO.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
+
+# LIBUNZIP variant sources in [.VMS].
+
+[.$(DEST)]VMS_L.OBJ : [.VMS]VMS.C
+	$(CC) $(CFLAGS) $(CDEFS_LIBUNZIP) $(MMS$SOURCE)
 
 # VAX C LINK options file.
 
@@ -461,6 +529,28 @@ $(UNZIP_MSG_EXE) : $(UNZIP_MSG_OBJ)
 
 $(UNZIP_MSG_OBJ) : $(UNZIP_MSG_MSG)
         message /object = $(MMS$TARGET) /nosymbols $(UNZIP_MSG_MSG)
+
+# Library link options file.
+
+$(LIBUNZIP_OPT) : [.VMS]STREAM_LF.FDL
+	def_dev_dir_orig = f$environment( "default")
+	set default [.$(DEST)]
+	def_dev_dir = f$environment( "default")
+	set default 'def_dev_dir_orig'
+	create /fdl = [.VMS]STREAM_LF.FDL $(MMS$TARGET)
+	open /append opt_file_lib $(MMS$TARGET)
+	write opt_file_lib "! DEFINE LIB_IZUNZIP ''def_dev_dir'"
+	if ("$(LIB_BZIP2_OPTS)" .nes. "") then -
+         write opt_file_lib "! DEFINE LIB_BZIP2 ''f$trnlnm( "lib_bzip2")'"
+	if ("$(LIB_ZLIB_OPTS)" .nes. "") then -
+         write opt_file_lib "! DEFINE LIB_ZLIB ''f$trnlnm( "lib_zlib")'"
+	write opt_file_lib "LIB_IZUNZIP:$(LIB_LIBUNZIP_NAME) /library"
+	if ("$(LIB_BZIP2_OPTS)" .nes. "") then -
+         write opt_file_lib "$(LIB_BZIP2_OPTS)" - ","
+	write opt_file_lib "LIB_IZUNZIP:$(LIB_LIBUNZIP_NAME) /library"
+	if ("$(LIB_ZLIB_OPTS)" .nes. "") then -
+         write opt_file_lib "$(LIB_ZLIB_OPTS)" - ","
+	close opt_file_lib
 
 # Include generated source dependencies.
 

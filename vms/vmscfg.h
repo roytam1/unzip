@@ -90,13 +90,22 @@
 
 #  define _MAX_PATH (NAMX_MAXRSS+1)     /* to define FILNAMSIZ below */
 
-#  ifdef RETURN_CODES  /* VMS interprets standard PK return codes incorrectly */
-#    define RETURN(ret) return_VMS(__G__ (ret))   /* verbose version */
-#    define EXIT(ret)   return_VMS(__G__ (ret))
-#  else
-#    define RETURN      return_VMS                /* quiet version */
-#    define EXIT        return_VMS
-#  endif
+#  ifdef DLL
+     /* Return the normal (raw) PK status code. */
+#    define RETURN      return
+#    define EXIT        return
+#  else /* def DLL */
+     /* Do the desired VMS-specific status code and exit processing. */
+#    ifdef RETURN_CODES
+       /* Display error message before exiting. */
+#      define RETURN(ret) return_VMS(__G__ (ret))
+#      define EXIT(ret)   return_VMS(__G__ (ret))
+#    else
+       /* Exit without extra error message. */
+#      define RETURN      return_VMS
+#      define EXIT        return_VMS
+#    endif
+#  endif /* def DLL [else] */
 #  ifdef VMSCLI
 #    define USAGE(ret)  VMSCLI_usage(__G__ (ret))
 #  endif

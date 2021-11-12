@@ -1781,6 +1781,12 @@ struct file_list {
 # endif /* defined(VMS) || defined(SIGUSR1) */
 #endif /* ndef NO_USER_PROGRESS */
 
+/* "api.h" wants <setjmp.h>, which must follow large-file determination,
+ * which is done above.
+ */
+#if defined( DLL) && !defined( WINDLL)
+#  include "api.h"
+#endif /* ndef WINDLL */
 
 #ifdef SHORT_SYMS                   /* Mark Williams C, ...? */
 #  define extract_or_test_files     xtr_or_tst_files
@@ -2834,7 +2840,6 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
 /* int    flush               OF((__GPRO__ uch *rawbuf, unsigned size,
                                   int final_flag));   * (see fileio.c) vms.c */
    char  *vms_msg_text        OF((void));                           /* vms.c */
-   int    vms_status          OF((int));                            /* vms.c */
 # ifdef RETURN_CODES
    void   return_VMS          OF((__GPRO__ int zip_error));         /* vms.c */
 # else /* def RETURN_CODES */

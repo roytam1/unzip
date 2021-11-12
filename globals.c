@@ -190,7 +190,7 @@ Uz_Globs *globalsCtor()
 
     G.message = UzpMessagePrnt;
     G.input = UzpInput;           /* not used by anyone at the moment... */
-#if defined(WINDLL) || defined(MACOS)
+#if defined(WINDLL) || defined(MACOS) || defined( DLL)
     G.mpause = NULL;              /* has scrollbars:  no need for pausing */
 #else
     G.mpause = UzpMorePause;

@@ -52,7 +52,7 @@ void bz_internal_error(bzerrcode)
 
     Info(slide, 0x421, ((char *)slide,
       "error: internal fatal libbzip2 error number %d\n", bzerrcode));
-#ifdef WINDLL
+#if defined( WINDLL) || defined( DLL)
     longjmp(dll_error_return, 1);
 #else
     DESTROYGLOBALS();

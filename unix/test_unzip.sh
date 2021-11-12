@@ -6,6 +6,9 @@
 #    $2 = program directory (relative).  Default: .
 #    $3 = non-null to skip funzip and SFX tests.
 #
+#    2012-06-22  SMS.  MinGW accommodation.  Changed to try
+#                      "unzipsfx.exe" when plain "unzipsfx" is missing.
+#                      Use "unzip -a" to avoid line-ending differences.
 #    2012-02-24  SMS.  Added $3 check for PPMd test.
 #                      Added exit status tests.
 #    2011-08-05  SMS.  New.
@@ -99,11 +102,12 @@ else
 fi
 
 # Test UnZip extraction with "-x" option.
+# (Use "-a" to get proper local line endings for "-Z" test below.)
 
 echo ''
 echo '>>> UnZip "-x" extraction test...'
 
-../${prod}/unzip -bo "../${test_archive}" -x "${member_1}"
+../${prod}/unzip -ao "../${test_archive}" -x "${member_1}"
 status=$?
 
 if test ${status} -ne 0 ; then
@@ -244,7 +248,14 @@ if test -z "$3" ; then
     if test -f "dest_dir/${member_1}" ; then
 
         rm ${member_1} ${member_2}
-        cat ../${prod}/unzipsfx "../${test_archive}" > test_sfx
+        # MinGW "test -f fred" detects "fred.exe", but the "cat" below
+        # needs the real name, so we use a more realistic test.
+        uzs='unzipsfx'
+        cat ../${prod}/${uzs} > /dev/null 2> /dev/null
+        if [ $? -ne 0 ]; then
+            uzs="${uzs}.exe"
+        fi
+        cat ../${prod}/${uzs} "../${test_archive}" > test_sfx
         chmod 0700 test_sfx
         ./test_sfx -b ${member_1}
         status=$?

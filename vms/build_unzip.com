@@ -2,7 +2,7 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2012-06-07  SMS.
+$!     Last revised:  2012-06-16  SMS.
 $!
 $!     Command arguments:
 $!     - suppress C compilation (re-link): "NOCOMPILE"
@@ -58,6 +58,7 @@ $!     - select installation of CLI interface version of UnZip:
 $!       "VMSCLI" or "CLI"
 $!     - force installation of UNIX interface version of UnZip
 $!       (override LOCAL_UNZIP environment): "NOVMSCLI" or "NOCLI"
+$!     - build a callable-UnZip library, LIBIZUNZIP.OLB: "LIBUNZIP"
 $!     - run basic UnZip tests: TEST, TEST_PPMD
 $!
 $!     To specify additional options, define the symbol LOCAL_UNZIP
@@ -126,6 +127,7 @@ $ unzx_unx = "UNZIP"
 $ unzx_cli = "UNZIP_CLI"
 $ unzsfx_unx = "UNZIPSFX"
 $ unzsfx_cli = "UNZIPSFX_CLI"
+$ lib_libunzip_name = "LIBIZUNZIP.OLB"
 $ lib_unzip_name = "UNZIP.OLB"
 $ lib_unzipcli_name = "UNZIPCLI.OLB"
 $ lib_unzipsfx_name = "UNZIPSFX.OLB"
@@ -139,6 +141,7 @@ $ IZ_ZLIB = ""
 $ LINKOPTS = "/notraceback"
 $ LISTING = " /nolist"
 $ LARGE_FILE = 0
+$ LIBUNZIP = 0
 $ LZMA = 0
 $ MAKE_EXE = 1
 $ MAKE_HELP = 1
@@ -215,6 +218,12 @@ $!
 $     if (f$extract( 0, 4, curr_arg) .eqs. "LIST")
 $     then
 $         LISTING = "/''curr_arg'"      ! But see below for mods.
+$         goto argloop_end
+$     endif
+$!
+$     if (f$extract( 0, 8, curr_arg) .eqs. "LIBUNZIP")
+$     then
+$         LIBUNZIP = 1
 $         goto argloop_end
 $     endif
 $!
@@ -449,11 +458,12 @@ $ then
 $     dest = "''dest'L"
 $ endif
 $!
+$ lib_libunzip = "SYS$DISK:[.''dest']''lib_libunzip_name'"
 $ lib_unzip = "SYS$DISK:[.''dest']''lib_unzip_name'"
 $ lib_unzipcli = "SYS$DISK:[.''dest']''lib_unzipcli_name'"
 $ lib_unzipsfx = "SYS$DISK:[.''dest']''lib_unzipsfx_name'"
 $ lib_unzipsfxcli = "SYS$DISK:[.''dest']''lib_unzipsfxcli_name'"
-$ unzip_lib_opt = "[.''dest']UNZIP_LIB.OPT"
+$ libunzip_opt = "[.''dest']LIB_IZUNZIP.OPT"
 $!
 $! If TEST was requested, then run the basic tests (and exit).
 $!
@@ -481,6 +491,7 @@ $     DEF_UNX = "/define = (''defs')"
 $     DEF_CLI = "/define = (''defs', VMSCLI)"
 $     DEF_SXUNX = "/define = (''defs', SFX)"
 $     DEF_SXCLI = "/define = (''defs', VMSCLI, SFX)"
+$     DEF_LIBUNZIP = "/define = (''defs', DLL)
 $ else
 $     if (MAKE_EXE .or. MAKE_MSG)
 $     then
@@ -673,7 +684,7 @@ $!
 $ if (MAKE_OBJ)
 $ then
 $!
-$! Compile the sources.
+$! Compile the primary sources.
 $!
 $     cc 'DEF_UNX' /object = [.'dest']UNZIP.OBJ UNZIP.C
 $     cc 'DEF_UNX' /object = [.'dest']CRC32.OBJ CRC32.C
@@ -693,6 +704,28 @@ $     cc 'DEF_UNX' /object = [.'dest']UNREDUCE.OBJ UNREDUCE.C
 $     cc 'DEF_UNX' /object = [.'dest']UNSHRINK.OBJ UNSHRINK.C
 $     cc 'DEF_UNX' /object = [.'dest']ZIPINFO.OBJ ZIPINFO.C
 $     cc 'DEF_UNX' /object = [.'dest']VMS.OBJ [.VMS]VMS.C
+$!
+$     if (LIBUNZIP .ne. 0)
+$     then
+$!
+$! Compile the callable object library sources, DLL/REENTRANT-sensitive.
+$!
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']API_L.OBJ API.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']CRYPT_L.OBJ CRYPT.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']EXPLODE_L.OBJ EXPLODE.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']EXTRACT_L.OBJ EXTRACT.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']FILEIO_L.OBJ FILEIO.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']GLOBALS_L.OBJ GLOBALS.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']INFLATE_L.OBJ INFLATE.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']LIST_L.OBJ LIST.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']PROCESS_L.OBJ PROCESS.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']TTYIO_L.OBJ TTYIO.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']UBZ2ERR_L.OBJ UBZ2ERR.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']UNSHRINK_L.OBJ UNSHRINK.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']UNZIP_L.OBJ UNZIP.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']ZIPINFO_L.OBJ ZIPINFO.C
+$         cc 'DEF_LIBUNZIP' /object = [.'dest']VMS_L.OBJ [.VMS]VMS.C
+$     endif
 $!
 $     if (AES_WG .ne. 0)
 $     then
@@ -718,7 +751,7 @@ $         cc 'DEF_UNX' /object = [.'dest']PPMD8.OBJ [.SZIP]PPMD8.C
 $         cc 'DEF_UNX' /object = [.'dest']PPMD8DEC.OBJ [.SZIP]PPMD8DEC.C
 $     endif
 $!
-$! Create the object library.
+$! Create the primary object library.
 $!
 $     if (f$search( lib_unzip) .eqs. "") then -
        libr /object /create 'lib_unzip'
@@ -767,6 +800,98 @@ $     then
 $         libr /object /replace 'lib_unzip' -
            [.'dest']PPMD8.OBJ, -
            [.'dest']PPMD8DEC.OBJ
+$     endif
+$!
+$! Create the callable UnZip object library and link options file.
+$!
+$     if (LIBUNZIP .ne. 0)
+$     then
+$!
+$         if (f$search( lib_libunzip) .eqs. "") then -
+           libr /object /create 'lib_libunzip'
+$!
+$! Modules sensitive to DLL/REENTRANT.
+$!
+$         libr /object /replace 'lib_libunzip' -
+           [.'dest']API_L.OBJ, -
+           [.'dest']CRYPT_L.OBJ, -
+           [.'dest']EXPLODE_L.OBJ, -
+           [.'dest']EXTRACT_L.OBJ, -
+           [.'dest']FILEIO_L.OBJ, -
+           [.'dest']GLOBALS_L.OBJ, -
+           [.'dest']INFLATE_L.OBJ, -
+           [.'dest']LIST_L.OBJ, -
+           [.'dest']PROCESS_L.OBJ, -
+           [.'dest']TTYIO_L.OBJ, -
+           [.'dest']UBZ2ERR_L.OBJ, -
+           [.'dest']UNSHRINK_L.OBJ, -
+           [.'dest']ZIPINFO_L.OBJ, -
+           [.'dest']VMS_L.OBJ
+$!
+$! Modules insensitive to DLL/REENTRANT.
+$!
+$         libr /object /replace 'lib_libunzip' -
+           [.'dest']CRC32.OBJ, -
+           [.'dest']ENVARGS.OBJ, -
+           [.'dest']MATCH.OBJ, -
+           [.'dest']UNREDUCE.OBJ
+$!
+$         if (AES_WG .ne. 0)
+$         then
+$             libr /object /replace 'lib_libunzip' -
+               [.'dest']AESCRYPT.OBJ, -
+               [.'dest']AESKEY.OBJ, -
+               [.'dest']AESTAB.OBJ, -
+               [.'dest']FILEENC.OBJ, -
+               [.'dest']HMAC.OBJ, -
+               [.'dest']PRNG.OBJ, -
+               [.'dest']PWD2KEY.OBJ, -
+               [.'dest']SHA1.OBJ
+$         endif
+$!
+$         if (LZMA .ne. 0)
+$         then
+$             libr /object /replace 'lib_libunzip' -
+               [.'dest']LZFIND.OBJ, -
+               [.'dest']LZMADEC.OBJ
+$         endif
+$!
+$         if (PPMD .ne. 0)
+$         then
+$             libr /object /replace 'lib_libunzip' -
+               [.'dest']PPMD8.OBJ, -
+               [.'dest']PPMD8DEC.OBJ
+$         endif
+$!
+$! Create the callable library link options file.
+$!
+$         def_dev_dir_orig = f$environment( "default")
+$         set default [.'dest']
+$         def_dev_dir = f$environment( "default")
+$         set default 'def_dev_dir_orig'
+$         create /fdl = [.VMS]STREAM_LF.FDL 'libunzip_opt'
+$         open /append opt_file_lib 'libunzip_opt'
+$         write opt_file_lib "! DEFINE LIB_IZUNZIP ''def_dev_dir'"
+$         if (IZ_BZIP2 .nes. "")
+$         then
+$             write opt_file_lib "! DEFINE LIB_BZIP2 ''f$trnlnm( "lib_bzip2")'"
+$         endif
+$         if (IZ_ZLIB .nes. "")
+$         then
+$             write opt_file_lib "! DEFINE LIB_ZLIB ''f$trnlnm( "lib_zlib")'"
+$         endif
+$         write opt_file_lib "LIB_IZUNZIP:''lib_unzip_name' /library"
+$         if (IZ_BZIP2 .nes. "")
+$         then
+$             write opt_file_lib "''lib_bzip2_opts'" - ", " - ","
+$         endif
+$         write opt_file_lib "LIB_IZUNZIP:''lib_unzip_name' /library"
+$         if (IZ_ZLIB .nes. "")
+$         then
+$             write opt_file_lib "''libunzip_opt'" - ", " - ","
+$         endif
+$         close opt_file_lib
+$!
 $     endif
 $!
 $ endif
