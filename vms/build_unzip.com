@@ -2,7 +2,7 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2011-08-05  SMS.
+$!     Last revised:  2011-08-09  SMS.
 $!
 $!     Command arguments:
 $!     - suppress C compilation (re-link): "NOCOMPILE"
@@ -10,7 +10,10 @@ $!     - suppress linking executables: "NOLINK"
 $!     - suppress help file processing: "NOHELP"
 $!     - suppress message file processing: "NOMSG"
 $!     - select compiler environment: "VAXC", "DECC", "GNUC"
-$!     - select AES (WinZip/Gladman) encryption support: "AES_WG"
+$!     - select AES_WG encryption support: "AES_WG"
+$!       By default, the SFX programs are built without AES_WG support.
+$!       Add "AES_WG_SFX=1" to the LOCAL_UNZIP C macros to enable it.
+$!       (See LOCAL_UNZIP, below.)
 $!     - select BZIP2 support: "USEBZ2"
 $!       This option is a shortcut for "IZ_BZIP2=SYS$DISK:[.bzip2]", and
 $!       runs the DCL build procedure there,
@@ -23,6 +26,9 @@ $!       By default, the SFX programs are built without BZIP2 support.
 $!       Add "BZIP2_SFX=1" to the LOCAL_UNZIP C macros to enable it.
 $!       (See LOCAL_UNZIP, below.)
 $!     - select LZMA compression support: "LZMA"
+$!       By default, the SFX programs are built without LZMA support.
+$!       Add "LZMA_SFX=1" to the LOCAL_UNZIP C macros to enable it.
+$!       (See LOCAL_UNZIP, below.)
 $!     - use ZLIB compression library: "IZ_ZLIB=dev:[dir]", where
 $!       "dev:[dir]" (or a suitable logical name) tells where to find
 $!       "zlib.h".  The ZLIB object library (LIBZ.OLB) is expected to be

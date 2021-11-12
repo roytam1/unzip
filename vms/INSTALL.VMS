@@ -1,11 +1,11 @@
 
   VMS (OpenVMS):
 
-     On VMS, two build methods are provided: a command procedure, and
-     description files for MMS or MMK.  Both methods must be run from
-     the main directory, not the [.VMS] subdirectory.
+     On VMS, two build methods are provided: a DCL command procedure,
+     and description files for MMS or MMK.  Both methods must be run
+     from the main directory, not the [.VMS] subdirectory.
 
-     A simple build using the command procedure looks like this:
+     A simple build using the DCL command procedure looks like this:
           @ [.VMS]BUILD_UNZIP.COM
 
      A simple build using MMS or MMK looks like this:
@@ -45,7 +45,7 @@
      explain the command-line options used to select a different
      compiler.
 
-     By default, Zip uses (and UnZip supports) the "deflate" compression
+     By default, Zip uses (and UnZip supports) the "Deflate" compression
      method.  To add support for the optional "bzip2" compression method,
      first obtain and build the bzip2 software (http://www.bzip.org/ or,
      for a more VMS-friendly kit, http://antinode.info/dec/sw/bzip2.html).
@@ -76,6 +76,9 @@
           MMS /DESC = [.VMS] /MACRO = (LARGE=1, "CCOPTS=/NAMES=AS_IS", -
            IZ_BZIP2=SYS$SYSDEVICE:[UTILITY.SOURCE.BZIP2.BZIP2-1_0_4B_VMS])
 
+     Instructions on how to enable additional optional compression
+     and/or encryption methods may be found in the main builder files.
+
      System-architecture-specific files (like objects and executables)
      are placed in separate directories, such as [.ALPHA], [.IA64], or
      [.VAX].  Large-file products get their own directories, [.ALPHAL]
@@ -99,7 +102,7 @@
      or:
           MMS /DESC = [.VMS] /MACRO = (LARGE=1) TEST
 
-     Specify "LARGE" or not, the same as when building the programs. 
+     Specify "LARGE" or not, the same as when building the programs.
      (On VAX, also specify same the compiler option: VAXC, ...)  Other
      normal build options are allowed, but not required.  The builders
      use a DCL procedure, [.vms]test_unzip.com, to do this job.  This
@@ -170,4 +173,39 @@
      file to SYS$MESSAGE, although this could cause some confusion if
      multiple versions of UnZip are used on the system, and their error
      message source files differ.
+
+  Self-extracting archives:
+
+     The UnZip kit includes a DCL procedure, [.vms]makesfx.com, which is
+     intended to help make a self-extracting archive from a normal Zip
+     archive.  Comments in the procedure explain its use.  It uses a DCL
+     symbol, "UNZIPSFX", to locate the appropriate UNZIPSFX.EXE (or
+     UNZIPSFX_CLI.EXE) program to use.  Note that, unlike the DCL
+     symbols for the normal UnZip or Zip programs, this is not a foreign
+     command symbol, and does not include the "$" prefix.  For example:
+
+          unzipsfx == "dev:[dir]unzipsfx.exe"
+
+     The user must define "UNZIPSFX" to point to an UNZIPSFX.EXE program
+     which is one appropriate for the destination architecture, which
+     may differ from the architecture of the system where the
+     self-extracting archive is being created.  For example, on an Alpha
+     system, one might create a self-extracting archive for use on an
+     IA64 system:
+
+          zip new_archive.zip [...]
+          unzipsfx == "utility_root:[ia64l]unzipsfx.exe"
+          @ utility:makesfx.com new_archive
+
+     In some cases, the COPY command in makesfx.com may have trouble
+     ("%COPY-W-INCOMPAT, [...] incompatible attributes") if the
+     UNZIPSFX.EXE program and the Zip archive have different record
+     formats.  SET FILE /ATTRIBUTES should be able to adjust the record
+     format of one file or the other to make them compatible.
+
+     By default, the UNZIPSFX.EXE and UNZIPSFX_CLI.EXE programs include
+     support for only the default "Deflate" compression method.  Other,
+     optional compression methods may be enabled in the SFX programs at
+     build time.  See the comments in the main builder files for
+     details.
 

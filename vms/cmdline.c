@@ -44,6 +44,9 @@
 **
 **  Modified by:
 **
+**      02-016          S. Schweda              11-Aug-2011 17:00
+**              Added /NAMES = [ [NO]LOWERCASE | [NO]ODS2 | [NO]SPACES ].
+**
 **      02-015          S. Schweda              31-Jul-2010 22:00
 **              Rewrote option conversion code to use a separate argv[]
 **              member for each option, eliminating combined short
@@ -200,7 +203,10 @@ $DESCRIPTOR(cli_binary,         "BINARY");              /* -b[b] */
 $DESCRIPTOR(cli_binary_auto,    "BINARY.AUTO");         /* -b */
 $DESCRIPTOR(cli_binary_all,     "BINARY.ALL");          /* -bb */
 $DESCRIPTOR(cli_binary_none,    "BINARY.NONE");         /* -b- */
+#if 0
+/* /[NO]CASE_INSENSITIVE dropped for conflict with /CASE_MATCH. */
 $DESCRIPTOR(cli_case_insensitive, "CASE_INSENSITIVE");  /* -C */
+#endif /* 0 */
 $DESCRIPTOR(cli_case_match,     "CASE_MATCH");          /* -C[-] */
 $DESCRIPTOR(cli_case_match_blind, "CASE_MATCH.BLIND");  /* -C */
 $DESCRIPTOR(cli_case_match_sens, "CASE_MATCH.SENSITIVE"); /* -C- */
@@ -227,6 +233,9 @@ $DESCRIPTOR(cli_super_quiet,    "QUIET.SUPER");         /* -qq */
 $DESCRIPTOR(cli_test,           "TEST");                /* -t */
 $DESCRIPTOR(cli_pipe,           "PIPE");                /* -p */
 $DESCRIPTOR(cli_password,       "PASSWORD");            /* -P */
+$DESCRIPTOR(cli_names_lowercase, "NAMES.LOWERCASE");    /* -L */
+$DESCRIPTOR(cli_names_ods2,     "NAMES.ODS2");          /* -2 */
+$DESCRIPTOR(cli_names_spaces,   "NAMES.SPACES");        /* -s */
 $DESCRIPTOR(cli_timestamp,      "TIMESTAMP");           /* -T */
 $DESCRIPTOR(cli_uppercase,      "UPPERCASE");           /* -U */
 $DESCRIPTOR(cli_update,         "UPDATE");              /* -u */
@@ -909,6 +918,88 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
         }
 
         /*
+         * Transform names.
+         * Convert names to ODS2 restrictions.
+         * Convert spaces in names to underscores.
+         * Clear any existing "-2"/"-s" option with "-2-"/"-s-", then
+         * add the desired "2"/"s" value.
+         */
+#define OPT_2   "-2-2"          /* "-2"  Convert names to ODS2. */
+#define OPT_2N  "-2-"           /* ""    Normal extract (default). */
+#define OPT_S   "-s-s"          /* "-s"  Convert spaces. */
+#define OPT_SN  "-s-"           /* ""    Preserve spaces (default). */
+
+        status = cli$present( &cli_names_lowercase);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NAMES = NOLOWERCASE */
+                opt = OPT__LN;
+            }
+            else
+            {
+                /* /NAMES = LOWERCASE */
+                opt = OPT__L;
+            }
+            ADD_ARG( opt);
+        }
+
+        status = cli$present( &cli_names_ods2);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NAMES = NOODS2 */
+                opt = OPT_2N;
+            }
+            else
+            {
+                /* /NAMES = ODS2 */
+                opt = OPT_2;
+            }
+            ADD_ARG( opt);
+        }
+
+        status = cli$present( &cli_names_spaces);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NAMES = NOSPACES */
+                opt = OPT_S;
+            }
+            else
+            {
+                /* /NAMES = SPACES */
+                opt = OPT_SN;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Force conversion of extracted file names to ODS2 conventions.
+         * Clear any existing "-2" option with "-2-", then add
+         * the desired "2" value.
+         */
+
+        status = cli$present( &cli_ods2);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOODS2 */
+                opt = OPT_2N;
+            }
+            else
+            {
+                /* /ODS2 */
+                opt = OPT_2;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
          * Pipe files to SYS$OUTPUT (stdout) with no informationals.
          * Clear any existing "-p" option with "-p-", then add
          * the desired "p" value.
@@ -1173,30 +1264,6 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
             {
                 /* /COMMENT */
                 opt = OPT_Z;
-            }
-            ADD_ARG( opt);
-        }
-
-        /*
-         * Force conversion of extracted file names to ODS2 conventions.
-         * Clear any existing "-2" option with "-2-", then add
-         * the desired "2" value.
-         */
-#define OPT_2   "-2-2"          /* "-2"  Convert names to ODS2. */
-#define OPT_2N  "-2-"           /* ""    Normal extract (default). */
-
-        status = cli$present( &cli_ods2);
-        if ((status & 1) || (status == CLI$_NEGATED))
-        {
-            if (status == CLI$_NEGATED)
-            {
-                /* /NOODS2 */
-                opt = OPT_2N;
-            }
-            else
-            {
-                /* /ODS2 */
-                opt = OPT_2;
             }
             ADD_ARG( opt);
         }
@@ -1814,9 +1881,10 @@ Major options include (type unzip -h for Unix style flags):\n\
    /[NO]COMMENT, /DIRECTORY=directory-spec, /EXCLUDE=(file-spec1,etc.)\n\n\
 Modifiers include:\n\
    /BRIEF, /FULL, /[NO]TEXT[=NONE|AUTO|ALL], /[NO]BINARY[=NONE|AUTO|ALL],\n\
-   /EXISTING={NEW_VERSION|OVERWRITE|NOEXTRACT}, /[NO]JUNK, /QUIET,\n\
-   /QUIET[=SUPER], /[NO]PAGE, /[NO]CASE_INSENSITIVE, /[NO]LOWERCASE,\n\
-   /[NO]VERSION, /RESTORE[=([NO]OWNER_PROT[,NODATE|DATE={ALL|FILES}])]\n\n"));
+   /EXISTING={NEW_VERSION|OVERWRITE|NOEXTRACT}, /[NO]JUNK, /[NO]PAGE,\n\
+   /CASE_MATCH[=BLIND|SENSITIVE], /[NO]LOWERCASE, /[NO]VERSION,\n\
+   /NAMES=[[NO]LOWERCASE]|[[NO]ODS2]|[NO]SPACES], /QUIET[=SUPER],\n\
+   /RESTORE[=([NO]OWNER_PROT[,NODATE|DATE={ALL|FILES}])]\n\n"));
 
         Info(slide, flag, ((char *)slide, "\
 Examples (see unzip.txt or \"HELP UNZIP\" for more info):\n\

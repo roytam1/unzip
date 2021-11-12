@@ -1,4 +1,4 @@
-#                                               5 August 2011.  SMS.
+#                                               9 August 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
@@ -11,7 +11,10 @@
 #
 # Optional macros:
 #
-#    AES_WG=1       Enable AES (WinZip/Gladman) encryption support.
+#    AES_WG=1       Enable AES_WG encryption support.  By default, the
+#                   SFX programs are built without AES_WG support.  Add
+#                   "AES_WG_SFX=1" to the LOCAL_UNZIP C macros to enable
+#                   it.  (See LOCAL_UNZIP, below.)
 #
 #    CCOPTS=xxx     Compile with CC options xxx.  For example:
 #                   CCOPTS=/ARCH=HOST
@@ -53,7 +56,10 @@
 #                   example:
 #                   "LOCAL_UNZIP=NO_EXCEPT_SIGNALS=1, NO_SYMLINKS=1"
 #
-#    LZMA=1         Enable LZMA compression support.
+#    LZMA=1         Enable LZMA compression support.  By default, the
+#                   SFX programs are built without LZMA support.  Add
+#                   "LZMA_SFX=1" to the LOCAL_UNZIP C macros to enable
+#                   it.  (See LOCAL_UNZIP, below.)
 #
 #    NOSHARE=1      Link /NOSYSSHR (not using shareable images).
 #    NOSHARE=OLDVAX Link /NOSYSSHR on VAX for:
@@ -62,10 +68,10 @@
 #
 #    USEBZ2=1       Build with optional BZIP2 support.  This macro
 #                   is a shortcut for IZ_BZIP2=SYS$DISK:[.BZIP2].
-#                   Additionally, it forces invokation of the UnZip-supplied
-#                   bzip2 make script provided in [.bzip2]descrbz2.mms.
-#                   This results in a "single-command" build of UnZip with
-#                   bzip2 support directly from the sources.
+#                   Additionally, it causes invocation of the
+#                   UnZip-supplied bzip2 builder, [.bzip2]descrbz2.mms,
+#                   which should lead to a bzip2-enabled build of UnZip
+#                   directly from the sources.
 #
 # VAX-specific optional macros:
 #

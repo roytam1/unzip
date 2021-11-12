@@ -2,9 +2,9 @@ $!
 $!    UnZip test procedure.
 $!
 $!    P1 = test archive name.  Default: testmake.zip
-$!    P2 = program directory.  Default: .
+$!    P2 = program directory.  Default: "" (current directory)
 $!
-$!    2011-06-05  SMS.  New.
+$!    2011-06-10  SMS.  New.
 $!
 $ test_archive = f$edit( p1, "trim")
 $ if (test_archive .eqs. "")
@@ -369,9 +369,9 @@ $     else
 $         echo ">>> Fail: ZipInfo output mismatch."
 $         type sys$input
 
-###   ZipInfo output does not match the expected output.
-###   (If the only difference is in the date-time values, then this may
-###   be caused by a time-zone difference, which may not be important.)
+>>> ###   ZipInfo output does not match the expected output.
+>>> ###   (If the only difference is in the date-time values, then this may
+>>> ###   be caused by a time-zone difference, which may not be important.)
 
 $         eod
 $         fail = fail+ 1

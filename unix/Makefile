@@ -72,7 +72,6 @@ RM = rm -f
 SHELL = /bin/sh
 STRIP = strip
 ZIP = zip
-ZIP = zip
 
 # UnZip flags
 LOC = $(D_USE_BZ2) $(D_USE_ZLIB) $(LOCAL_UNZIP)
@@ -580,7 +579,7 @@ TESTZIP = testmake.zip
 check:		test
 
 test:
-	unix/test_unzip.sh $(TESTZIP)
+	sh unix/test_unzip.sh $(TESTZIP)
 
 
 # Create a new testmake.zip.

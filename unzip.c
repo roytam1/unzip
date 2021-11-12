@@ -2877,7 +2877,9 @@ static void help_extended(__G)
   "  -o   Overwrite existing files without prompting.  Useful with -f.  Use with",
   "         care.",
 #ifdef USE_ICONV_MAPPING
-  "  -O   [UNIX] OEM code page to use.",
+  "  -O   [UNIX] OEM code page to use.  Now, if USE_ICONV_MAPPING compile option",
+  "         is used, and -O is not used, UnZip tries to automatically set OEM",
+  "         code page based on current environment language setting.",
 #endif
   "  -P p Use password p to decrypt files.  THIS IS INSECURE!  Some OS show",
   "         command line to other users.",
@@ -3169,19 +3171,19 @@ static void show_options(__G)
 
         switch (options[i].value_type) {
             case o_NO_VALUE:
-                strcpy(val_type, "none "); break;
+                strcpy(val_type, "none"); break;
             case o_REQUIRED_VALUE:
-                strcpy(val_type, "requ "); break;
+                strcpy(val_type, "requ"); break;
             case o_OPTIONAL_VALUE:
-                strcpy(val_type, "optn "); break;
+                strcpy(val_type, "optn"); break;
             case o_VALUE_LIST:
-                strcpy(val_type, "list "); break;
+                strcpy(val_type, "list"); break;
             case o_ONE_CHAR_VALUE:
-                strcpy(val_type, "char "); break;
+                strcpy(val_type, "char"); break;
             case o_NUMBER_VALUE:
-                strcpy(val_type, "numb "); break;
+                strcpy(val_type, "numb"); break;
             default:
-                strcpy(val_type, "?    ");
+                strcpy(val_type, "?   ");
         }
 
         if (options[i].negatable == 0)
@@ -3191,7 +3193,7 @@ static void show_options(__G)
         else
             strcpy(neg, "?");
 
-        sprintf(optiontext, "%s  %s   %s  %s %s  %s", gr, sh, lo, val_type,
+        sprintf(optiontext, "%s  %s   %s  %s  %s  %s", gr, sh, lo, val_type,
           neg, options[i].name);
         Info(slide, 0, ((char *)slide, "%s\n", optiontext));
     }

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -692,20 +692,35 @@
 /*  Defines  */
 /*************/
 
-#define UNZIP_BZ2VERS   46
-#ifdef ZIP64_SUPPORT
-# ifdef USE_BZIP2
-#  define UNZIP_VERSION   UNZIP_BZ2VERS
-# else
-#  define UNZIP_VERSION   45
+/* Version-Needed-to-Extract values by feature. */
+#define UNZIP_LZMA_VERS     63  /* 6.3 for LZMA, PPMd, ... */
+#define UNZIP_BZIP2_VERS    46  /* 4.6 for bzip2. */
+#define UNZIP_ZIP64_VERS    45  /* 4.5 for ZIP64. */
+
+#ifdef USE_LZMA
+# ifndef UNZIP_VERSION
+#  define UNZIP_VERSION UNZIP_LZMA_VERS
 # endif
-#else
+#endif
+#ifdef USE_BZIP2
+# ifndef UNZIP_VERSION
+#  define UNZIP_VERSION UNZIP_BZIP2_VERS
+# endif
+#endif
+#ifdef ZIP64_SUPPORT
+# ifndef UNZIP_VERSION
+#  define UNZIP_VERSION UNZIP_ZIP64_VERS
+# endif
+#endif
 #ifdef USE_DEFLATE64
-#  define UNZIP_VERSION   21   /* compatible with PKUNZIP 4.0 */
-#else
-#  define UNZIP_VERSION   20   /* compatible with PKUNZIP 2.0 */
+# ifndef UNZIP_VERSION
+#  define UNZIP_VERSION 21      /* compatible with PKUNZIP 4.0 */
+# endif
 #endif
+#ifndef UNZIP_VERSION
+# define UNZIP_VERSION 20       /* compatible with PKUNZIP 2.0 */
 #endif
+
 #define VMS_UNZIP_VERSION 42   /* if OS-needed-to-extract is VMS:  can do */
 
 #if (defined(MSDOS) || defined(OS2))

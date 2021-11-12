@@ -1001,8 +1001,8 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
 # endif
 #endif
 
-#if (defined(USE_BZIP2) && (UNZIP_VERSION < UNZIP_BZ2VERS))
-    int unzvers_support = (UNKN_BZ2 ? UNZIP_VERSION : UNZIP_BZ2VERS);
+#if (defined(USE_BZIP2) && (UNZIP_VERSION < UNZIP_BZIP2_VERS))
+    int unzvers_support = (UNKN_BZ2 ? UNZIP_VERSION : UNZIP_BZIP2_VERS);
 #   define UNZVERS_SUPPORT  unzvers_support
 #else
 #   define UNZVERS_SUPPORT  UNZIP_VERSION

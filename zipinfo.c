@@ -849,7 +849,7 @@ int zi_opts(__G__ pargc, pargv)
             break;
     }
 
-    *pargc = argc;
+    *pargc = argc- 1;
     *pargv = args;
     return 0;
 

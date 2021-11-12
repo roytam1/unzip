@@ -183,7 +183,18 @@ Features added (or removed):
  - Add P6 (search vector) and P7 (macro vector) parameters.
    (vms/collect_deps.com) [SMS]
 
- 
+6.10c04 (5 Aug 2011):
+ - First attempt at support for LZMA compression (method 14).  (extract.c,
+   fileio.c, unzip.c, unzpriv.h, lzma/* (from LZMA SDK), unix/configure,
+   unix/Makefile, vms/descrip.mms, vms/descrip_deps.mms, vms/descrip_src.mms)
+   [SMS]
+ - Create start of zos port.  (zos/zcc, zos/zld) [AD]
+ - Modify handling of non-ASCI file names (-I/-O options) to automatically
+   guess OEM code page when not already set.  Only some common mappings have
+   been added currently.  Only used if USE_ICONV_MAPPING is defined.
+   (unix/unix.c) [EG, based on patch by Dmitry Butskoy on Red Hat Bugzilla -
+   Bug 225576]
+
 
 
 Bugs fixed:
@@ -326,19 +337,16 @@ Bugs fixed:
    Change compiler option error from PK_BADERR to PK_COMPERR.  Add
    byte endian runtime check.  Remove CryptDate from Crypt -v line.
    (unzip.c, unzip.h) [SMS]
- - Restrict -s (space to underscore) to certain platforms.  ***Not sure why.
-   Seems it might be useful for Unix and some others.  Undoes the change
-   in UnZip 6.10c01.***  (unzip.c) [EG]
- - Add AES support to SFX.  Define UNZIP_AESVERS as 51.  ***Not sure this is
-   correct as that version seems to only apply to PKZip encryption, which
-   this is not.***  Define AESENCRED as 99.  Define EF_AES_WG as 0x9901.
-   (unzpriv.h) [SMS]
+ - Add AES support to SFX.  Define AESENCRED as 99.  Define EF_AES_WG
+   as 0x9901.  (unzpriv.h) [SMS]
  - Update comments to match latest makefile changes.  Remove support for
    gcc target as the CC=gcc parameter covers that now.  (unix/configure)
    [SMS]
  - Message wording changes.  (vms/collect_deps.com) [SMS]
  - Add new COMPERR error.  (vms/unzip_msg.msg) [SMS]
- - Re-applied lost VMS-specific "unzip -a" fix from 6.10c01.
+ - VMS-specific problem could cause "unzip -a" to truncate the last line
+   in a text file which had a one-character line ending (like LF) which
+   fell at the end of an internal buffer.  (vms/vms.c) [SMS]
  - Change NAM to NAMX.  Add some SYS defines.  (vms/vms.c, vms/vms.h,
    vms/vmscfg.h) [SMS]
  - Reset file pointer even on failure to fix problem.  (win32/win32.c) [????]
@@ -348,7 +356,7 @@ Bugs fixed:
    fileio.c, match.c, unzip.c, acorn/acorn.c, unix/unix.c, unix/unxcfg.h,
    vms/cmdline.c, win32/win32.c) [SMS]
 
-6.10c03 (24 Jul 2011):
+6.10c03 (02 Aug 2011):
  - Replace crypt.c with version from Zip 3.1d14.  In brief, changes for
    AES_WG, updates in AES_WG and ZCRYPT documentation, fix eb_eas == NULL
    issue, zipcloak() updates, change STANDARD_ENCRYPTION to
@@ -399,20 +407,20 @@ Bugs fixed:
    been put twice in ZipInfo (ZIO) list.  (unzip.c) [EG]
  - Add comment about disk number == 1.  (process.c) [EG]
 
-6.10c04 (XX Aug 2011):
-
- - Replaced some Mac-specific AppleDouble-related code which disappeared
+6.10c04 (05 Aug 2011):
+ - Replace some Mac-specific AppleDouble-related code which got omitted
    between 6.10a and 6.10b(?)  (extract.c) [SMS]
- - Replaced lost code for enhanced "apparent file type" message in
+ - Replace lost code for enhanced "apparent file type" message in
    ZipInfo.  A hex value is now included, to show useful info for
    unexpected values (not "binary", "ebcdic", or "text").  zipinfo.c [SMS]
- - Replaced lost change enabling "-s" everywhere.  (unzip.c, unzip.h) [SMS]
- - Replaced lost change to VMS usage text.
- - Removed an unused variable (aes_strngth).  (zipinfo.c) [EG, SMS]
- - Reformed a defective ZCRYPT version test.  (ttyio.c) [SMS]
- - Replaced obsolete test Zip archive, to give "make test" a chance to
+ - Replace lost change enabling "-s" everywhere.  Replace lost change to
+   VMS usage text.  (unzip.c, unzip.h) [SMS]
+ - Remove an unused variable (aes_strngth).  (zipinfo.c) [EG, SMS]
+ - Reform a defective ZCRYPT version test, now handling version 3.0 case.
+   (ttyio.c) [SMS]
+ - Replace obsolete test Zip archive, to give "make test" a chance to
    succeed.  (testmake.zip) [SMS]
- - Added "testmake_zip" target to UNIX "make" file, to help in creating
+ - Add "testmake_zip" target to UNIX "make" file, to help in creating
    testmake.zip.  (Formerly not done on UNIX.)  (unix/Makefile) [SMS]
  - New command-line processing in ZipInfo miscounted non-option
    arguments, causing loss of the heading and total sections in default
@@ -421,22 +429,58 @@ Bugs fixed:
    argument (member to extract, not archive name).  (unzip.c) [SMS]
  - Various VMS CLI bad behavior involving /HELP and /VERBOSE.
    (vms/cmdline.c) [SMS]
- - First attempt at support for LZMA compression (method 14).  (extract.c,
-   fileio.c, unzip.c, unzpriv.h, lzma/*, unix/configure, unix/Makefile,
-   vms/descrip.mms, vms/descrip_deps.mms, vms/descrip_src.mms) [SMS]
- - VMS builders now generate module-ID options files.  vms/unzip.opt and
-   vms/unzipsfx.opt have been removed from the kit.  (vms/build_unzip.com,
-   vms/descrip.mms, vms/optgen.com (new)) [SMS]
- - Command-line options for the VMS DCL builder should now agree better
-   with those for Zip. (vms/build_unzip.com) [SMS]
- - New VMS DCL procedure for basic UnZip testing.  New MMS/MMK builder
-   target, TEST, to run it, and CLEAN_TEST to clean up after it.
-   (vms/descrip.mms, vms/test_unzip.com) [SMS]
+ - Remove _orig files.  (crypt.c_orig, crypt.h_orig, extract.c_orig,
+   fileio.c_orig, globals.h_orig, INSTALL._orig, list.c_orig,
+   process.c_orig, README._orig, ttyio.c_orig, ttyio.h_orig,
+   unshrink.c_orig, unzip.c_orig, unzip.h_orig, unzpriv.h_orig,
+   zipinfo.c_orig, unix/configure._orig, unix/Makefile._orig,
+   unix/unix.c_orig, vms/build_unzip.com_orig, vms/collect_deps.com_orig,
+   vms/descrip.mms_orig, vms/descrip_deps.mms_orig,
+   vms/descrip_mkdeps.mms_orig, vms/descrip_src.mms_orig, vms/vms.c_orig,
+   vms/vms.h_orig, vmscfg.h_orig) [EG]
+ - Rename bzip2 readme from 00README.IZ to README_bz2.txt.
+   (README_bz2.txt) [EG]
+ - Update Contents.  Add lzma.  (Contents) [SMS]
+ - Minor changes to Contents.  (Contents) [EG]
+ - Update crypt to version 3.0.  (crypt.h) [SMS]
+ - Update VCC6 project to look for AES WG files in aes_wg.
+   (win32/vc6/unzip.dsp) [EG]
+ - Allow Total Disks (ecloc64_total_disks) to be 0, as some archive creator
+   out there sets this to 0 incorrectly instead of 1.  However, probably
+   no reason we can't just go with it.  This only is relevant for Zip64
+   archives.  (process.c) [EG]
+ - Change i and b to unsigned in AES_WG endian test.  (unzip.c) [SMS]
+ - Add possible fix for MINIX needing <unistd.h>.  (unzpriv.h) [SMS, adapted
+   from user suggestion]
  - New UNIX(-like) shell script for basic UnZip testing.  Builder
    changed to use it, instead of in-line actions.  (unix/Makefile,
    unix/test_unzip.sh) [SMS]
- - Added VMS CLI option, /LICENSE, equivalent to --license.
-   
+ - VMS builders now generate module-ID options files.  vms/unzip.opt and
+   vms/unzipsfx.opt have been removed from the kit.  Add new NOCOMPILE, NOEXE,
+   LZMA, and TEST commands.  Command-line options for the VMS DCL builder
+   should now agree better with those for Zip.(vms/build_unzip.com,
+   vms/descrip.mms, vms/unzip.opt (removed), vms/unzipsfx.opt (removed),
+   vms/optgen.com (new)) [SMS]
+ - Added VMS CLI option, /LICENSE, equivalent to --license.  Change
+   VERBOSE to VERBOSE.COMMAND for verbose_command.  Update to use -h and
+   -hh help options supported by new command line parser.  (vms/cmdline.c,
+   vms/unz_cli.cld, vms/unzip_cli.help) [SMS]
+ - Significant updates to VMS Contents.  (vms/contents) [SMS]
+ - New VMS DCL procedure for basic UnZip testing.  New MMS/MMK builder
+   target, TEST, to run it, and CLEAN_TEST to clean up after it.
+   (vms/descrip.mms, vms/test_unzip.com (new), vms/install.vms) [SMS]
+ - Add definition of C macro _SZ_NO_INT_64 for LZMA on VAX.
+   (vms/descrip_mkdeps.mms, vms/descrip_src.mms) [SMS]
+ - Initial update to README.  (README) [SMS]
+
+6.10cXX (XX Aug 2011):
+ - Added VMS-style option /SPACEUNDER for -s.  (vms/cmdline.c,
+   vms/unz_cli.cld, vms/unzip_cli.help, vms/unzipsfx.hlp) [SMS]
+ - Updated VMS UnZipSFX_CLI help.  (vms/unzipsfx.hlp) [SMS]
+ - The change from /[NO]CASE_INSENSITIVE to /CASE_MATCH never made it
+   into the VMS CLI usage text.  (vms/cmdline.c) [SMS]
+
+
 
 ==================
 
