@@ -56,11 +56,9 @@
 #if CRYPT
 /* full version */
 
-#ifdef UNZIP
-#  ifdef CRYPT_AES_WG
-#    include "aes/fileenc.h"
-#  endif /* def CRYPT_AES_WG */
-#endif /* def UNZIP */
+#ifdef CRYPT_AES_WG
+#  include "aes_wg/fileenc.h"
+#endif /* def CRYPT_AES_WG */
 
 #ifdef CR_BETA
 #  undef CR_BETA    /* this is not a beta release */

@@ -1577,7 +1577,7 @@ void version(__G)
       " (Silicon Graphics IRIX)",
 #else
 #ifdef sun
-#  if defined(UNAME_P) && defined(UNAME_R) && defined(UNAME_S) 
+#  if defined(UNAME_P) && defined(UNAME_R) && defined(UNAME_S)
       " ("UNAME_S" "UNAME_R" "UNAME_P")",
 #  else
 #  ifdef sparc
@@ -1600,7 +1600,7 @@ void version(__G)
 #  endif
 #else /* def sun */
 #ifdef __hpux
-#  if defined(UNAME_M) && defined(UNAME_R) && defined(UNAME_S) 
+#  if defined(UNAME_M) && defined(UNAME_R) && defined(UNAME_S)
       " ("UNAME_S" "UNAME_R" "UNAME_M")",
 #  else
       " (HP-UX)",
@@ -1735,7 +1735,7 @@ void version(__G)
       " (LynxOS)",
 #else
 #ifdef __APPLE__
-#  if defined(UNAME_P) && defined(UNAME_R) && defined(UNAME_S) 
+#  if defined(UNAME_P) && defined(UNAME_R) && defined(UNAME_S)
       " ("UNAME_S" "UNAME_R" "UNAME_P")",
 #  else
 #  ifdef __i386__
@@ -1985,15 +1985,15 @@ void init_conversion_charsets()
     const char *local_charset;
     int i;
 
-    /* Make a guess only if OEM_CP not already set. */ 
+    /* Make a guess only if OEM_CP not already set. */
     if(*OEM_CP == '\0') {
-    	local_charset = nl_langinfo(CODESET);
-    	for(i = 0; i < sizeof(dos_charset_map)/sizeof(CHARSET_MAP); i++)
-    		if(!strcasecmp(local_charset, dos_charset_map[i].local_charset)) {
-    			strncpy(OEM_CP, dos_charset_map[i].archive_charset,
-    					sizeof(OEM_CP));
-    			break;
-    		}
+        local_charset = nl_langinfo(CODESET);
+        for (i = 0; i < sizeof(dos_charset_map)/sizeof(CHARSET_MAP); i++)
+            if (!strcasecmp(local_charset, dos_charset_map[i].local_charset)) {
+                strncpy(OEM_CP, dos_charset_map[i].archive_charset,
+                 sizeof(OEM_CP));
+                break;
+        }
     }
 }
 

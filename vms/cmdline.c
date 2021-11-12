@@ -1214,7 +1214,6 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
             }
             ADD_ARG( opt);
         }
-									
     }
     else /* if (zipinfo == 0) */
     {

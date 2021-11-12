@@ -716,21 +716,25 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
 #  ifdef CRYPT_AES_WG
         if (G.lrec.compression_method == AESENCRED)
         {
-            fcrypt_decrypt( G.inptr, G.incnt, G.zcx);
+            int n;
+
+            n = (int)(IZ_MIN( G.incnt, G.ucsize_aes));
+            fcrypt_decrypt( G.inptr, n, G.zcx);
+            G.ucsize_aes -= n;
         }
         else
 #  endif /* def CRYPT_AES_WG */
         {
-        uch *p;
-        int n;
+            uch *p;
+            int n;
 
         /* This was previously set to decrypt one byte beyond G.csize, when
          * incnt reached that far.  GRR said, "but it's required:  why?"  This
          * was a bug in fillinbuf() -- was it also a bug here?
          */
-        for (n = G.incnt, p = G.inptr;  n--;  p++)
-            zdecode(*p);
-    }
+            for (n = G.incnt, p = G.inptr;  n--;  p++)
+                zdecode(*p);
+        }
     }
 #endif /* CRYPT */
 
@@ -760,12 +764,26 @@ int fillinbuf(__G) /* like readbyte() except returns number of bytes in inbuf */
     defer_leftover_input(__G);           /* decrements G.csize */
 
 #if CRYPT
-    if (G.pInfo->encrypted) {
-        uch *p;
-        int n;
+    if (G.pInfo->encrypted)
+    {
+#  ifdef CRYPT_AES_WG
+        if (G.lrec.compression_method == AESENCRED)
+        {
+            int n;
 
-        for (n = G.incnt, p = G.inptr;  n--;  p++)
-            zdecode(*p);
+            n = IZ_MIN( G.incnt, G.ucsize_aes);
+            fcrypt_decrypt( G.inptr, n, G.zcx);
+            G.ucsize_aes -= n;
+        }
+        else
+#  endif /* def CRYPT_AES_WG */
+        {
+            uch *p;
+            int n;
+
+            for (n = G.incnt, p = G.inptr;  n--;  p++)
+                zdecode(*p);
+        }
     }
 #endif /* CRYPT */
 
@@ -950,7 +968,7 @@ static int partflush(__G__ rawbuf, size, unshrink)
             if (size < G.apl_dbl_hdr_bytes)
             {
                 /* Fewer bytes than needed to complete the AppleDouble
-                 * header.  (Unlikely?)  Move them to the AppleDouble 
+                 * header.  (Unlikely?)  Move them to the AppleDouble
                  * header buffer, adjust the byte counts, and resume
                  * extraction.
                  */

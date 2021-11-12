@@ -2,14 +2,14 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2011-05-05  SMS.
+$!     Last revised:  2011-06-17  SMS.
 $!
 $!     Command arguments:
 $!     - suppress help file processing: "NOHELP"
 $!     - suppress message file processing: "NOMSG"
 $!     - select link-only: "LINK"
 $!     - select compiler environment: "VAXC", "DECC", "GNUC"
-$!     - select AES encryption support: "AES" (DECC only)
+$!     - select AES (WinZip/Gladman) encryption support: "AES_WG"
 $!     - select BZIP2 support: "USEBZ2"
 $!       This option is a shortcut for "IZ_BZIP2=SYS$DISK:[.bzip2]", and
 $!       runs the DCL build procedure there,
@@ -114,7 +114,7 @@ $ unzx_cli = "UNZIP_CLI"
 $ unzsfx_unx = "UNZIPSFX"
 $ unzsfx_cli = "UNZIPSFX_CLI"
 $!
-$ AES = ""
+$ AES_WG = ""
 $ CCOPTS = ""
 $ IZ_BZIP2 = ""
 $ BUILD_BZIP2 = 0
@@ -136,9 +136,9 @@ $     current_arg_name = "P''arg_cnt'"
 $     curr_arg = f$edit( 'current_arg_name', "UPCASE")
 $     if (curr_arg .eqs. "") then goto argloop_out
 $!
-$     if (f$extract( 0, 3, curr_arg) .eqs. "AES")
+$     if (f$extract( 0, 6, curr_arg) .eqs. "AES_WG")
 $     then
-$         AES = 1
+$         AES_WG = 1
 $         goto argloop_end
 $     endif
 $!
@@ -354,11 +354,6 @@ $             dest = "''dest'V"
 $             cmpl = "VAX C"
 $         endif
 $         opts = "''opts' SYS$DISK:[.''dest']VAXCSHR.OPT /OPTIONS,"
-$         if (AES .ne. 0)
-$         then
-$            say "AES is not available with GNU C or VAX C."
-$            AES = 0
-$         endif
 $     endif
 $ endif
 $!
@@ -367,12 +362,11 @@ $ then
 $     defs = "USE_BZIP2, ''defs'"
 $ endif
 $!
-$! Set AES-related data.  (Last, to avoid even crazier quotation.)
+$! Set AES_WG-related data.
 $!
-$ if (AES .ne. 0)
+$ if (AES_WG .ne. 0)
 $ then
-$     defs = defs+ -
-       ", CRYPT_AES_WG, _ENDIAN_H=""""""""""""endian.h"""""""""""""
+$     defs = defs+ ", CRYPT_AES_WG"
 $ endif
 $!
 $! Reveal the plan.  If compiling, set some compiler options.
@@ -591,16 +585,16 @@ $     cc 'DEF_UNX' /object = [.'dest']UNSHRINK.OBJ UNSHRINK.C
 $     cc 'DEF_UNX' /object = [.'dest']ZIPINFO.OBJ ZIPINFO.C
 $     cc 'DEF_UNX' /object = [.'dest']VMS.OBJ [.VMS]VMS.C
 $!
-$     if (AES .ne. 0)
+$     if (AES_WG .ne. 0)
 $     then
-$         cc 'DEF_UNX' /object = [.'dest']AESCRYPT.OBJ [.AES]AESCRYPT.C
-$         cc 'DEF_UNX' /object = [.'dest']AESKEY.OBJ [.AES]AESKEY.C
-$         cc 'DEF_UNX' /object = [.'dest']AESTAB.OBJ [.AES]AESTAB.C
-$         cc 'DEF_UNX' /object = [.'dest']FILEENC.OBJ [.AES]FILEENC.C
-$         cc 'DEF_UNX' /object = [.'dest']HMAC.OBJ [.AES]HMAC.C
-$         cc 'DEF_UNX' /object = [.'dest']PRNG.OBJ [.AES]PRNG.C
-$         cc 'DEF_UNX' /object = [.'dest']PWD2KEY.OBJ [.AES]PWD2KEY.C
-$         cc 'DEF_UNX' /object = [.'dest']SHA1.OBJ [.AES]SHA1.C
+$         cc 'DEF_UNX' /object = [.'dest']AESCRYPT.OBJ [.AES_WG]AESCRYPT.C
+$         cc 'DEF_UNX' /object = [.'dest']AESKEY.OBJ [.AES_WG]AESKEY.C
+$         cc 'DEF_UNX' /object = [.'dest']AESTAB.OBJ [.AES_WG]AESTAB.C
+$         cc 'DEF_UNX' /object = [.'dest']FILEENC.OBJ [.AES_WG]FILEENC.C
+$         cc 'DEF_UNX' /object = [.'dest']HMAC.OBJ [.AES_WG]HMAC.C
+$         cc 'DEF_UNX' /object = [.'dest']PRNG.OBJ [.AES_WG]PRNG.C
+$         cc 'DEF_UNX' /object = [.'dest']PWD2KEY.OBJ [.AES_WG]PWD2KEY.C
+$         cc 'DEF_UNX' /object = [.'dest']SHA1.OBJ [.AES_WG]SHA1.C
 $     endif
 $!
 $! Create the object library.
@@ -627,9 +621,9 @@ $     libr /object /replace [.'dest']UNZIP.OLB -
        [.'dest']ZIPINFO.OBJ, -
        [.'dest']VMS.OBJ
 $!
-$     if (AES .ne. 0)
+$     if (AES_WG .ne. 0)
 $     then
-$         libr /object /replace [.'dest']ZIP.OLB -
+$         libr /object /replace [.'dest']UNZIP.OLB -
            [.'dest']AESCRYPT.OBJ, -
            [.'dest']AESKEY.OBJ, -
            [.'dest']AESTAB.OBJ, -
@@ -739,6 +733,19 @@ $     libr /object /replace [.'dest']UNZIPSFX.OLB -
        [.'dest']TTYIO_.OBJ, -
        [.'dest']UBZ2ERR_.OBJ, -
        [.'dest']VMS_.OBJ
+$!
+$     if (AES_WG .ne. 0)
+$     then
+$         libr /object /replace [.'dest']UNZIPSFX.OLB -
+           [.'dest']AESCRYPT.OBJ, -
+           [.'dest']AESKEY.OBJ, -
+           [.'dest']AESTAB.OBJ, -
+           [.'dest']FILEENC.OBJ, -
+           [.'dest']HMAC.OBJ, -
+           [.'dest']PRNG.OBJ, -
+           [.'dest']PWD2KEY.OBJ, -
+           [.'dest']SHA1.OBJ
+$     endif
 $!
 $ endif
 $!

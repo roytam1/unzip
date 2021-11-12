@@ -145,6 +145,42 @@ Features added (or removed):
 6.10b (10 Dec 2010):
  - No feature changes.
 
+6.10c01 (15 May 2011):
+ - Clarify VMS usage line.  (unzip.c) [SMS]
+ - Add compiler test.  (unix/configure) [SMS]
+ - Make -s spaces to underscores option generic (unzip.c) [Stan Sieler]
+ - Add optional AES encryption compatible with WinZip version (compression
+   method 99).  Use Gladman AES implementation.  Note that when the optional
+   AES_WG support is not enabled, this still changes the old message:
+    skipping: <name>  unsupported compression method 99
+   to:
+    skipping: <name>  AES_WG encr method not supported
+   when trying to extract an AES_WG-encrypted file.
+   (crypt.c, crypt.h, extract.c, fileio.c, globals.h, list.c, process.c,
+   unzip.c, unzpriv.h, zipinfo.c) [SMS]
+
+6.10c02 (28 May 2011):
+ - Add ef_scan_for_aes() and ef_strip_aes() for processing AES extra fields.
+   (crypt.c) [SMS]
+ - Update zipcloak() and zipbare() to support AES encryption and decryption
+   (though technically a Zip update).  (crypt.c) [SMS]
+ - Add WIN32 entropy_fun().  Add VCC 6 project for compiling in AES
+   encryption.  (crypt.c) [EG]
+ - Add AES support to ZipInfo.  Add recognition of flag bit 0x0040.  (Not
+   sure if this is correct.)  (zipinfo.c) [SMS]
+ - Add support for named parameters to configure.  Add support for AES
+   encryption.  (unix/configure, unix/makefile) [SMS]
+ - Add AES encryption.  (vms/build_unzip.com, vms/descript.mms,
+   vms/descript_deps.mms, vms/descrip_mkdeps.mms, vms/descrip_src.mms) [SMS]
+ - Add initial VCC6 project for compiling AES on Win32.
+   (win32/vc6/unzip.dsp) [EG]
+ - Update UnZip to more current Zip version of crypt.c, making modifications
+   as needed.  (crypt.c) [SMS]
+ - Update testp() and testkey() to support AES.  (crypt.c) [SMS]
+
+
+ 
+
 
 Bugs fixed:
 
@@ -252,10 +288,12 @@ Bugs fixed:
 6.10b (10 Dec 2010):
  - No bug fixes.
 
-6.10b+ (xx Xxx 2011):
- - VMS-specific problem could cause "unzip -a" to truncate the last line
-   in a text file which had a one-character line ending (like LF) which
-   fell at the end of an internal buffer.  (vms/vms.c) [SMS]
+6.10c01 (15 May 2011):
+ - Fixed bug where extracting a text file with one-character line endings CR
+    or LF) using the "-a" (/TEXT) option on VMS could cause the last line in
+    the file to be truncated.  (vms/vms.c) [SMS]
+
+6.10c02 (28 May 2011):
  - Changed the exit handler to use echorig() to restore the original
    terminal echo setting, instead of echon() to enable echo
    unconditionally.  (Actually implemented only on VMS.)   (fileio.c,
@@ -266,9 +304,49 @@ Bugs fixed:
    overwritten by succeeding output lines.  Please report any new problems
    with error message format/placement.  (extract.c, fileio.c, globals.h,
    process.c) [SMS]
- - Added support for WinZip AES encryption.  (crypt.c, crypt.h, extract.c,
-   fileio.c, globals.h, list.c, process.c, unzip.c, unzpriv.h, zipinfo.c)
+ - Updates to decrypt() to fix some minor AES header length issues.
+   (crypt.c) [SMS]
+ - Update testkey() for AES.  (crypt.c) [SMS]
+ - Minor bug fixes for AES and for making crypt similar in Zip and UnZip.
+   (crypt.h) [SMS]
+ - Add extra field processing for AES.  Account for extra AES data in file
+   data.  Replace fprintf() use with Info().  (extract.c, unzpriv.h) [SMS]
+ - Additional AES fixes.  (fileio.c, globals.h) [SMS]
+ - Spelling fixes.  (history.600, readme, unzip.h, unzpriv.h,
+   cmsmvs/vmmvs.h, macos/history.txt, windll/contents) [SMS]
+ - Minor wording updates.  Add descriptions for CRYPT_AES_WG and
+   AES_WG_SFX.  Descript support for new CC=gcc format for parameters.
+   (INSTALL) [SMS]
+ - Update method list to include AESencr.  (list.c) [SMS]
+ - Update VMS example in help message.  Add -v line for CRYPT_AES_WG.
+   Change compiler option error from PK_BADERR to PK_COMPERR.  Add
+   byte endian runtime check.  Remove CryptDate from Crypt -v line.
+   (unzip.c, unzip.h) [SMS]
+ - Restrict -s (space to underscore) to certain platforms.  ***Not sure why.
+   Seems it might be useful for Unix and some others.  Undoes the change
+   in UnZip 6.10c01.***  (unzip.c) [SMS]
+ - Add AES support to SFX.  Define UNZIP_AESVERS as 51.  ***Not sure this is
+   correct as that version seems to only apply to PKZip encryption, which
+   this is not.***  Define AESENCRED as 99.  Define EF_AES_WG as 0x9901.
+   (unzpriv.h) [SMS]
+ - Update comments to match latest makefile changes.  Remove support for
+   gcc target as the CC=gcc parameter covers that now.  (unix/configure)
    [SMS]
+ - Message wording changes.  (vms/collect_deps.com) [SMS]
+ - Add new COMPERR error.  (vms/unzip_msg.msg) [SMS]
+ - VMS-specific problem could cause "unzip -a" to truncate the last line
+   in a text file which had a one-character line ending (like LF) which
+   fell at the end of an internal buffer.  (vms/vms.c) [SMS]
+ - Change NAM to NAMX.  Add some SYS defines.  (vms/vms.c, vms/vms.h,
+   vms/vmscfg.h) [SMS]
+ - Reset file pointer even on failure to fix problem.  (win32/win32.c) [????]
+ - Add (int) cast to n assignment in testkey() for type mismatch.  (May
+   limit the range of test cases.)  (crypt.c) [EG]
+ - Miscellaneous code tidying (white space, mostly).  (crypt.c, extract.c,
+   fileio.c, match.c, unzip.c, acorn/acorn.c, unix/unix.c, unix/unxcfg.h,
+   vms/cmdline.c, win32/win32.c) [SMS]
+
+
 
 ==================
 

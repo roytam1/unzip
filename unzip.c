@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -71,7 +71,8 @@
 #include "unzvers.h"
 
 #ifdef CRYPT_AES_WG
-# include <aes/aesopt.h>
+# include "aes_wg/aesopt.h"
+# include "aes_wg/iz_aes_wg.h"
 #endif /* def CRYPT_AES_WG */
 
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
@@ -561,7 +562,7 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
 #  endif
 #  ifdef CRYPT_AES_WG
      static ZCONST char Far AesWgDecryption[] =
-      "CRYPT_AES_WG (AES strong encryption (WinZip/Gladman))";
+       "        CRYPT_AES_WG (AES encryption (WinZip/Gladman), ver %d.%d%s)\n";
 #  endif
 #  if CRYPT
 #   ifdef PASSWD_FROM_STDIN
@@ -1010,22 +1011,26 @@ int unzip(__G__ argc, argv)
 #  ifndef PLATFORM_BYTE_ORDER
 #   define ENDI_BYTE 0x00
 #   define ENDI_PROB "(Undefined)"
-#  elif PLATFORM_BYTE_ORDER == AES_LITTLE_ENDIAN
-#   define ENDI_BYTE 0x78
-#   define ENDI_PROB "Little"
-#  elif PLATFORM_BYTE_ORDER == AES_BIG_ENDIAN
-#   define ENDI_BYTE 0x12
-#   define ENDI_PROB "Big"
 #  else
-#   define ENDI_BYTE 0xff
-#   define ENDI_PROB "(Unknown)"
+#   if PLATFORM_BYTE_ORDER == AES_LITTLE_ENDIAN
+#    define ENDI_BYTE 0x78
+#    define ENDI_PROB "Little"
+#   else
+#    if PLATFORM_BYTE_ORDER == AES_BIG_ENDIAN
+#     define ENDI_BYTE 0x12
+#     define ENDI_PROB "Big"
+#    else
+#     define ENDI_BYTE 0xff
+#     define ENDI_PROB "(Unknown)"
+#    endif
+#   endif
 #  endif
 
         bi.i = 0x12345678;
         if (bi.b[ 0] != ENDI_BYTE)
         {
             Info(slide, 0x401, ((char *)slide,
-             "Bad AES compile-time endian: %s\n", ENDI_PROB));
+             "Bad AES_WG compile-time endian: %s\n", ENDI_PROB));
             retcode = PK_COMPERR;
             goto cleanup_and_exit;
         }
@@ -1419,8 +1424,7 @@ static int setsignalhandler(__G__ p_savedhandler_chain, signal_type,
 
 # endif /* REENTRANT && !NO_EXCEPT_SIGNALS */
 
-  
-  
+
 /*
   -------------------------------------------------------
   Command Line Options
@@ -2939,7 +2943,7 @@ static void help_extended(__G)
   "  displays may be limited to a specific code page.  Either way full UTF-8",
   "  paths are generally restored on extraction where OS supports.  Use -U",
   "  to force use of escapes in extracted names.  Use -UU to totally ignore",
-  "  Unicode.  Unicode comments not yet fully supported.", 
+  "  Unicode.  Unicode comments not yet fully supported.",
   "",
   "  \"New\" options -I and -O (from a patch that has been out there awhile)",
   "  are used on UNIX to set the ISO and OEM code pages used for conversions.",
@@ -3140,7 +3144,7 @@ static void show_options(__G)
             strcpy(gr, "INF");
         else
             strcpy(gr, "?  ");
-        
+
         strcpy(sh, options[i].shortopt);
         strcat(sh, "  ");
         sh[2] = '\0';
@@ -3468,8 +3472,8 @@ static void show_version_info(__G)
         ++numopts;
 #  endif
 #  if CRYPT_AES_WG
-        Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
-          LoadFarStringSmall(AesWgDecryption)));
+        Info(slide, 0, ((char *)slide, LoadFarStringSmall(AesWgDecryption),
+          IZ_AES_WG_MAJORVER, IZ_AES_WG_MINORVER, IZ_AES_WG_BETA_VER));
         ++numopts;
 #  endif
 #  if CRYPT

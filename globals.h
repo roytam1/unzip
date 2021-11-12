@@ -143,7 +143,7 @@
 #endif
 
 #ifdef CRYPT_AES_WG
-#  include "aes/fileenc.h"
+#  include "aes_wg/fileenc.h"
 #endif
 
 #ifdef USE_BZIP2
@@ -405,9 +405,10 @@ typedef struct Globals {
 #endif /* !FUNZIP */
 
 #ifdef CRYPT_AES_WG
-    /* 2011-05-09 SMS.
-     * AES compression parameters.
+    /* 2011-05-24 SMS.
+     * AES_WG encryption parameters.
      */
+    zoff_t ucsize_aes;          /* AES uncompressed bytes left to decrypt. */
     fcrypt_ctx zcx[ 1];         /* AES context. */
 #endif /* def CRYPT_AES_WG */
 

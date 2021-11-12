@@ -685,7 +685,6 @@
 /*  Defines  */
 /*************/
 
-#define UNZIP_AESVERS   51
 #define UNZIP_BZ2VERS   46
 #ifdef ZIP64_SUPPORT
 # ifdef USE_BZIP2
@@ -1867,7 +1866,7 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define EF_THEOSO    0x4854    /* old Theos port */
 #define EF_MD5       0x4b46    /* Fred Kantor's MD5 ("FK") */
 #define EF_ASIUNIX   0x756e    /* ASi's Unix ("nu") */
-#define EF_AES       0x9901    /* AES encryption ("c^!") */
+#define EF_AES_WG    0x9901    /* AES (WinZip/Gladman) encryption ("c^!") */
 
 #define EB_AES_VERS       0    /* AES encryption version. */
 #define EB_AES_VEND       2    /* AES encryption vendor. */
@@ -2156,6 +2155,7 @@ typedef struct min_info {
 #endif
 #ifdef CRYPT_AES_WG
        ush cmpr_mthd_aes;
+       ush cmpr_vers_aes;
        char cmpr_mode_aes;
 #endif /* def CRYPT_AES_WG */
 } min_info;
@@ -2805,6 +2805,7 @@ char    *GetLoadPath     OF((__GPRO));                              /* local */
 #ifndef MIN
 #  define MIN(a,b)   ((a) < (b) ? (a) : (b))
 #endif
+#define IZ_MIN( a, b) ((a) < (b) ? (a) : (b))
 
 #ifdef DEBUG
 #  if (defined(THEOS) && defined(NO_BOGUS_SPC))

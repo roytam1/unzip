@@ -1,4 +1,4 @@
-#                                               7 May 2011.  SMS.
+#                                               17 June 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
@@ -11,7 +11,7 @@
 #
 # Optional macros:
 #
-#    AES=1          Enable AES encryption support.  DEC C only.
+#    AES_WG=1       Enable AES (WinZip/Gladman) encryption support.
 #
 #    CCOPTS=xxx     Compile with CC options xxx.  For example:
 #                   CCOPTS=/ARCH=HOST
