@@ -3,11 +3,13 @@
 # The above ":" is necessary on some buggy systems.
 
 # configure: Test to determine values for system-dependent variables.
-# Output the flag definitions to the file "flags".
-# Parameters: $1 = $CC, $2 = $CFLAGS, $3 = $IZ_BZIP2, $4 = $IZ_ZLIB
+# Output the flag definitions to the file "$PROD/flags".
 #
-# This file is typically called from Makefile rather than executed
-# from the command line.
+# Parameters: Specify "var=value" for "var" names like:
+#   CC, CFLAGS, IZ_BZIP2, IZ_ZLIB, PROD
+#
+# This shell script is typically run from Makefile rather than executed
+# directly by the user.
 #
 # To construct unzip automatically using this file, type
 # "make -f unix/Makefile generic".
@@ -15,41 +17,42 @@
 
 trap "rm -f conftest* core a.out; exit 1" 1 2 3 15
 
-CC=${1:-cc}
-CFLAGS=${2}
+# Evaluate command-line "make"-macro-like var=value expressions.
+
+# Evaluate only variables in this list.  Complain about others, but continue.
+valid_vars="|AES|CC|CFLAGS|IZ_BZIP2|IZ_ZLIB|LFLAGS1|LFLAGS2|PROD|"
+
+argc=$#
+while test ${argc} -gt 0 ; do
+  var=` echo "${1}" | sed -e 's/=.*//' `
+  val=` echo "${1}" | sed -e 's/^[^=]*=//' `
+  if echo "${valid_vars}" | grep "|${var}|" > /dev/null 2>&1 ; then
+    eval ${arg}
+  else
+    echo "   Unrecognized variable name \"${var}\" in \"${1}\"."
+  fi
+  shift
+  argc=` expr ${argc} - 1 `
+done
+
+# Command-line option variables, default values.
+
+CC=${CC:-cc}
+CFLAGS=${CFLAGS-"-I. -DUNIX"}
 CFLAGSR=${CFLAGS}
-CFLAGS="${CFLAGS} -I. -DUNIX"
-LFLAGS1=""
-LFLAGS2="-s"
+LFLAGS1=${LFLAGS1-}
+LFLAGS2=${LFLAGS2--s}
+PROD=${PROD:-.}
+
+# Miscellaneous command macros.
+
 LN="ln -s"
 
-# bzip2
-IZ_BZIP2=${3-}
-CFLAGS_BZ=''
-
-# zlib
-IZ_ZLIB=${4-}
+# Special-purpose CFLAGS_xxx variables.
 
 CFLAGS_OPT=''
+CFLAGS_BZ=''
 BZLF=''
-
-echo "Check C compiler operation"
-cat > conftest.c << _EOF_
-int main()
-{
-   return 0;
-}
-_EOF_
-$CC $CFLAGS -c conftest.c
-status=$?
-if test $status -ne 0; then
-  echo ''
-  echo "C compiler \"${CC}\" does not work as expected."
-  echo "Failing command was: $CC $CFLAGS -c conftest.c"
-  exit $status
-else
-  echo '  Ok'
-fi
 
 echo "Check C compiler+linker operation"
 cat > conftest.c << _EOF_
@@ -169,6 +172,7 @@ if test -n "${CFLAGS_OPT}"; then
   CFLAGSR="${CFLAGSR} ${CFLAGS_OPT}"
   CFLAGS_BZ="${CFLAGS_BZ} ${CFLAGS_OPT}"
 fi
+
 
 echo Check for the C preprocessor
 # on SVR4, cc -E does not produce correct assembler files. Need /lib/cpp.
@@ -640,6 +644,33 @@ ln -s /dev/null null > /dev/null 2>/dev/null || LN=ln
 rm -f a.out conftest.c conftest.o conftest null
 
 
+# AES encryption.  (User must request: "AES=1".)
+
+LIB_AES=''
+if test "${AES}" -ne 0 ; then
+  echo "Check AES encryption support"
+  cat > conftest.c << _EOF_
+int main()
+{
+#include <aes/aes.h>
+#ifndef CRYPT_AES_WG
+   forget it
+#endif
+   return 0;
+}
+_EOF_
+  $CC $CFLAGSR -DCRYPT_AES_WG -c conftest.c > /dev/null 2>/dev/null
+  if [ $? -eq 0 ]; then
+    CFLAGSR="${CFLAGSR} -DCRYPT_AES_WG"
+    LIB_AES="libaes.a"
+    LFLAGS2="${LFLAGS2} -L. -laes"
+    echo "  Including AES encryption support"
+  else
+    echo "  Not including AES encryption support  (Check \"aes\" directory?)"
+  fi
+fi
+
+
 # bzip2
 
 echo "Check bzip2 support"
@@ -746,5 +777,5 @@ echo CC=\"${CC}\" CF=\"${CFLAGSR}\" CRCA_O=\"${CRC32OA}\" \
        AS=\"${CC} -c\" LFLAGS1=\"${LFLAGS1}\" LF2=\"${LFLAGS2}\" \
        CC_BZ=\"${CC_BZ}\" CFLAGS_BZ=\"${CFLAGS_BZ}\" \
        IZ_BZIP2=\"${IZ_BZIP2}\" LIBBZ2=\"${LIBBZ2}\" \
-       IZ_ZLIB=\"${IZ_ZLIB}\"  > flags
+       LIB_AES=\"${LIB_AES}\" > "$PROD"/flags
 

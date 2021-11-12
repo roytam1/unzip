@@ -711,7 +711,16 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
     }
 
 #if CRYPT
-    if (G.pInfo->encrypted) {
+    if (G.pInfo->encrypted)
+    {
+#  ifdef CRYPT_AES_WG
+        if (G.lrec.compression_method == AESENCRED)
+        {
+            fcrypt_decrypt( G.inptr, G.incnt, G.zcx);
+        }
+        else
+#  endif /* def CRYPT_AES_WG */
+        {
         uch *p;
         int n;
 
@@ -721,6 +730,7 @@ int readbyte(__G)   /* refill inbuf and return a byte if available, else EOF */
          */
         for (n = G.incnt, p = G.inptr;  n--;  p++)
             zdecode(*p);
+    }
     }
 #endif /* CRYPT */
 
@@ -1390,9 +1400,9 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
     uch *q=buf, *endbuf=buf+(unsigned)size;
 #ifdef MORE
     uch *p=buf;
-#if (defined(SCREENWIDTH) && defined(SCREENLWRAP))
+# if (defined(SCREENWIDTH) && defined(SCREENLWRAP))
     int islinefeed = FALSE;
-#endif
+# endif
 #endif
     FILE *outfp;
 
@@ -1434,6 +1444,32 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
         outfp = (FILE *)stderr;
     else
         outfp = (FILE *)stdout;
+
+    /* 2011-05-07 SMS.
+     * VMS needs to handle toggling between stdout and stderr in its own
+     * way.  We were putting out a message like "inflating <file_name>"
+     * to stdout (with no terminating "\n"), and then putting out an
+     * error message with a leading "\n" to stderr, to get the error
+     * message onto its own line.  This may look ok on UNIX, but it
+     * makes a mess on VMS with spurious blank lines, and the error
+     * message getting overwritten by the next message to stdout.  Now,
+     * we save the outfp value, and, when it changes, and we're not at
+     * start-of-line, we put out an explicit "\n" to the previous outfp.
+     * This closes the old stdout line properly, allowing the new error
+     * message to appear on its own line, with no spurious blank lines
+     * added.  This method seems to work on UNIX, too.
+     */
+
+    /* When outfp changes, "\n"-terminate any pending line. */
+    if (outfp != ((Uz_Globs *)pG)->outfp_prev)
+    {
+        if (!((Uz_Globs *)pG)->sol)
+        {
+            WriteTxtErr( "\n", 2, ((Uz_Globs *)pG)->outfp_prev);
+            ((Uz_Globs *)pG)->sol = TRUE;
+        }
+        ((Uz_Globs *)pG)->outfp_prev = outfp;
+    }
 
 #ifdef QUERY_TRNEWLN
     /* some systems require termination of query prompts with '\n' to force
@@ -1481,9 +1517,9 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
 #ifdef MORE
             if (((Uz_Globs *)pG)->M_flag)
             {
-#if (defined(SCREENWIDTH) && defined(SCREENLWRAP))
+# if (defined(SCREENWIDTH) && defined(SCREENLWRAP))
                 ((Uz_Globs *)pG)->chars = 0;
-#endif
+# endif
                 ++((Uz_Globs *)pG)->numlines;
                 ++((Uz_Globs *)pG)->lines;
                 if (((Uz_Globs *)pG)->lines >= ((Uz_Globs *)pG)->height)
@@ -1509,14 +1545,14 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
 
 #ifdef MORE
     if (((Uz_Globs *)pG)->M_flag
-#ifdef OS2DLL
+# ifdef OS2DLL
          && !((Uz_Globs *)pG)->redirect_text
-#endif
+# endif
                                                  )
     {
         while (p < endbuf) {
             if (*p == '\n') {
-#if (defined(SCREENWIDTH) && defined(SCREENLWRAP))
+# if (defined(SCREENWIDTH) && defined(SCREENLWRAP))
                 islinefeed = TRUE;
             } else if (SCREENLWRAP) {
                 if (*p == '\r') {
@@ -1537,7 +1573,7 @@ int UZ_EXP UzpMessagePrnt(pG, buf, size, flag)
             if (islinefeed) {
                 islinefeed = FALSE;
                 ((Uz_Globs *)pG)->chars = 0;
-#endif /* (SCREENWIDTH && SCREEN_LWRAP) */
+# endif /* (SCREENWIDTH && SCREEN_LWRAP) */
                 ++((Uz_Globs *)pG)->numlines;
                 ++((Uz_Globs *)pG)->lines;
                 if (((Uz_Globs *)pG)->lines >= ((Uz_Globs *)pG)->height)
@@ -1706,7 +1742,7 @@ int UZ_EXP UzpPassword (pG, rcnt, pwbuf, size, zfn, efn)
     zvoid *pG;         /* pointer to UnZip's internal global vars */
     int *rcnt;         /* retry counter */
     char *pwbuf;       /* buffer for password */
-    int size;          /* size of password buffer */
+    int size;          /* Usable size of password buffer */
     ZCONST char *zfn;  /* name of zip archive */
     ZCONST char *efn;  /* name of archive entry being processed */
 {
@@ -1772,7 +1808,8 @@ void handler(signal)   /* upon interrupt, turn on echo and exit cleanly */
     (*G.message)((zvoid *)&G, slide, 0L, 0x41); /*  start of line (to stderr; */
 #endif                                          /*  slide[] should be safe) */
 
-    echon();
+    /* Restore the original terminal echo setting. */
+    echorig();
 
 #ifdef SIGBUS
     if (signal == SIGBUS) {

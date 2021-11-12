@@ -256,6 +256,19 @@ Bugs fixed:
  - VMS-specific problem could cause "unzip -a" to truncate the last line
    in a text file which had a one-character line ending (like LF) which
    fell at the end of an internal buffer.  (vms/vms.c) [SMS]
+ - Changed the exit handler to use echorig() to restore the original
+   terminal echo setting, instead of echon() to enable echo
+   unconditionally.  (Actually implemented only on VMS.)   (fileio.c,
+   ttyio.c, ttyio.h) [SMS]
+ - Changed the carriage-control scheme used when an unfinished output line
+   to stdout is interrupted by an error message to stderr.  On VMS, the old
+   method produced spurious blank lines, and error messages could be
+   overwritten by succeeding output lines.  Please report any new problems
+   with error message format/placement.  (extract.c, fileio.c, globals.h,
+   process.c) [SMS]
+ - Added support for WinZip AES encryption.  (crypt.c, crypt.h, extract.c,
+   fileio.c, globals.h, list.c, process.c, unzip.c, unzpriv.h, zipinfo.c)
+   [SMS]
 
 ==================
 

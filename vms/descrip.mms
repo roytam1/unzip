@@ -1,4 +1,4 @@
-#                                               25 April 2011.  SMS.
+#                                               7 May 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
@@ -16,9 +16,9 @@
 #    CCOPTS=xxx     Compile with CC options xxx.  For example:
 #                   CCOPTS=/ARCH=HOST
 #
-#    DBG=1          Compile with /DEBUG /NOOPTIMIZE.
-#                   Link with /DEBUG /TRACEBACK.
-#                   (Default is /NOTRACEBACK.)
+#    DBG=1          Compile /DEBUG /NOOPTIMIZE.  Link /DEBUG /TRACEBACK.
+#    TRC=1          Default is /NOTRACEBACK, but TRC=1 enables link with
+#                   /TRACEBACK without compiling for debug.
 #
 #    IZ_BZIP2=dev:[dir]  Build with optional BZIP2 support.  The value
 #                        of the MMS macro, ("dev:[dir]", or a suitable
@@ -49,7 +49,9 @@
 #                   Link with /MAP /CROSS_REFERENCE /FULL.
 #
 #    "LOCAL_UNZIP= c_macro_1=value1 [, c_macro_2=value2 [...]]"
-#                   Compile with these additional C macros defined.
+#                   Compile with these additional C macros defined.  For
+#                   example:
+#                   "LOCAL_UNZIP=NO_EXCEPT_SIGNALS=1, NO_SYMLINKS=1"
 #
 #    NOSHARE=1      Link /NOSYSSHR (not using shareable images).
 #    NOSHARE=OLDVAX Link /NOSYSSHR on VAX for:

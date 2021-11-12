@@ -2,7 +2,7 @@ $! BUILD_UNZIP.COM
 $!
 $!     Build procedure for VMS versions of UnZip/ZipInfo and UnZipSFX.
 $!
-$!     Last revised:  2011-04-25  SMS.
+$!     Last revised:  2011-05-05  SMS.
 $!
 $!     Command arguments:
 $!     - suppress help file processing: "NOHELP"
@@ -371,7 +371,8 @@ $! Set AES-related data.  (Last, to avoid even crazier quotation.)
 $!
 $ if (AES .ne. 0)
 $ then
-$     defs = defs+ ", CRYPT_AES, _ENDIAN_H=""""""""""""endian.h"""""""""""""
+$     defs = defs+ -
+       ", CRYPT_AES_WG, _ENDIAN_H=""""""""""""endian.h"""""""""""""
 $ endif
 $!
 $! Reveal the plan.  If compiling, set some compiler options.

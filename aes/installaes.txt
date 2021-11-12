@@ -1,0 +1,41 @@
+HOW TO ADD AES STRONG ENCRYPTION TO ZIP
+
+This document describes how to add AES strong encryption to Zip.
+
+This implementation adds the WinZip version of AES encryption using
+the Gladman AES implementation.  Start by getting the latest AES
+download from http://www.gladman.me.uk/ and dropping the files into
+the aes directory.
+
+Currently only a Windows Visual Studio 6 project exists to compile in
+AES encryption.  I believe including these files is enough to compile
+in AES:
+
+aes/aescrypt.c
+aes/aeskey.c
+aes/aestab.c
+aes/fileenc.c
+aes/hmac.c
+aes/prng.c
+aes/pwd2key.c
+aes/sha1.c
+aes/aes.h
+aes/aesopt.h
+aes/fileenc.h
+aes/hmac.h
+aes/prng.h
+aes/pwd2key.h
+aes/sha1.h
+
+
+Notes
+
+More later.
+
+
+Installation
+
+More later.
+
+
+2011 Feb 21 EG

@@ -1,8 +1,8 @@
 /*
-  Copyright (c) 1990-2007 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2011 Info-ZIP.  All rights reserved.
 
-  See the accompanying file LICENSE, version 2005-Feb-10 or later
-  (the contents of which are also included in (un)zip.h) for terms of use.
+  See the accompanying file LICENSE, version 2009-Jan-2 or later
+  (the contents of which are also included in zip.h) for terms of use.
   If, for some reason, all these files are missing, the Info-ZIP license
   also may be found at:  ftp://ftp.info-zip.org/pub/infozip/license.html
 */
@@ -25,8 +25,14 @@
 /*
   This encryption code is a direct transcription of the algorithm from
   Roger Schlafly, described by Phil Katz in the file appnote.txt.  This
-  file (appnote.txt) is distributed with the PKZIP program (even in the
-  version without encryption capabilities).
+  file (appnote.txt) was distributed with the PKZIP program (even in the
+  version without encryption capabilities).  Now it's available on line.
+ */
+
+/*
+  Now includes part of the AES encryption implementation in CRYPT_AES_WG
+  blocks.  This code is provided under the Info-ZIP license, though it
+  calls the Gladman AES code which needs to be added to the aes directory.
  */
 
 #define ZCRYPT_INTERNAL
@@ -34,26 +40,39 @@
 #include "crypt.h"
 #include "ttyio.h"
 
-#if CRYPT
-
-#ifndef FALSE
-#  define FALSE 0
+#ifdef ZIP
+# ifdef CRYPT_AES_WG
+#  ifdef WIN32
+#   include <windows.h>
+#  endif
+# endif
 #endif
 
-#ifdef ZIP
-   /* For the encoding task used in Zip (and ZipCloak), we want to initialize
+#if CRYPT
+
+# ifndef FALSE
+#  define FALSE 0
+# endif
+
+# ifdef ZIP
+   /* The below refers to traditional (weak) encryption.  See farther below
+      for more on AES encryption.
+      
+      For the encoding task used in Zip (and ZipCloak), we want to initialize
       the crypt algorithm with some reasonably unpredictable bytes, see
       the crypthead() function. The standard rand() library function is
       used to supply these `random' bytes, which in turn is initialized by
       a srand() call. The srand() function takes an "unsigned" (at least 16bit)
       seed value as argument to determine the starting point of the rand()
       pseudo-random number generator.
+      
       This seed number is constructed as "Seed = Seed1 .XOR. Seed2" with
       Seed1 supplied by the current time (= "(unsigned)time()") and Seed2
       as some (hopefully) nondeterministic bitmask. On many (most) systems,
       we use some "process specific" number, as the PID or something similar,
       but when nothing unpredictable is available, a fixed number may be
       sufficient.
+      
       NOTE:
       1.) This implementation requires the availability of the following
           standard UNIX C runtime library functions: time(), rand(), srand().
@@ -77,71 +96,48 @@
 #  include <time.h>     /* time() function supplies first part of crypt seed */
    /* "last resort" source for second part of crypt seed pattern */
 #  ifndef ZCR_SEED2
-#    define ZCR_SEED2 (unsigned)3141592654L     /* use PI as default pattern */
+#   define ZCR_SEED2 (unsigned)3141592654L     /* use PI as default pattern */
 #  endif
 #  ifdef GLOBAL         /* used in Amiga system headers, maybe others too */
-#    undef GLOBAL
+#   undef GLOBAL
 #  endif
 #  define GLOBAL(g) g
-#else /* !ZIP */
+# else /* def ZIP */
 #  define GLOBAL(g) G.g
-#endif /* ?ZIP */
+# endif /* def ZIP [else] */
 
 
-#ifdef UNZIP
+# ifdef UNZIP
    /* char *key = (char *)NULL; moved to globals.h */
 #  ifndef FUNZIP
-     local int testp OF((__GPRO__ ZCONST uch *h));
-     local int testkey OF((__GPRO__ ZCONST uch *h, ZCONST char *key));
-#  endif
-#endif /* UNZIP */
-
-#ifndef UNZIP             /* moved to globals.h for UnZip */
-#  ifndef Z_UINT4_DEFINED
-#   if !defined(NO_LIMITS_H)
-#    if (defined(UINT_MAX) && (UINT_MAX == 0xffffffffUL))
-       typedef unsigned int     z_uint4;
-#      define Z_UINT4_DEFINED
-#    else
-#    if (defined(ULONG_MAX) && (ULONG_MAX == 0xffffffffUL))
-       typedef unsigned long    z_uint4;
-#      define Z_UINT4_DEFINED
-#    else
-#    if (defined(USHRT_MAX) && (USHRT_MAX == 0xffffffffUL))
-       typedef unsigned short   z_uint4;
-#      define Z_UINT4_DEFINED
-#    endif
-#    endif
-#    endif
-#   endif /* !NO_LIMITS_H */
-#  endif /* !Z_UINT4_DEFINED */
-#  ifndef Z_UINT4_DEFINED
-     typedef ulg                z_uint4;
-#    define Z_UINT4_DEFINED
-#  endif
+     local int testp OF((__GPRO__ int hd_len, ZCONST uch *h));
+     local int testkey OF((__GPRO__ int hd_len, ZCONST uch *h,
+                           ZCONST char *key));
+#  endif /* ndef FUNZIP */
+# else /* def UNZIP */           /* moved to globals.h for UnZip */
    local z_uint4 keys[3];       /* keys defining the pseudo-random sequence */
-#endif /* !UNZIP */
+# endif /* def UNZIP [else] */
 
-#ifndef Trace
+# ifndef Trace
 #  ifdef CRYPT_DEBUG
-#    define Trace(x) fprintf x
+#   define Trace(x) fprintf x
 #  else
-#    define Trace(x)
+#   define Trace(x)
 #  endif
-#endif
+# endif
 
-#include "crc32.h"
+# include "crc32.h"
 
-#ifdef IZ_CRC_BE_OPTIMIZ
+# ifdef IZ_CRC_BE_OPTIMIZ
    local z_uint4 near crycrctab[256];
    local z_uint4 near *cry_crctb_p = NULL;
    local z_uint4 near *crytab_init OF((__GPRO));
 #  define CRY_CRC_TAB  cry_crctb_p
 #  undef CRC32
 #  define CRC32(c, b, crctab) (crctab[((int)(c) ^ (b)) & 0xff] ^ ((c) >> 8))
-#else
+# else
 #  define CRY_CRC_TAB  CRC_32_TAB
-#endif /* ?IZ_CRC_BE_OPTIMIZ */
+# endif /* ?IZ_CRC_BE_OPTIMIZ */
 
 /***********************************************************************
  * Return the next byte in the pseudo-random sequence
@@ -184,14 +180,14 @@ void init_keys(__G__ passwd)
     __GDEF
     ZCONST char *passwd;        /* password string with which to modify keys */
 {
-#ifdef IZ_CRC_BE_OPTIMIZ
+# ifdef IZ_CRC_BE_OPTIMIZ
     if (cry_crctb_p == NULL) {
         cry_crctb_p = crytab_init(__G);
     }
-#endif
-    GLOBAL(keys[0]) = 305419896L;
-    GLOBAL(keys[1]) = 591751049L;
-    GLOBAL(keys[2]) = 878082192L;
+# endif
+    GLOBAL(keys[0]) = 305419896L;       /* 0x12345678. */
+    GLOBAL(keys[1]) = 591751049L;       /* 0x23456789. */
+    GLOBAL(keys[2]) = 878082192L;       /* 0x34567890. */
     while (*passwd != '\0') {
         update_keys(__G__ (int)*passwd);
         passwd++;
@@ -208,7 +204,7 @@ void init_keys(__G__ passwd)
  * requires inverting the byte-order of the values in the
  * crypt-crc32-table.
  */
-#ifdef IZ_CRC_BE_OPTIMIZ
+# ifdef IZ_CRC_BE_OPTIMIZ
 local z_uint4 near *crytab_init(__G)
     __GDEF
 {
@@ -219,19 +215,18 @@ local z_uint4 near *crytab_init(__G)
     }
     return crycrctab;
 }
-#endif
+# endif /* def IZ_CRC_BE_OPTIMIZ */
 
 
-#ifdef ZIP
+# ifdef ZIP
 
 /***********************************************************************
  * Write encryption header to file zfile using the password passwd
  * and the cyclic redundancy check crc.
  */
-void crypthead(passwd, crc, zfile)
+void crypthead(passwd, crc)
     ZCONST char *passwd;         /* password string */
     ulg crc;                     /* crc of file being encrypted */
-    FILE *zfile;                 /* where to write header */
 {
     int n;                       /* index in random header */
     int t;                       /* temporary */
@@ -258,193 +253,597 @@ void crypthead(passwd, crc, zfile)
     }
     header[RAND_HEAD_LEN-2] = (uch)zencode((int)(crc >> 16) & 0xff, t);
     header[RAND_HEAD_LEN-1] = (uch)zencode((int)(crc >> 24) & 0xff, t);
-    fwrite(header, 1, RAND_HEAD_LEN, f);
+    bfwrite(header, 1, RAND_HEAD_LEN, BFWRITE_DATA);
 }
 
+# endif /* def ZIP */
 
-#ifdef UTIL
+# if defined( UNZIP) || defined( UTIL)
+
+#  ifdef CRYPT_AES_WG
+
+/* SH() macro lifted from zipfile.c. */
+
+#   ifdef THEOS
+  /* Macros cause stack overflow in compiler */
+  ush SH(uch* p) { return ((ush)(uch)((p)[0]) | ((ush)(uch)((p)[1]) << 8)); }
+#   else /* !THEOS */
+  /* Macros for converting integers in little-endian to machine format */
+#    define SH(a) ((ush)(((ush)(uch)(a)[0]) | (((ush)(uch)(a)[1]) << 8)))
+#   endif /* ?THEOS */
+
+#   define makeword( a) SH( a)
+
+
+/******************************/
+/* Function ef_scan_for_aes() */
+/******************************/
+
+int ef_scan_for_aes( ef_buf, ef_len, vers, vend, mode, mthd)
+    ZCONST uch *ef_buf; /* Buffer containing extra field */
+    unsigned ef_len;    /* Total length of extra field */
+    ush *vers;          /* Return storage: AES encryption version. */
+    ush *vend;          /* Return storage: AES encryption vendor. */
+    char *mode;         /* Return storage: AES encryption mode. */
+    ush *mthd;          /* Return storage: Actual compression method. */
+{
+    int ret = 0;
+    unsigned eb_id;
+    unsigned eb_len;
+
+/*---------------------------------------------------------------------------
+    This function scans the extra field for an EF_AES block containing
+    the AES encryption mode (which determines key length and salt
+    length) and the actual compression method used.
+    The return value is 0 if EF_AES was not found, 1 if a good EF_AES
+    was found, and negative if an error occurred.
+  ---------------------------------------------------------------------------*/
+
+    /* Exit early, if there are no extra field data. */
+    if ((ef_len == 0) || (ef_buf == NULL))
+        return 0;
+
+    Trace(( stderr,
+     "\nef_scan_for_aes: scanning extra field of length %u\n",
+     ef_len));
+
+    /* Scan the extra field blocks. */
+    while (ef_len >= EB_HEADSIZE)
+    {
+        eb_id = makeword( ef_buf+ EB_ID);       /* Extra block ID. */
+        eb_len = makeword( ef_buf+ EB_LEN);     /* Extra block length. */
+
+        if (eb_len > (ef_len - EB_HEADSIZE))
+        {
+            /* Discovered some extra field inconsistency! */
+            Trace(( stderr,
+             "ef_scan_for_aes: block length %u > rest ef_size %u\n",
+             eb_len, (ef_len- EB_HEADSIZE)));
+            ret = -1;
+            break;
+        }
+
+        if (eb_id == EF_AES)
+        {
+            /* Found an EF_AES block.  Check for a valid length. */
+            if (eb_len < EB_AES_HLEN)
+            {
+                /* Not enough data.  Return an error code. */
+                ret = -2;
+                break;
+            }
+
+            /* Store extra block data in the user-supplied places. */
+            if (vers != NULL)
+            {
+                *vers = makeword( ef_buf+ EB_HEADSIZE+ EB_AES_VERS);
+            }
+            if (vend != NULL)
+            {
+                *vend = makeword( ef_buf+ EB_HEADSIZE+ EB_AES_VEND);
+            }
+            if (mode != NULL)
+            {
+                *mode = *(ef_buf+ EB_HEADSIZE+ EB_AES_MODE);
+            }
+            if (mthd != NULL)
+            {
+                *mthd = makeword( ef_buf+ EB_HEADSIZE+ EB_AES_MTHD);
+            }
+            ret = 1;
+            break;
+        }
+
+        /* Advance to the next extra field block. */
+        ef_buf += (eb_len+ EB_HEADSIZE);
+        ef_len -= (eb_len+ EB_HEADSIZE);
+    }
+
+    return ret;
+}
+
+#  endif /* def CRYPT_AES_WG */
+
+# endif /* defined( UNZIP) || defined( UTIL) */
+
+# ifdef ZIP
+
+#  ifdef UTIL
+
+#   ifdef CRYPT_AES_WG
+
+/***************************/
+/* Function ef_strip_aes() */
+/***************************/
+
+int ef_strip_aes( ef_buf, ef_len)
+    ZCONST uch *ef_buf; /* Buffer containing extra field */
+    unsigned ef_len;    /* Total length of extra field */
+{
+    int ret = -1;               /* Return value. */
+    unsigned eb_id;             /* Extra block ID. */
+    unsigned eb_len;            /* Extra block length. */
+    uch *eb_aes;                /* Start of AES block. */
+    uch *ef_buf_d;              /* Sliding extra field pointer. */
+    unsigned ef_len_d;          /* Remaining extra field length. */
+
+/*---------------------------------------------------------------------------
+    This function strips an EF_AES block from an extra field.
+    The return value is -1 if EF_AES was not found, and the new
+    (smaller) extra field length, if an EF_AES was found.
+  ---------------------------------------------------------------------------*/
+
+    /* Exit early, if there are no extra field data. */
+    if ((ef_len == 0) || (ef_buf == NULL))
+        return -1;
+
+    Trace(( stderr,
+     "\nef_strip_aes: scanning extra field of length %u\n",
+     ef_len));
+
+    eb_aes == NULL;             /* Start of AES block. */
+    ef_buf_d = (uch *)ef_buf;   /* Sliding extra field pointer. */
+    ef_len_d = ef_len;          /* Remaining extra field length. */
+
+    /* Scan the extra field blocks. */
+    while (ef_len_d >= EB_HEADSIZE)
+    {
+        eb_id = makeword( ef_buf_d+ EB_ID);     /* Extra block ID. */
+        eb_len = makeword( ef_buf_d+ EB_LEN);   /* Extra block length. */
+
+        if (eb_len > (ef_len_d - EB_HEADSIZE))
+        {
+            /* Discovered some extra field inconsistency! */
+            Trace(( stderr,
+             "ef_strip_aes: block length %u > rest ef_size %u\n",
+             eb_len, (ef_len_d- EB_HEADSIZE)));
+            ret = -1;
+            break;
+        }
+
+        if (eb_id == EF_AES)
+        {
+            /* Found an EF_AES block.  Save its location, and escape. */
+            eb_aes = ef_buf_d;
+            break;
+        }
+
+        /* Advance to the next extra field block. */
+        ef_buf_d += (eb_len+ EB_HEADSIZE);
+        ef_len_d -= (eb_len+ EB_HEADSIZE);
+    }
+
+    if (eb_aes != NULL)
+    {
+        /* Move post-AES block data up onto AES block data (if not at end).
+         * Prepare to return the original EF size less the AES block size.
+         * Note: memmove() is supposed to be overlap-safe.
+         */
+        eb_len += EB_HEADSIZE;  /* Total block size (header+data). */
+        ret = ef_len- eb_len;   /* New (reduced) extra field size. */
+        ef_len_d = ef_buf+ ef_len- eb_aes- eb_len;      /* Move size. */
+
+        if (ef_len_d > 0)
+        {
+            /* Move the data which need to be moved. */
+            memmove( eb_aes, (eb_aes+ eb_len), ef_len_d);
+        }
+    }
+
+    return ret;
+}
+
+#   endif /* def CRYPT_AES_WG */
+
 
 /***********************************************************************
- * Encrypt the zip entry described by z from file source to file dest
+ * Encrypt the zip entry described by z from file in_file to file y
  * using the password passwd.  Return an error code in the ZE_ class.
  */
-int zipcloak(z, source, dest, passwd)
+int zipcloak(z, passwd)
     struct zlist far *z;    /* zip entry to encrypt */
-    FILE *source, *dest;    /* source and destination files */
     ZCONST char *passwd;    /* password string */
 {
     int c;                  /* input byte */
     int res;                /* result code */
-    ulg n;                  /* holds offset and counts size */
-    ush flag;               /* previous flags */
+    zoff_t n;               /* holds offset and counts size */
     int t;                  /* temporary */
-    int ztemp;              /* temporary storage for zencode value */
+    struct zlist far *localz; /* local header */
+    uch buf[1024];          /* write buffer */
+    int b;                  /* bytes in buffer */
 
     /* Set encrypted bit, clear extended local header bit and write local
        header to output file */
-    if ((n = (ulg)ftell(dest)) == (ulg)-1L) return ZE_TEMP;
+    if ((n = (zoff_t)zftello(y)) == (zoff_t)-1L) return ZE_TEMP;
+
+    /* assume this archive is one disk and the file is open */
+
+    /* read the local header */
+    res = readlocal(&localz, z);
+
+    /* update disk and offset */
+    z->dsk = 0;
     z->off = n;
-    flag = z->flg;
+
+    /* Set encryption and unset any extended local header */
     z->flg |= 1,  z->flg &= ~8;
-    z->lflg |= 1, z->lflg &= ~8;
-    z->siz += RAND_HEAD_LEN;
-    if ((res = putlocal(z, dest)) != ZE_OK) return res;
+    localz->lflg |= 1, localz->lflg &= ~8;
+
+    /* Add size of encryption header */
+    localz->siz += RAND_HEAD_LEN;
+    z->siz = localz->siz;
+
+    /* Put the local header */
+    if ((res = putlocal(localz, PUTLOCAL_WRITE)) != ZE_OK) return res;
 
     /* Initialize keys with password and write random header */
-    crypthead(passwd, z->crc, dest);
-
-    /* Skip local header in input file */
-    if (fseek(source, (long)((4 + LOCHEAD) + (ulg)z->nam + (ulg)z->ext),
-              SEEK_CUR)) {
-        return ferror(source) ? ZE_READ : ZE_EOF;
-    }
+    crypthead(passwd, localz->crc);
 
     /* Encrypt data */
+    b = 0;
     for (n = z->siz - RAND_HEAD_LEN; n; n--) {
-        if ((c = getc(source)) == EOF) {
-            return ferror(source) ? ZE_READ : ZE_EOF;
-        }
-        ztemp = zencode(c, t);
-        putc(ztemp, dest);
+      if ((c = getc(in_file)) == EOF) {
+          return ferror(in_file) ? ZE_READ : ZE_EOF;
+      }
+      buf[b] = (uch)zencode(c, t);
+      b++;
+      if (b >= 1024) {
+        /* write the buffer */
+        bfwrite(buf, 1, b, BFWRITE_DATA);
+        b = 0;
+      }
     }
-    /* Skip extended local header in input file if there is one */
-    if ((flag & 8) != 0 && fseek(source, 16L, SEEK_CUR)) {
-        return ferror(source) ? ZE_READ : ZE_EOF;
+    if (b) {
+      /* write the buffer */
+      bfwrite(buf, 1, b, BFWRITE_DATA);
+      b = 0;
     }
-    if (fflush(dest) == EOF) return ZE_TEMP;
+
+    /* Since we seek to the start of each local header can skip
+       reading any extended local header */
+    /*
+    if ((flag & 8) != 0 && zfseeko(in_file, 16L, SEEK_CUR)) {
+        return ferror(in_file) ? ZE_READ : ZE_EOF;
+    }
+    if (fflush(y) == EOF) return ZE_TEMP;
+    */
 
     /* Update number of bytes written to output file */
-    tempzn += (4 + LOCHEAD) + z->nam + z->ext + z->siz;
+    tempzn += (4 + LOCHEAD) + localz->nam + localz->ext + localz->siz;
+
+    /* Free local header */
+    if (localz->ext) free(localz->extra);
+    if (localz->nam) free(localz->iname);
+    if (localz->nam) free(localz->name);
+#   ifdef UNICODE_SUPPORT
+    if (localz->uname) free(localz->uname);
+#   endif
+    free(localz);
 
     return ZE_OK;
 }
 
+
 /***********************************************************************
- * Decrypt the zip entry described by z from file source to file dest
+ * Decrypt the zip entry described by z from file in_file to file y
  * using the password passwd.  Return an error code in the ZE_ class.
  */
-int zipbare(z, source, dest, passwd)
+int zipbare(z, passwd)
     struct zlist far *z;  /* zip entry to encrypt */
-    FILE *source, *dest;  /* source and destination files */
     ZCONST char *passwd;  /* password string */
 {
-#ifdef ZIP10
+#   ifdef ZIP10
     int c0                /* byte preceding the last input byte */
-#endif
+#   endif
     int c1;               /* last input byte */
-    ulg offset;           /* used for file offsets */
-    ulg size;             /* size of input data */
+    /* all file offset and size now zoff_t - 8/28/04 EG */
+    zoff_t size;          /* size of input data */
+    struct zlist far *localz; /* local header */
+    uch buf[1024];        /* write buffer */
+    int b;                /* bytes in buffer */
+    zoff_t n;
+    zoff_t nn;
+    zoff_t nout;
+    zoff_t z_siz;
+    int passwd_ok;
     int r;                /* size of encryption header */
     int res;              /* return code */
-    ush flag;             /* previous flags */
+    int head_len;
+    ush how_orig;         /* Original encryption method. */
 
-    /* Save position and skip local header in input file */
-    if ((offset = (ulg)ftell(source)) == (ulg)-1L ||
-        fseek(source, (long)((4 + LOCHEAD) + (ulg)z->nam + (ulg)z->ext),
-              SEEK_CUR)) {
-        return ferror(source) ? ZE_READ : ZE_EOF;
-    }
-    /* Initialize keys with password */
-    init_keys(passwd);
+#   ifdef CRYPT_AES_WG
+    uch h[ ENCR_HEAD_LEN];
+    uch hh[ ENCR_PW_CHK_LEN];   /* Password check buffer. */
+    char aes_mode;      /* Return storage: AES encryption mode. */
+    ush aes_mthd;       /* Return storage: Actual compression method. */
+#   endif /* def CRYPT_AES_WG */
 
-    /* Decrypt encryption header, save last two bytes */
-    c1 = 0;
-    for (r = RAND_HEAD_LEN; r; r--) {
-#ifdef ZIP10
-        c0 = c1;
-#endif
-        if ((c1 = getc(source)) == EOF) {
-            return ferror(source) ? ZE_READ : ZE_EOF;
+    /* Read local header */
+    res = readlocal(&localz, z);
+
+    passwd_ok = 1;              /* Assume a good password. */
+
+#   ifdef CRYPT_AES_WG
+    how_orig = localz->how;     /* Save the original encryption method. */
+    if (how_orig == AESENCRED)
+    {
+        /* Extract the AES encryption details from the local extra field. */
+        ef_scan_for_aes( localz->extra, localz->ext,
+         NULL, NULL, &aes_mode, &aes_mthd);
+
+        if ((aes_mode > 0) && (aes_mode <= 3))
+        {
+            /* AES header size depends on (variable) salt length. */
+            head_len = SALT_LENGTH( aes_mode)+ PWD_VER_LENGTH;
         }
-        Trace((stdout, " (%02x)", c1));
-        zdecode(c1);
-        Trace((stdout, " %02x", c1));
+        else
+        {
+            /* Unexpected/invalid AES mode value. */
+            return ZE_CRYPT;
+        }
+
+        /* Read the AES header from the input file. */
+        size = fread( h, 1, head_len, in_file);
+        if (size < head_len)
+        {
+            return ferror(in_file) ? ZE_READ : ZE_EOF;
+        }
+
+        /* Initialize the AES decryption machine for the password check. */
+        fcrypt_init( aes_mode,                  /* AES mode. */
+                     (unsigned char*) passwd,   /* Password. */
+                     strlen( passwd),           /* Password length. */
+                     h,                         /* Salt. */
+                     hh,                        /* PASSWORD_VERIFIER. */
+                     &zctx);                    /* AES context. */
+
+        /* Check the password verifier. */
+        if (memcmp( (h+ head_len- PWD_VER_LENGTH), hh, PWD_VER_LENGTH))
+        {
+            passwd_ok = 0;      /* Bad AES password. */
+        }
     }
-    Trace((stdout, "\n"));
+    else /* if (how_orig == AESENCRED) */
+#   endif /* def CRYPT_AES_WG */
+    {
+        /* Traditional Zip decryption. */
+        head_len = RAND_HEAD_LEN;
+        /* Update disk.  Caller is responsible for offset (z->off). */
+        z->dsk = 0;
+
+        /* Initialize keys with password */
+        init_keys(passwd);
+
+        /* Decrypt encryption header, save last two bytes */
+        c1 = 0;
+        for (r = RAND_HEAD_LEN; r; r--) {
+#   ifdef ZIP10
+            c0 = c1;
+#   endif
+            if ((c1 = getc(in_file)) == EOF) {
+                return ferror(in_file) ? ZE_READ : ZE_EOF;
+            }
+            Trace((stdout, " (%02x)", c1));
+            zdecode(c1);
+            Trace((stdout, " %02x", c1));
+        }
+        Trace((stdout, "\n"));
 
     /* If last two bytes of header don't match crc (or file time in the
      * case of an extended local header), back up and just copy. For
      * pkzip 2.0, the check has been reduced to one byte only.
      */
-#ifdef ZIP10
-    if ((ush)(c0 | (c1<<8)) !=
-        (z->flg & 8 ? (ush) z->tim & 0xffff : (ush)(z->crc >> 16))) {
-#else
-    if ((ush)c1 != (z->flg & 8 ? (ush) z->tim >> 8 : (ush)(z->crc >> 24))) {
-#endif
-        if (fseek(source, offset, SEEK_SET)) {
-            return ferror(source) ? ZE_READ : ZE_EOF;
+#   ifdef ZIP10
+        if ((ush)(c0 | (c1<<8)) !=
+            (z->flg & 8 ? (ush) z->tim & 0xffff : (ush)(z->crc >> 16)))
+#   else
+        if ((ush)c1 != (z->flg & 8 ? (ush) z->tim >> 8 : (ush)(z->crc >> 24)))
+#   endif
+        {
+            passwd_ok = 0;          /* Bad traditional password. */
         }
-        if ((res = zipcopy(z, source, dest)) != ZE_OK) return res;
+    }
+
+    if (!passwd_ok)
+    {
+        /* Bad password.  Copy the entry as is. */
+        if ((res = zipcopy(z)) != ZE_OK) {
+            ziperr(res, "was copying an entry");
+        }
+
         return ZE_MISS;
     }
 
-    /* Clear encrypted bit and local header bit, and write local header to
-       output file */
-    if ((offset = (ulg)ftell(dest)) == (ulg)-1L) return ZE_TEMP;
-    z->off = offset;
-    flag = z->flg;
-    z->flg &= ~9;
-    z->lflg &= ~9;
-    z->siz -= RAND_HEAD_LEN;
-    if ((res = putlocal(z, dest)) != ZE_OK) return res;
+    /* Good password.  Proceed to decrypt the entry. */
+    z->siz -= head_len;         /* Subtract the encryption header length. */
+    localz->siz = z->siz;       /* Local, too. */
+    z_siz = z->siz;             /* Save z->siz as Use z_siz for I/O later. */
 
-    /* Decrypt data */
-    for (size = z->siz; size; size--) {
-        if ((c1 = getc(source)) == EOF) {
-            return ferror(source) ? ZE_READ : ZE_EOF;
+    localz->flg = z->flg &= ~9;         /* Clear the encryption and */
+    z->lflg = localz->lflg &= ~9;       /* data-descriptor flags. */
+
+#   ifdef CRYPT_AES_WG
+    if (how_orig == AESENCRED)
+    {
+        localz->how = aes_mthd; /* Set the compression method value(s) */
+        z->how = aes_mthd;      /* to the value from the AES extra block. */
+
+        /* Subtract the MAC size from the compressed size(s). */
+        localz->siz -= MAC_LENGTH( aes_mode);
+        z->siz = localz->siz;
+
+        /* Strip the AES extra block out of the local extra field. */
+        if (localz->extra != NULL)
+        {
+            r = ef_strip_aes( localz->extra, localz->ext);
+            if (r >= 0)
+            {
+                localz->ext = r;
+                if (r == 0)
+                {
+                    /* Whole extra field is now gone.  free() below will
+                     * see localz->ext == 0, and skip it, so do it here.
+                     */
+                    free( localz->extra);
+                }
+            }
         }
-        zdecode(c1);
-        putc(c1, dest);
+        /* Strip the AES extra block out of the central extra field. */
+        r = ef_strip_aes( z->cextra, z->cext);
+        if (r >= 0)
+        {
+            z->cext = r;
+        }
     }
-    /* Skip extended local header in input file if there is one */
-    if ((flag & 8) != 0 && fseek(source, 16L, SEEK_CUR)) {
-        return ferror(source) ? ZE_READ : ZE_EOF;
+#   endif /* def CRYPT_AES_WG */
+
+    /* Put out the (modified) local extra field. */
+    if ((res = putlocal(localz, PUTLOCAL_WRITE)) != ZE_OK)
+        return res;
+
+#   ifdef CRYPT_AES_WG
+
+#    define IZ_MIN( a, b) ((a < b) ? (a) : (b))
+
+    if (how_orig == AESENCRED)
+    {
+        /* Read, AES-decrypt, and write the member data, until
+         * exhausted (no more input, or no more desired output).
+         * z_siz = original (encrypted) compressed size (bytes to read).
+         * z->siz = new (decrypted) compressed size (bytes to write).
+         */
+        nout = 0;
+        for (size = z_siz; (size > 0) && (nout < z->siz);)
+        {
+            nn = IZ_MIN( sizeof( buf), size);
+            n = fread( buf, 1, nn, in_file);
+            if (n == nn)
+            {
+                fcrypt_decrypt( buf, n, &zctx);
+                n = IZ_MIN( n, (z->siz- nout));
+                bfwrite( buf, 1, n, BFWRITE_DATA);
+                nout += n;      /* Bytes written. */
+            }
+            else
+            {
+                return ferror(in_file) ? ZE_READ : ZE_EOF;
+            }
+            size -= nn;         /* Bytes left to read. */
+        }
     }
-    if (fflush(dest) == EOF) return ZE_TEMP;
+    else /* if (how_orig == AESENCRED) */
+#   endif /* def CRYPT_AES_WG */
+    {
+        /* Read, traditional-decrypt, and write the member data, until done. */
+        b = 0;
+        for (size = z->siz; size; size--) {
+            if ((c1 = getc(in_file)) == EOF) {
+                return ferror(in_file) ? ZE_READ : ZE_EOF;
+            }
+            zdecode(c1);
+            buf[b] = c1;
+            b++;
+            if (b >= 1024) {
+              /* write the buffer */
+              bfwrite(buf, 1, b, BFWRITE_DATA);
+              b = 0;
+            }
+        }
+        if (b) {
+          /* write the buffer */
+          bfwrite(buf, 1, b, BFWRITE_DATA);
+          b = 0;
+        }
+    }
+
+    /* Since we seek to the start of each local header can skip
+         reading any extended local header */
 
     /* Update number of bytes written to output file */
-    tempzn += (4 + LOCHEAD) + z->nam + z->ext + z->siz;
+    tempzn += (4 + LOCHEAD) + localz->nam + localz->ext + localz->siz;
+
+    /* Free local header */
+    if (localz->ext) free(localz->extra);
+    if (localz->nam) free(localz->iname);
+    if (localz->nam) free(localz->name);
+#   ifdef UNICODE_SUPPORT
+    if (localz->uname) free(localz->uname);
+#   endif
+    free(localz);
 
     return ZE_OK;
 }
 
-
-#else /* !UTIL */
+#  else /* def UTIL */
 
 /***********************************************************************
- * If requested, encrypt the data in buf, and in any case call fwrite()
- * with the arguments to zfwrite().  Return what fwrite() returns.
+ * If requested, encrypt the data in buf, and in any case call bfwrite()
+ * with the arguments to zfwrite().  Return what bfwrite() returns.
+ * bfwrite() keeps byte counts, does splits, and calls fwrite() to
+ * write out the data.
  *
- * A bug has been found when encrypting large files.  See trees.c
- * for details and the fix.
+ * now write to global y
+ *
+ * A bug has been found when encrypting large files that don't
+ * compress.  See trees.c for the details and the fix.
  */
-unsigned zfwrite(buf, item_size, nb, f)
+unsigned zfwrite(buf, item_size, nb)
     zvoid *buf;                 /* data buffer */
     extent item_size;           /* size of each item in bytes */
     extent nb;                  /* number of items */
+#if 0
     FILE *f;                    /* file to write to */
+#endif
 {
     int t;                      /* temporary */
 
     if (key != (char *)NULL) {  /* key is the global password pointer */
+#   ifdef CRYPT_AES_WG
+      if (encryption_method > 1) {
+        /* assume all items are bytes */
+        fcrypt_encrypt(buf, item_size * nb, &zctx);
+      }
+      else
+#   endif
+      {
         ulg size;               /* buffer size */
-        char *p = (char*)buf;   /* steps through buffer */
+        char *p = (char *)buf;  /* steps through buffer */
 
         /* Encrypt data in buffer */
         for (size = item_size*(ulg)nb; size != 0; p++, size--) {
             *p = (char)zencode(*p, t);
         }
+      }
     }
     /* Write the buffer out */
-    return fwrite(buf, item_size, nb, f);
+    return bfwrite(buf, item_size, nb, BFWRITE_DATA);
 }
 
-#endif /* ?UTIL */
-#endif /* ZIP */
+#  endif /* def UTIL [else] */
+# endif /* def ZIP */
 
 
-#if (defined(UNZIP) && !defined(FUNZIP))
+# if (defined(UNZIP) && !defined(FUNZIP))
 
 /***********************************************************************
  * Get the password and set up keys for current zipfile member.
@@ -455,26 +854,40 @@ int decrypt(__G__ passwrd)
     ZCONST char *passwrd;
 {
     ush b;
-    int n, r;
-    uch h[RAND_HEAD_LEN];
+    int head_len;
+    int n;
+    int r;
+    uch h[ ENCR_HEAD_LEN];
 
     Trace((stdout, "\n[incnt = %d]: ", GLOBAL(incnt)));
 
-/* SMSd. */
-fprintf( stderr, " decrypt().  incnt = %d, newzip = %d, passwrd: >%s<\n",
- GLOBAL( incnt), GLOBAL( newzip), passwrd);
-
-fprintf( stderr, "             l.c_m = %d, l.e_f_len = %d.\n",
- GLOBAL( lrec.compression_method), GLOBAL( lrec.extra_field_length));
-
-/* SMSd. */
-fprintf( stderr, "             key0: %%x%08x .\n", GLOBAL(key));
+#  ifdef CRYPT_AES_WG
+    if (GLOBAL( lrec.compression_method) == AESENCRED)
+    {
+        if ((GLOBAL( pInfo->cmpr_mode_aes) > 0) &&
+         (GLOBAL( pInfo->cmpr_mode_aes) <= 3))
+        {
+            /* AES header size depends on (variable) salt length. */
+            head_len = SALT_LENGTH( GLOBAL( pInfo->cmpr_mode_aes))+
+             PWD_VER_LENGTH;
+        }
+        else
+        {
+            /* Unexpected/invalid AES mode value. */
+            return PK_ERR;
+        }
+    }
+    else
+#  endif /* def CRYPT_AES_WG */
+    {
+        head_len = RAND_HEAD_LEN;
+    }
 
     /* get header once (turn off "encrypted" flag temporarily so we don't
      * try to decrypt the same data twice) */
     GLOBAL(pInfo->encrypted) = FALSE;
     defer_leftover_input(__G);
-    for (n = 0; n < RAND_HEAD_LEN; n++) {
+    for (n = 0; n < head_len; n++) {
         b = NEXTBYTE;
         h[n] = (uch)b;
         Trace((stdout, " (%02x)", h[n]));
@@ -500,20 +913,17 @@ fprintf( stderr, "             key0: %%x%08x .\n", GLOBAL(key));
 
     /* if have key already, test it; else allocate memory for it */
     if (GLOBAL(key)) {
-        if (!testp(__G__ h))
+        if (!testp(__G__ head_len, h))
             return PK_COOL;   /* existing password OK (else prompt for new) */
         else if (GLOBAL(nopwd))
             return PK_WARN;   /* user indicated no more prompting */
     } else if ((GLOBAL(key) = (char *)malloc(IZ_PWLEN+1)) == (char *)NULL)
         return PK_MEM2;
 
-/* SMSd. */
-fprintf( stderr, "             key1: %%x%08x .\n", GLOBAL(key));
-
     /* try a few keys */
     n = 0;
     do {
-        r = (*G.decr_passwd)((zvoid *)&G, &n, GLOBAL(key), IZ_PWLEN+1,
+        r = (*G.decr_passwd)((zvoid *)&G, &n, GLOBAL(key), IZ_PWLEN,
                              GLOBAL(zipfn), GLOBAL(filename));
         if (r == IZ_PW_ERROR) {         /* internal error in fetch of PW */
             free (GLOBAL(key));
@@ -524,7 +934,7 @@ fprintf( stderr, "             key1: %%x%08x .\n", GLOBAL(key));
             *GLOBAL(key) = '\0';        /*   We try the NIL password, ... */
             n = 0;                      /*   and cancel fetch for this item. */
         }
-        if (!testp(__G__ h))
+        if (!testp(__G__ head_len, h))
             return PK_COOL;
         if (r == IZ_PW_CANCELALL)       /* User replied "Skip all" */
             GLOBAL(nopwd) = TRUE;       /*   inhibit any further PW prompt! */
@@ -539,8 +949,9 @@ fprintf( stderr, "             key1: %%x%08x .\n", GLOBAL(key));
 /***********************************************************************
  * Test the password.  Return -1 if bad, 0 if OK.
  */
-local int testp(__G__ h)
+local int testp(__G__ hd_len, h)
     __GDEF
+    int hd_len;
     ZCONST uch *h;
 {
     int r;
@@ -550,69 +961,97 @@ local int testp(__G__ h)
      * the first test translates the password to the "main standard"
      * character coding. */
 
-#ifdef STR_TO_CP1
+#  ifdef STR_TO_CP1
     /* allocate buffer for translated password */
     if ((key_translated = malloc(strlen(GLOBAL(key)) + 1)) == (char *)NULL)
         return -1;
     /* first try, test password translated "standard" charset */
-    r = testkey(__G__ h, STR_TO_CP1(key_translated, GLOBAL(key)));
-#else /* !STR_TO_CP1 */
+    r = testkey(__G__ hd_len, h, STR_TO_CP1(key_translated, GLOBAL(key)));
+#  else /* !STR_TO_CP1 */
     /* first try, test password as supplied on the extractor's host */
-    r = testkey(__G__ h, GLOBAL(key));
-#endif /* ?STR_TO_CP1 */
+    r = testkey(__G__ hd_len, h, GLOBAL(key));
+#  endif /* ?STR_TO_CP1 */
 
-#ifdef STR_TO_CP2
+#  ifdef STR_TO_CP2
     if (r != 0) {
-#ifndef STR_TO_CP1
+#   ifndef STR_TO_CP1
         /* now prepare for second (and maybe third) test with translated pwd */
         if ((key_translated = malloc(strlen(GLOBAL(key)) + 1)) == (char *)NULL)
             return -1;
-#endif
+#   endif
         /* second try, password translated to alternate ("standard") charset */
-        r = testkey(__G__ h, STR_TO_CP2(key_translated, GLOBAL(key)));
-#ifdef STR_TO_CP3
+        r = testkey(__G__ hd_len, h, STR_TO_CP2(key_translated, GLOBAL(key)));
+#   ifdef STR_TO_CP3
         if (r != 0)
             /* third try, password translated to another "standard" charset */
-            r = testkey(__G__ h, STR_TO_CP3(key_translated, GLOBAL(key)));
-#endif
-#ifndef STR_TO_CP1
+            r = testkey(__G__ hd_len, h, STR_TO_CP3(key_translated, GLOBAL(key)));
+#   endif
+#   ifndef STR_TO_CP1
         free(key_translated);
-#endif
+#   endif
     }
-#endif /* STR_TO_CP2 */
+#  endif /* STR_TO_CP2 */
 
-#ifdef STR_TO_CP1
+#  ifdef STR_TO_CP1
     free(key_translated);
     if (r != 0) {
         /* last resort, test password as supplied on the extractor's host */
-        r = testkey(__G__ h, GLOBAL(key));
+        r = testkey(__G__ hd_len, h, GLOBAL(key));
     }
-#endif /* STR_TO_CP1 */
+#  endif /* STR_TO_CP1 */
 
     return r;
 
 } /* end function testp() */
 
 
-local int testkey(__G__ h, key)
+local int testkey(__G__ hd_len, h, key)
     __GDEF
-    ZCONST uch *h;      /* decrypted header */
-    ZCONST char *key;   /* decryption password to test */
+    int hd_len;         /* Encryption header length. */
+    ZCONST uch *h;      /* Decrypted header. */
+    ZCONST char *key;   /* Decryption password to test. */
 {
     ush b;
-#ifdef ZIP10
+#  ifdef ZIP10
     ush c;
-#endif
+#  endif
     int n;
     uch *p;
-    uch hh[RAND_HEAD_LEN]; /* decrypted header */
+    uch hh[ ENCR_PW_CHK_LEN];   /* Password check buffer. */
+
+#  ifdef CRYPT_AES_WG
+    if (GLOBAL( lrec.compression_method) == AESENCRED)
+    {
+        fcrypt_init( GLOBAL( pInfo->cmpr_mode_aes),     /* AES mode. */
+                     (unsigned char*) key,      /* Password. */
+                     strlen( key),              /* Password length. */
+                     h,                         /* Salt. */
+                     hh,                        /* PASSWORD_VERIFIER. */
+                     GLOBAL( zcx));             /* AES context. */
+
+        /* Check password verifier. */
+        if (memcmp( (h+ hd_len- PWD_VER_LENGTH), hh, PWD_VER_LENGTH))
+        {
+            return -1;  /* Bad AES password. */
+        }
+        /* Password OK.  Decrypt current buffer contents before leaving. */
+        n = (GLOBAL( incnt) > GLOBAL( csize)) ?
+         GLOBAL( csize) : GLOBAL( incnt);
+        fcrypt_decrypt( GLOBAL( inptr), n, GLOBAL( zcx));
+        return 0;       /* OK */
+    }
+    else
+    {
+#  endif /* def CRYPT_AES_WG */
+
+    /* Standard encryption. */
 
     /* set keys and save the encrypted header */
     init_keys(__G__ key);
-    memcpy(hh, h, RAND_HEAD_LEN);
+    memcpy(hh, h, hd_len);
 
     /* check password */
-    for (n = 0; n < RAND_HEAD_LEN; n++) {
+    for (n = 0; n < hd_len; n++) {
         zdecode(hh[n]);
         Trace((stdout, " %02x", hh[n]));
     }
@@ -627,7 +1066,7 @@ local int testkey(__G__ h, key)
 
     /* same test as in zipbare(): */
 
-#ifdef ZIP10 /* check two bytes */
+#  ifdef ZIP10 /* check two bytes */
     c = hh[RAND_HEAD_LEN-2], b = hh[RAND_HEAD_LEN-1];
     Trace((stdout,
       "  (c | (b<<8)) = %04x  (crc >> 16) = %04x  lrec.time = %04x\n",
@@ -637,7 +1076,7 @@ local int testkey(__G__ h, key)
                            ((ush)GLOBAL(lrec.last_mod_dos_datetime) & 0xffff) :
                            (ush)(GLOBAL(lrec.crc32) >> 16)))
         return -1;  /* bad */
-#else
+#  else
     b = hh[RAND_HEAD_LEN-1];
     Trace((stdout, "  b = %02x  (crc >> 24) = %02x  (lrec.time >> 8) = %02x\n",
       b, (ush)(GLOBAL(lrec.crc32) >> 24),
@@ -646,7 +1085,7 @@ local int testkey(__G__ h, key)
         ((ush)GLOBAL(lrec.last_mod_dos_datetime) >> 8) & 0xff :
         (ush)(GLOBAL(lrec.crc32) >> 24)))
         return -1;  /* bad */
-#endif
+#  endif
     /* password OK:  decrypt current buffer contents before leaving */
     for (n = (long)GLOBAL(incnt) > GLOBAL(csize) ?
              (int)GLOBAL(csize) : GLOBAL(incnt),
@@ -654,13 +1093,115 @@ local int testkey(__G__ h, key)
         zdecode(*p);
     return 0;       /* OK */
 
+#  ifdef CRYPT_AES_WG
+    } /* (GLOBAL( lrec.compression_method) == AESENCRED) [else] */
+#  endif /* def CRYPT_AES_WG */
+
 } /* end function testkey() */
 
-#endif /* UNZIP && !FUNZIP */
+# endif /* UNZIP && !FUNZIP */
 
-#else /* !CRYPT */
+#else /* def CRYPT */
 
 /* something "externally visible" to shut up compiler/linker warnings */
 int zcr_dummy;
 
-#endif /* ?CRYPT */
+#endif /* def CRYPT [else] */
+
+
+#ifdef ZIP
+
+# ifdef CRYPT_AES_WG
+
+#  ifdef WIN32
+
+/* Below is more or less the entropy function provided by WinZip and
+   now suggested by Gladman.  This function is for use on Win32
+   systems.  Other OS probably need to modify this function or
+   provide their own.
+ */
+
+/* simple entropy collection function that uses the fast timer      */
+/* since we are not using the random pool for generating secret     */
+/* keys we don't need to be too worried about the entropy quality   */
+
+/* Modified in 2008 to add revised entropy generation courtesy of   */
+/* WinZip Inc. This code now performs the following sequence of     */
+/* entropy generation operations on sequential calls:               */ 
+/*                                                                  */
+/*      - the current 8-byte Windows performance counter value      */
+/*      - an 8-byte representation of the current date/time         */
+/*      - an 8-byte value built from the current process ID         */
+/*        and thread ID                                             */
+/*      - all subsequent calls return the then-current 8-byte       */
+/*        performance counter value                                 */
+
+int entropy_fun(unsigned char buf[], unsigned int len)
+{   unsigned __int64    pentium_tsc[1];
+    unsigned int        i;
+    static unsigned int num = 0;
+
+    switch(num)
+    {
+    /* use a value that is unlikely to repeat across system reboots         */
+    case 1: 
+        ++num;
+        GetSystemTimeAsFileTime((FILETIME *)pentium_tsc);
+        break;
+    /* use a value that distinguishes between different instances of this   */
+    /* code that might be running on different processors at the same time  */
+    case 2: 
+        ++num;
+        {   
+          unsigned __int32 processtest = GetCurrentProcessId();
+          unsigned __int32 threadtest  = GetCurrentThreadId();
+
+          pentium_tsc[0] = processtest;
+          pentium_tsc[0] = (pentium_tsc[0] << 32) + threadtest;
+        }
+        break;
+    
+    /* use a rapidly-changing value -- check QueryPerformanceFrequency()    */
+    /* to ensure that QueryPerformanceCounter() will work                   */
+    case 0: 
+        ++num;
+    default:
+        QueryPerformanceCounter((LARGE_INTEGER *)pentium_tsc);
+        break;
+    }
+
+    for(i = 0; i < 8 && i < len; ++i) {
+        buf[i] = ((unsigned char*)pentium_tsc)[i];
+    }
+    return i;
+}
+
+#  endif /* WIN32 */
+
+/***********************************************************************
+ * Write encryption header to file zfile.
+ *
+ * Size (bytes)    Content
+ * Variable        Salt value
+ * 2               Password verification value
+ * Variable        Encrypted file data
+ * 10              Authentication code
+ *
+ * Here, writing salt and password verification.
+ */
+void aes_crypthead( OFT( ZCONST uch *)salt,
+                    OFT( uch) salt_len,
+                    OFT( ZCONST uch *)pwd_verifier)
+#  ifdef NO_PROTO
+    ZCONST uch *salt;
+    uch salt_len;
+    ZCONST uch *pwd_verifier;
+#  endif /* def NO_PROTO */
+{
+    bfwrite(salt, 1, salt_len, BFWRITE_DATA);
+    bfwrite(pwd_verifier, 1, PWD_VER_LENGTH, BFWRITE_DATA);
+}
+
+# endif /* CRYPT_AES_WG */
+
+#endif /* def ZIP */

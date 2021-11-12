@@ -142,6 +142,10 @@
 #  endif
 #endif
 
+#ifdef CRYPT_AES_WG
+#  include "aes/fileenc.h"
+#endif
+
 #ifdef USE_BZIP2
 #  include "bzlib.h"
 #endif
@@ -178,6 +182,7 @@ typedef struct Globals {
     int chars;            /* count of screen characters in current line */
 # endif
 #endif /* MORE */
+    FILE *outfp_prev;     /* Previous outfp for fileio.c:UzpMessagePrnt(). */
 #if (defined(IZ_CHECK_TZ) && defined(USE_EF_UT_TIME))
     int tz_is_valid;      /* indicates that timezone info can be used */
 #endif
@@ -398,6 +403,13 @@ typedef struct Globals {
     char autorun_command[FILNAMSIZ];
 #endif
 #endif /* !FUNZIP */
+
+#ifdef CRYPT_AES_WG
+    /* 2011-05-09 SMS.
+     * AES compression parameters.
+     */
+    fcrypt_ctx zcx[ 1];         /* AES context. */
+#endif /* def CRYPT_AES_WG */
 
 #ifdef SYSTEM_SPECIFIC_GLOBALS
     SYSTEM_SPECIFIC_GLOBALS

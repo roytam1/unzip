@@ -67,7 +67,12 @@
 #  endif
 #endif
 
-/* disable bzip2 support for SFX stub, unless explicitly requested */
+/* Disable AES_WG support for SFX stub, unless explicitly requested. */
+#if (defined(SFX) && !defined(AES_WG_SFX) && defined(CRYPT_AES_WG))
+#  undef CRYPT_AES_WG
+#endif
+
+/* Disable bzip2 support for SFX stub, unless explicitly requested. */
 #if (defined(SFX) && !defined(BZIP2_SFX) && defined(USE_BZIP2))
 #  undef USE_BZIP2
 #endif
@@ -317,7 +322,7 @@
 #    define _MBCS
 #  endif
 #  if (defined(_MBCS) && defined(NO_MBCS))
-     /* disable MBCS support when explicitely requested */
+     /* disable MBCS support when explicitly requested */
 #    undef _MBCS
 #  endif
 #  include <time.h>
@@ -1785,7 +1790,7 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define MAC_OSX_          19   /* Mac OS/X (Darwin) */
 #define ATHEOS_           30   /* AtheOS */
 #define NUM_HOSTS         31   /* index of last system + 1 */
-/* don't forget to update zipinfo.c appropiately if NUM_HOSTS changes! */
+/* Be sure to update zipinfo.c appropriately if NUM_HOSTS changes! */
 
 #define STORED            0    /* compression methods */
 #define SHRUNK            1
@@ -1805,9 +1810,9 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define WAVPACKED        97
 #define PPMDED           98
 #define AESENCRED        99
-#define NUM_METHODS      18     /* number of known method IDs */
-/* don't forget to update list.c (list_files()), extract.c and zipinfo.c
- * appropriately if NUM_METHODS changes */
+#define NUM_METHODS      18     /* Number of known method IDs. */
+/* Be sure to update list.c (list_files()), extract.c, and zipinfo.c
+ * appropriately if NUM_METHODS changes. */
 
 /* (the PK-class error codes are public and have been moved into unzip.h) */
 
@@ -1863,6 +1868,12 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define EF_MD5       0x4b46    /* Fred Kantor's MD5 ("FK") */
 #define EF_ASIUNIX   0x756e    /* ASi's Unix ("nu") */
 #define EF_AES       0x9901    /* AES encryption ("c^!") */
+
+#define EB_AES_VERS       0    /* AES encryption version. */
+#define EB_AES_VEND       2    /* AES encryption vendor. */
+#define EB_AES_MODE       4    /* AES encryption mode. */
+#define EB_AES_MTHD       5    /* AES encryption real compression method. */
+#define EB_AES_HLEN       7    /* AES encryption extra block size. */
 
 #define EB_HEADSIZE       4    /* length of extra field block header */
 #define EB_ID             0    /* offset of block ID in header */
@@ -2143,6 +2154,10 @@ typedef struct min_info {
 #ifndef SFX
     char Far *cfilname;      /* central header version of filename */
 #endif
+#ifdef CRYPT_AES_WG
+       ush cmpr_mthd_aes;
+       char cmpr_mode_aes;
+#endif /* def CRYPT_AES_WG */
 } min_info;
 
 typedef struct VMStimbuf {
@@ -2372,6 +2387,12 @@ int      getZip64Data            OF((__GPRO__ ZCONST uch *ef_buf,
 unsigned ef_scan_for_izux        OF((ZCONST uch *ef_buf, unsigned ef_len,
                                      int ef_is_c, ulg dos_mdatetime,
                                      iztimes *z_utim, ulg *z_uidgid));
+#ifdef CRYPT_AES_WG
+int ef_scan_for_aes              OF((ZCONST uch *ef_buf, unsigned ef_len,
+                                     ush *vers, ush *vend,
+                                     char *mode, ush *mthd));
+#endif /* def CRYPT_AES_WG */
+
 #if (defined(RISCOS) || defined(ACORN_FTYPE_NFS))
    zvoid *getRISCOSexfield       OF((ZCONST uch *ef_buf, unsigned ef_len));
 #endif

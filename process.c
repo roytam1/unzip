@@ -132,17 +132,17 @@ static ZCONST char Far CannotAllocateBuffers[] =
 #endif /* DO_SAFECHECK_2GB */
    static ZCONST char Far MaybeExe[] =
      "note:  %s may be a plain executable, not an archive\n";
-   static ZCONST char Far CentDirNotInZipMsg[] = "\n\
+   static ZCONST char Far CentDirNotInZipMsg[] = "\
    [%s]:\n\
      Zipfile is disk %lu of a multi-disk archive, and this is not the disk on\n\
      which the central zipfile directory begins (disk %lu).\n";
    static ZCONST char Far EndCentDirBogus[] =
-     "\nwarning [%s]:  end-of-central-directory record claims this\n\
+     "warning [%s]:  end-of-central-directory record claims this\n\
   is disk %lu but that the central directory starts on disk %lu; this is a\n\
   contradiction.  Attempting to process anyway.\n";
 # ifdef NO_MULTIPART
    static ZCONST char Far NoMultiDiskArcSupport[] =
-     "\nerror [%s]:  zipfile is part of multi-disk archive\n\
+     "error [%s]:  zipfile is part of multi-disk archive\n\
   (sorry, not yet supported).\n";
    static ZCONST char Far MaybePakBug[] = "warning [%s]:\
   zipfile claims to be 2nd disk of a 2-part archive;\n\
@@ -205,7 +205,7 @@ static ZCONST char Far Cent64EndSigSearchOff[] =
      "Updated time stamp for %s.\n";
 #endif
 static ZCONST char Far ZipfileCommTrunc1[] =
-  "\ncaution:  zipfile comment truncated\n";
+  "caution:  zipfile comment truncated\n";
 #ifndef NO_ZIPINFO
    static ZCONST char Far NoZipfileComment[] =
      "There is no zipfile comment.\n";
@@ -218,13 +218,13 @@ static ZCONST char Far ZipfileCommTrunc1[] =
      "========================= zipfile comment ends\
  ===========================\n";
    static ZCONST char Far ZipfileCommTrunc2[] =
-     "\n  The zipfile comment is truncated.\n";
+     "  The zipfile comment is truncated.\n";
 #endif /* !NO_ZIPINFO */
 #ifdef UNICODE_SUPPORT
    static ZCONST char Far UnicodeVersionError[] =
-     "\nwarning:  Unicode Path version > 1\n";
+     "warning:  Unicode Path version > 1\n";
    static ZCONST char Far UnicodeMismatchError[] =
-     "\nwarning:  Unicode Path checksum invalid\n";
+     "warning:  Unicode Path checksum invalid\n";
 #endif
 
 
@@ -2722,8 +2722,6 @@ zwchar *utf8_to_wide_string(utf8_string)
 
 #endif /* UNICODE_WCHAR */
 #endif /* UNICODE_SUPPORT */
-
-
 
 
 

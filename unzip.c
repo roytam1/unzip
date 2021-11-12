@@ -70,6 +70,10 @@
 #include "crypt.h"
 #include "unzvers.h"
 
+#ifdef CRYPT_AES_WG
+# include <aes/aesopt.h>
+#endif /* def CRYPT_AES_WG */
+
 #ifndef WINDLL          /* The WINDLL port uses windll/windll.c instead... */
 
 /***************************/
@@ -555,12 +559,16 @@ static ZCONST char Far ZipInfoUsageLine3[] = "miscellaneous options:\n\
 #  ifdef WILD_STOP_AT_DIR
      static ZCONST char Far WildStopAtDir[] = "WILD_STOP_AT_DIR";
 #  endif
+#  ifdef CRYPT_AES_WG
+     static ZCONST char Far AesWgDecryption[] =
+      "CRYPT_AES_WG (AES strong encryption (WinZip/Gladman))";
+#  endif
 #  if CRYPT
 #   ifdef PASSWD_FROM_STDIN
        static ZCONST char Far PasswdStdin[] = "PASSWD_FROM_STDIN";
 #   endif
      static ZCONST char Far Decryption[] =
-       "        [decryption, version %d.%d%s of %s]\n";
+       "        CRYPT (traditional (weak) encryption, ver %d.%d%s)\n";
      static ZCONST char Far CryptDate[] = CR_VERSION_DATE;
 #  endif
 #  ifndef __RSXNT__
@@ -835,11 +843,11 @@ int unzip(__G__ argc, argv)
 # endif /* UNICODE_SUPPORT */
 
 
-#ifdef USE_ICONV_MAPPING
-# ifdef UNIX
+# ifdef USE_ICONV_MAPPING
+#  ifdef UNIX
     init_conversion_charsets();
-# endif
-#endif /* USE_ICONV_MAPPING */
+#  endif
+# endif /* USE_ICONV_MAPPING */
 
 # if (defined(__IBMC__) && defined(__DEBUG_ALLOC__))
     extern void DebugMalloc(void);
@@ -959,12 +967,12 @@ int unzip(__G__ argc, argv)
         Claus.
   ---------------------------------------------------------------------------*/
 
-# ifdef DEBUG
-#  ifdef LARGE_FILE_SUPPORT
+# ifdef LARGE_FILE_SUPPORT
   /* test if we can support large files - 10/6/04 EG */
     if (sizeof(zoff_t) < 8) {
-        Info(slide, 0x401, ((char *)slide, "LARGE_FILE_SUPPORT set but not supported\n"));
-        retcode = PK_BADERR;
+        Info(slide, 0x401, ((char *)slide,
+         "LARGE_FILE_SUPPORT set but not supported\n"));
+        retcode = PK_COMPERR;
         goto cleanup_and_exit;
     }
     /* test if we can show 64-bit values */
@@ -985,12 +993,46 @@ int unzip(__G__ argc, argv)
         {
             Info(slide, 0x401, ((char *)slide,
               "Can't show 64-bit values correctly\n"));
-            retcode = PK_BADERR;
+            retcode = PK_COMPERR;
             goto cleanup_and_exit;
         }
     }
-#  endif /* LARGE_FILE_SUPPORT */
+# endif /* LARGE_FILE_SUPPORT */
 
+# ifdef CRYPT_AES_WG
+    /* Verify the AES compile-time endian decision. */
+    {
+        union {
+            int i;
+            char b[ 4];
+        } bi;
+
+#  ifndef PLATFORM_BYTE_ORDER
+#   define ENDI_BYTE 0x00
+#   define ENDI_PROB "(Undefined)"
+#  elif PLATFORM_BYTE_ORDER == AES_LITTLE_ENDIAN
+#   define ENDI_BYTE 0x78
+#   define ENDI_PROB "Little"
+#  elif PLATFORM_BYTE_ORDER == AES_BIG_ENDIAN
+#   define ENDI_BYTE 0x12
+#   define ENDI_PROB "Big"
+#  else
+#   define ENDI_BYTE 0xff
+#   define ENDI_PROB "(Unknown)"
+#  endif
+
+        bi.i = 0x12345678;
+        if (bi.b[ 0] != ENDI_BYTE)
+        {
+            Info(slide, 0x401, ((char *)slide,
+             "Bad AES compile-time endian: %s\n", ENDI_PROB));
+            retcode = PK_COMPERR;
+            goto cleanup_and_exit;
+        }
+    }
+# endif /* def CRYPT_AES_WG */
+
+# ifdef DEBUG
     /* 2004-11-30 SMS.
        Test the NEXTBYTE macro for proper operation.
     */
@@ -1011,7 +1053,7 @@ int unzip(__G__ argc, argv)
             Info(slide, 0x401, ((char *)slide,
  "NEXTBYTE macro failed.  Try compiling with ALT_NEXTBYTE defined?"));
 
-            retcode = PK_BADERR;
+            retcode = PK_COMPERR;
             goto cleanup_and_exit;
         }
     }
@@ -3425,14 +3467,18 @@ static void show_version_info(__G)
           LoadFarStringSmall(WildStopAtDir)));
         ++numopts;
 #  endif
+#  if CRYPT_AES_WG
+        Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
+          LoadFarStringSmall(AesWgDecryption)));
+        ++numopts;
+#  endif
 #  if CRYPT
 #   ifdef PASSWD_FROM_STDIN
         Info(slide, 0, ((char *)slide, LoadFarString(CompileOptFormat),
           LoadFarStringSmall(PasswdStdin)));
 #   endif
         Info(slide, 0, ((char *)slide, LoadFarString(Decryption),
-          CR_MAJORVER, CR_MINORVER, CR_BETA_VER,
-          LoadFarStringSmall(CryptDate)));
+          CR_MAJORVER, CR_MINORVER, CR_BETA_VER));
         ++numopts;
 #  endif /* CRYPT */
         if (numopts == 0)

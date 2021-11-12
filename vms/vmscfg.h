@@ -16,6 +16,9 @@
 /* Workaround for broken header files of older DECC distributions
  * that are incompatible with the /NAMES=AS_IS qualifier. */
 #define cma$tis_errno_get_addr CMA$TIS_ERRNO_GET_ADDR
+#define sys$assign SYS$ASSIGN
+#define sys$dassgn SYS$DASSGN
+#define sys$qiow SYS$QIOW
 
 /* LARGE FILE SUPPORT - 10/6/04 EG */
 /* This needs to be set before the includes so they set the right sizes */

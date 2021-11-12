@@ -125,7 +125,6 @@ static int extract_or_test_member OF((__GPRO));
 #endif
 
 
-
 /*******************************/
 /*  Strings used in extract.c  */
 /*******************************/
@@ -195,6 +194,11 @@ static ZCONST char Far ExtractMsg[] =
       supposed to require %s bytes%s%s%s\n";
 #endif
 
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+static ZCONST char Far BadAesExtFieldMsg[] =
+  "%s:  bad AES extra field (mode = %d)\n";
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
 static ZCONST char Far BadFileCommLength[] = "%s:  bad file comment length\n";
 static ZCONST char Far LocalHdrSig[] = "local header sig";
 static ZCONST char Far BadLocalHdr[] = "file #%lu:  bad local header\n";
@@ -211,7 +215,7 @@ static ZCONST char Far SkipVolumeLabel[] =
 
 #if defined( UNIX) && defined( __APPLE__)
 static ZCONST char Far AplDblNameTooLong[] =
-  "error:  file name too long with AppleDouble suffix: %s\n";
+  "ERROR:  file name too long with AppleDouble suffix: %s\n";
 #endif /* defined( UNIX) && defined( __APPLE__) */
 
 #ifdef SET_DIR_ATTRIB   /* messages of code for setting directory attributes */
@@ -236,6 +240,10 @@ static ZCONST char Far AplDblNameTooLong[] =
      "finishing deferred symbolic links:\n";
    static ZCONST char Far SymLnkFinish[] =
      "  %-22s -> %s\n";
+# ifdef VMS
+   static ZCONST char Far SymLnkError[] =
+     "  %s\n";
+# endif /* def VMS */
 #endif
 
 #ifndef WINDLL
@@ -283,8 +291,8 @@ static ZCONST char Far NoErrInTestedFiles[] =
 static ZCONST char Far FilesSkipped[] =
   "%lu file%s skipped because of unsupported compression or encoding.\n";
 
-static ZCONST char Far ErrUnzipFile[] = "  error:  %s%s %s\n";
-static ZCONST char Far ErrUnzipNoFile[] = "\n  error:  %s%s\n";
+static ZCONST char Far ErrUnzipFile[] = "ERROR:  %s%s %s\n";
+static ZCONST char Far ErrUnzipNoFile[] = "ERROR:  %s%s\n";
 static ZCONST char Far NotEnoughMem[] = "not enough memory to ";
 static ZCONST char Far InvalidComprData[] = "invalid compressed data to ";
 static ZCONST char Far Inflate[] = "inflate";
@@ -334,9 +342,9 @@ char ZCONST Far TruncNTSD[] =
 #endif /* !SFX */
 
 static ZCONST char Far UnsupportedExtraField[] =
-  "\nerror:  unsupported extra-field compression type (%u)--skipping\n";
+  "ERROR:  unsupported extra-field compression type (%u)--skipping\n";
 static ZCONST char Far BadExtraFieldCRC[] =
-  "error [%s]:  bad extra-field CRC %08lx (should be %08lx)\n";
+  "ERROR [%s]:  bad extra-field CRC %08lx (should be %08lx)\n";
 
 
 
@@ -924,8 +932,8 @@ int extract_or_test_files(__G)    /* return PK-type error code */
 static int store_info(__G)   /* return 0 if skipping, 1 if OK */
     __GDEF
 {
-#ifdef USE_AES
-#  define UNKN_AES (G.crec.compression_method!=AESENCRED)
+#ifdef CRYPT_AES_WG
+#  define UNKN_AES (G.crec.compression_method != AESENCRED)
 #else
 #  define UNKN_AES TRUE       /* AES unknown */
 #endif
@@ -1147,6 +1155,22 @@ static int extract_or_test_entrylist(__G__ numchunk,
     zoff_t bufstart, inbuf_offset, request;
     int error, errcode;
 
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+    ush temp_compression_method;
+    int temp_stored_size_decr;
+#  define REAL_COMPRESSION_METHOD temp_compression_method
+#  define REAL_STORED_SIZE_DECR temp_stored_size_decr
+#else /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+   /* RAND_HEAD_LEN normally comes from crypt.h, but may be disabled,
+    * if CRYPT is not defined.
+    */
+#  ifndef RAND_HEAD_LEN
+#    define RAND_HEAD_LEN 12
+#  endif /* ndef RAND_HEAD_LEN */
+#  define REAL_COMPRESSION_METHOD G.lrec.compression_method
+#  define REAL_STORED_SIZE_DECR RAND_HEAD_LEN
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) [else] */
+
 /* possible values for local skip_entry flag: */
 #define SKIP_NO         0       /* do not skip this entry */
 #define SKIP_Y_EXISTING 1       /* skip this entry, do not overwrite file */
@@ -1337,15 +1361,55 @@ static int extract_or_test_entrylist(__G__ numchunk,
             G.pInfo->cfilname = (char Far *)NULL;
         }
 #endif /* !SFX */
+
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+        /* Analyze any AES encryption extra block before calculating
+         * the true uncompressed file size.
+         */
+        if (G.lrec.compression_method == AESENCRED)
+        {
+            /* Extract info from an AES extra block, if there is one. */
+            /* Set mode negative.  (Valid values are positive.) */
+            G.pInfo->cmpr_mode_aes = -1;
+            /* Scan the extra field for an AES block. */
+            ef_scan_for_aes( G.extra_field,
+                             G.lrec.extra_field_length,
+                             NULL,                      /* AES version, */
+                             NULL,                      /* AES vendor, */
+                             &G.pInfo->cmpr_mode_aes,   /* AES mode. */
+                             &G.pInfo->cmpr_mthd_aes);  /* AES method. */
+
+            if ((G.pInfo->cmpr_mode_aes <= 0) || (G.pInfo->cmpr_mode_aes > 3))
+            {
+                Info(slide, 0x401, ((char *)slide,
+                  LoadFarString(BadAesExtFieldMsg),
+                  FnFilter1(G.filename), G.pInfo->cmpr_mode_aes));
+                continue;  /* this one hosed; try next? */
+            }
+            temp_compression_method = G.pInfo->cmpr_mthd_aes;
+            temp_stored_size_decr = MAC_LENGTH( G.pInfo->cmpr_mode_aes)+
+             SALT_LENGTH( G.pInfo->cmpr_mode_aes)+ PWD_VER_LENGTH;
+        }
+        else
+        {
+            /* Use non-AES values. */
+            temp_compression_method = G.lrec.compression_method;
+            temp_stored_size_decr = RAND_HEAD_LEN;
+        }
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
         /* Size consistency checks must come after reading in the local extra
          * field, so that any Zip64 extension local e.f. block has already
          * been processed.
          */
-        if (G.lrec.compression_method == STORED) {
+        if (REAL_COMPRESSION_METHOD == STORED)
+        {
             zusz_t csiz_decrypted = G.lrec.csize;
 
             if (G.pInfo->encrypted)
-                csiz_decrypted -= 12;
+            {
+                csiz_decrypted -= REAL_STORED_SIZE_DECR;
+            }
             if (G.lrec.ucsize != csiz_decrypted) {
                 Info(slide, 0x401, ((char *)slide,
                   LoadFarStringSmall2(WrnStorUCSizCSizDiff),
@@ -1658,8 +1722,8 @@ reprompt:
     } /* end for-loop (i:  files in current block) */
  
     return error_in_archive;
- 
-} /* end function extract_or_test_entrylistw() */
+
+} /* end function extract_or_test_entrylist() */
 
 
 
@@ -1688,6 +1752,11 @@ static int extract_or_test_entrylistw(__G__ numchunk,
     int skip_entry;
     zoff_t bufstart, inbuf_offset, request;
     int error, errcode;
+
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+    ush temp_compression_method;
+    int temp_stored_size_decr;
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
 
 /* possible values for local skip_entry flag: */
 #define SKIP_NO         0       /* do not skip this entry */
@@ -1927,16 +1996,56 @@ static int extract_or_test_entrylistw(__G__ numchunk,
             zffree(G.pInfo->cfilname);
             G.pInfo->cfilname = (char Far *)NULL;
         }
+
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+        /* Analyze any AES encryption extra block before calculating
+         * the true uncompressed file size.
+         */
+        if (G.lrec.compression_method == AESENCRED)
+        {
+            /* Extract info from an AES extra block, if there is one. */
+            /* Set mode negative.  (Valid values are positive.) */
+            G.pInfo->cmpr_mode_aes = -1;
+            /* Scan the extra field for an AES block. */
+            ef_scan_for_aes( G.extra_field,
+                             G.lrec.extra_field_length,
+                             NULL,                      /* AES version, */
+                             NULL,                      /* AES vendor, */
+                             &G.pInfo->cmpr_mode_aes,   /* AES mode. */
+                             &G.pInfo->cmpr_mthd_aes);  /* AES method. */
+
+            if ((G.pInfo->cmpr_mode_aes <= 0) || (G.pInfo->cmpr_mode_aes > 3))
+            {
+                Info(slide, 0x401, ((char *)slide,
+                  LoadFarString(BadAesExtFieldMsg),
+                  FnFilter1(G.filename), G.pInfo->cmpr_mode_aes));
+                continue;  /* this one hosed; try next? */
+            }
+            temp_compression_method = G.pInfo->cmpr_mthd_aes;
+            temp_stored_size_decr = MAC_LENGTH( G.pInfo->cmpr_mode_aes)+
+             SALT_LENGTH( G.pInfo->cmpr_mode_aes)+ PWD_VER_LENGTH;
+        }
+        else
+        {
+            /* Use non-AES values. */
+            temp_compression_method = G.lrec.compression_method;
+            temp_stored_size_decr = RAND_HEAD_LEN;
+        }
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
 # endif /* !SFX */
         /* Size consistency checks must come after reading in the local extra
          * field, so that any Zip64 extension local e.f. block has already
          * been processed.
          */
-        if (G.lrec.compression_method == STORED) {
+        if (REAL_COMPRESSION_METHOD == STORED)
+        {
             zusz_t csiz_decrypted = G.lrec.csize;
 
             if (G.pInfo->encrypted)
-                csiz_decrypted -= 12;
+            {
+                csiz_decrypted -= REAL_STORED_SIZE_DECR;
+            }
             if (G.lrec.ucsize != csiz_decrypted) {
                 Info(slide, 0x401, ((char *)slide,
                   LoadFarStringSmall2(WrnStorUCSizCSizDiff),
@@ -2276,6 +2385,17 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
     register int b;
     int r, error=PK_COOL;
 
+    /* AES-encrypted data include a trailer which must not be put out.
+     * For STORED data, the output bytes are counted in bytes_put_out,
+     * and limited (below) to the known uncompressed data size.
+     */
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+    zoff_t bytes_put_out;
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+    ush temp_compression_method;
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
 
 /*---------------------------------------------------------------------------
     Initialize variables, buffers, etc.
@@ -2311,14 +2431,14 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
             G.outfile = stdout;
 #endif
 #ifdef DOS_FLX_NLM_OS2_W32
-#if (defined(__HIGHC__) && !defined(FLEXOS))
+#  if (defined(__HIGHC__) && !defined(FLEXOS))
             setmode(G.outfile, _BINARY);
-#else /* !(defined(__HIGHC__) && !defined(FLEXOS)) */
+#  else /* !(defined(__HIGHC__) && !defined(FLEXOS)) */
             setmode(fileno(G.outfile), O_BINARY);
-#endif /* ?(defined(__HIGHC__) && !defined(FLEXOS)) */
-#           define NEWLINE "\r\n"
+#  endif /* ?(defined(__HIGHC__) && !defined(FLEXOS)) */
+#  define NEWLINE "\r\n"
 #else /* !DOS_FLX_NLM_OS2_W32 */
-#           define NEWLINE "\n"
+#  define NEWLINE "\n"
 #endif /* ?DOS_FLX_NLM_OS2_W32 */
 #ifdef VMS
             /* VMS:  required even for stdout! */
@@ -2351,7 +2471,21 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
   ---------------------------------------------------------------------------*/
 
     defer_leftover_input(__G);    /* so NEXTBYTE bounds check will work */
-    switch (G.lrec.compression_method) {
+
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+    if (G.lrec.compression_method == AESENCRED)
+    {
+        /* The "compression_method" is AES, so use the real method. */
+        temp_compression_method = G.pInfo->cmpr_mthd_aes;
+    }
+    else
+    {
+        /* Not AES encrypted, so use the apparent compression_method. */
+        temp_compression_method = G.lrec.compression_method;
+    }
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
+    switch (REAL_COMPRESSION_METHOD) {
         case STORED:
             if (!uO.tflag && QCOND2) {
 #ifdef SYMLINKS
@@ -2375,9 +2509,23 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
 #endif
             G.outptr = redirSlide;
             G.outcnt = 0L;
+
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+            /* Limit AES-encrypted data output to actual uncompressed
+             * size, not including the AES trailer data.
+             */
+            bytes_put_out = 0;
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
             while ((b = NEXTBYTE) != EOF) {
                 *G.outptr++ = (uch)b;
                 if (++G.outcnt == wsize) {
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+                    if (G.outcnt > G.pInfo->uncompr_size- bytes_put_out)
+                    {
+                        G.outcnt = G.pInfo->uncompr_size- bytes_put_out;
+                    }
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
                     error = flush(__G__ redirSlide, G.outcnt, 0);
                     G.outptr = redirSlide;
                     G.outcnt = 0L;
@@ -2385,6 +2533,13 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
                 }
             }
             if (G.outcnt) {        /* flush final (partial) buffer */
+#if defined( CRYPT) && defined( CRYPT_AES_WG)
+                if (G.outcnt > G.pInfo->uncompr_size- bytes_put_out)
+                {
+                    G.outcnt = G.pInfo->uncompr_size- bytes_put_out;
+                }
+#endif /* defined( CRYPT) && defined( CRYPT_AES_WG) */
+
                 r = flush(__G__ redirSlide, G.outcnt, 0);
                 if (error < r) error = r;
             }
@@ -3200,14 +3355,10 @@ static void set_deferred_symlink(__G__ slnk_entry)
 #ifdef VMS
     if (vms_symlink_works == 0)
     {
-        /* Should we be using some UnZip error message function instead
-         * of perror() (or equivalent) for these "symlink error"
-         * messages?
-         */
         Info(slide, 0, ((char *)slide, LoadFarString(SymLnkFinish),
           FnFilter1(linkfname), FnFilter2(linktarget)));
-
-        fprintf( stderr, "Symlink error: %s\n", strerror( ENOSYS));
+        Info(slide, 0x401, ((char *)slide, LoadFarString(SymLnkError),
+          strerror( ENOSYS)));
         free(linktarget);
         return;
     }

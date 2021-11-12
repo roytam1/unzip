@@ -1,4 +1,4 @@
-#                                               25 April 2011.  SMS.
+#                                               11 May 2011.  SMS.
 #
 #    UnZip 6.1 for VMS - MMS (or MMK) Source Description File.
 #
@@ -240,7 +240,7 @@ BUILD_BZIP2 = 1
 # AES options.
 
 .IFDEF AES                      # AES
-CDEFS_AES = , CRYPT_AES, USE_AES, _ENDIAN_H="""endian.h"""
+CDEFS_AES = , CRYPT_AES_WG, _ENDIAN_H="""endian.h"""
 .ENDIF                          # AES
 
 # BZIP2 options.
@@ -267,14 +267,18 @@ CFLAGS_INCL = /include = []
 .ENDIF                              # CFLAGS_INCL
 .ENDIF                          # IZ_ZLIB
 
-# DBG options.
+# DBG, TRC options.
 
 .IFDEF DBG                      # DBG
 CFLAGS_DBG = /debug /nooptimize
 LINKFLAGS_DBG = /debug /traceback
 .ELSE                           # DBG
 CFLAGS_DBG =
+.IFDEF TRC                          # TRC
+LINKFLAGS_DBG = /traceback
+.ELSE                               # TRC
 LINKFLAGS_DBG = /notraceback
+.ENDIF                              # TRC
 .ENDIF                          # DBG
 
 # Large-file options.
