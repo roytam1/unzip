@@ -352,7 +352,9 @@
 /* Static variables that we have to add to Uz_Globs: */
 #if defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)
 #define SYSTEM_SPECIFIC_GLOBALS \
-    int created_dir, renamed_fullpath, fnlen;\
+    int created_dir;\
+    int renamed_fullpath;\
+    size_t fnlen;\
     unsigned nLabelDrive;\
     char lastRootPath[4];\
     wchar_t lastRootPathw[4];\
@@ -363,18 +365,24 @@
     ZCONST wchar_t *wildnamew;\
     char *dirname, matchname[FILNAMSIZ];\
     wchar_t *dirnamew, matchnamew[FILNAMSIZ];\
-    int rootlen, have_dirname, dirnamelen, notfirstcall;\
+    size_t dirnamelen;\
+    size_t rootlen;\
+    int have_dirname, notfirstcall;\
     zvoid *wild_dir;
 #else /* (defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)) */
 #define SYSTEM_SPECIFIC_GLOBALS \
-    int created_dir, renamed_fullpath, fnlen;\
+    int created_dir;\
+    int renamed_fullpath;\
+    size_t fnlen;\
     unsigned nLabelDrive;\
     char lastRootPath[4];\
     int lastVolOldFAT, lastVolLocTim;\
     char *rootpath, *buildpathHPFS, *buildpathFAT, *endHPFS, *endFAT;\
     ZCONST char *wildname;\
     char *dirname, matchname[FILNAMSIZ];\
-    int rootlen, have_dirname, dirnamelen, notfirstcall;\
+    size_t dirnamelen;\
+    size_t rootlen;\
+    int have_dirname, notfirstcall;\
     zvoid *wild_dir;
 #endif /* ?(defined(UNICODE_SUPPORT) && defined(WIN32_WIDE)) */
 

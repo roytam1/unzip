@@ -3762,7 +3762,7 @@ static void show_options(__G)
     __GDEF
 {
     extent i;
-    int lolen;
+    size_t lolen;
     char optiontext[200];
     char gr[4];
     char sh[7];
@@ -4573,14 +4573,14 @@ static unsigned long get_shortopt(__G__ option_group, args, argnum, optchar,
   int option_group;
   ZCONST char **args;
   int argnum;
-  int *optchar;
+  size_t *optchar;
   int *negated;
   char **value;
   int *option_num;
   int depth;
 {
   ZCONST char *shortopt;
-  int clen;
+  size_t clen;
   ZCONST char *nextchar;
   ZCONST char *s;
   ZCONST char *start;

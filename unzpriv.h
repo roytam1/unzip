@@ -3285,7 +3285,7 @@ char    *GetLoadPath     OF((__GPRO));                              /* local */
 #ifdef _MBCS
 #  define STRLOWER(str1, str2) \
    { \
-       char  *p, *q, c; unsigned i; \
+       char  *p, *q, c; size_t i; \
        p = (char *)(str1); \
        q = (char *)(str2); \
        while ((c = *p) != '\0') { \
