@@ -4,7 +4,7 @@
 
 #==============================================================================
 # unix/configure: Detect feature support and pass that information to Makefile.
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo             Revised: 2014-05-08
+# - For UnZip, UnZipSFX, fUnZip and ZipInfo             Revised: 2014-05-10
 #
 # Copyright (c) 2004-2014 Info-ZIP.  All rights reserved.
 #
@@ -270,9 +270,9 @@ LIB_UNZIP=''                               # UnZip object library
 LIB_Z=''                                   # ZLIB compression
 
 # Private object library base names.
-L_AES_WG='iz_prvt_aes'
-L_LZMA='iz_prvt_lzma'
-L_PPMD='iz_prvt_ppmd'
+L_AES_WG='iz_aes_wg'
+L_LZMA='iz_lzma'
+L_PPMD='iz_ppmd'
 
 # Build makefiles.
 MK_BZ='Makefile'                           # BZIP2 compression
@@ -1247,7 +1247,6 @@ _EOF_
       ;;
 esac
 
-lprod=0
 #------------------------------------------------------------------------------
 # E) Configure optional AES (WinZip/Gladman) encryption library.
 #------------------------------------------------------------------------------
@@ -1274,14 +1273,9 @@ _EOF_
       if [ $status -eq 0 ]; then
         LIB_AES_WG="${PROD}/lib${L_AES_WG}.a"
         CFLAGS_TST="${CFLAGS_TST} -DCRYPT_AES_WG"
-        if [ $lprod -eq 0 ]; then
-          lprod=1
-          LFLAGS1="${LFLAGS1} -L${PROD}"
-        fi
-        LFLAGS2="${LFLAGS2} -l${L_AES_WG}"
         echo '  Yes.'
         echo "-- Including AES_WG encryption support."
-        echo "-- Building lib${L_AES_WG}.a in ${PROD}/ directory."
+        echo "-- Building ${PROD}/lib${L_AES_WG}.a."
       else
         echo '  No.'
         echo "^^ AES_WG test build failed. Check aes_wg/ directory."
@@ -1328,14 +1322,9 @@ _EOF_
       if [ $status -eq 0 ]; then
         LIB_LZMA="${PROD}/lib${L_LZMA}.a"
         CFLAGS_TST="${CFLAGS_TST} -DLZMA_SUPPORT"
-        if [ $lprod -eq 0 ]; then
-          lprod=1
-          LFLAGS1="${LFLAGS1} -L${PROD}"
-        fi
-        LFLAGS2="${LFLAGS2} -l${L_LZMA}"
         echo '  Yes.'
         echo "-- Including LZMA compression support."
-        echo "-- Building lib${L_LZMA}.a in ${PROD}/ directory."
+        echo "-- Building ${PROD}/lib${L_LZMA}.a."
       else
         echo '  No.'
         echo "^^ LZMA test build failed. Check szip/ directory."
@@ -1382,14 +1371,9 @@ _EOF_
       if [ $status -eq 0 ]; then
         LIB_PPMD="${PROD}/lib${L_PPMD}.a"
         CFLAGS_TST="${CFLAGS_TST} -DPPMD_SUPPORT"
-        if [ $lprod -eq 0 ]; then
-          lprod=1
-          LFLAGS1="${LFLAGS1} -L${PROD}"
-        fi
-        LFLAGS2="${LFLAGS2} -l${L_PPMD}"
         echo '  Yes.'
         echo "-- Including PPMd compression support."
-        echo "-- Building lib${L_PPMD}.a in ${PROD}/ directory."
+        echo "-- Building ${PROD}/lib${L_PPMD}.a."
       else
         echo '  No.'
         echo "^^ PPMd test build failed.  Check szip/ directory."

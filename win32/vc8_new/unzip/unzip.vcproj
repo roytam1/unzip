@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9.00"
+	Version="8.00"
 	Name="unzip"
 	ProjectGUID="{69B450BF-447C-40BA-9EE2-2DA1E3FD4E7F}"
 	RootNamespace="unzip"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
 	>
 	<Platforms>
 		<Platform
@@ -115,11 +114,9 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="2"
-				EnableIntrinsicFunctions="true"
 				AdditionalIncludeDirectories="..\..\..\bzip2"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;ASM_CRC;x_BZIP2_SUPPORT;x_CRYPT_AES_WG;LZMA_SUPPORT;PPMD_SUPPORT;x_SYMLINKS"
 				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
 				DebugInformationFormat="3"

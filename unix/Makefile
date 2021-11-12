@@ -1,6 +1,6 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2014-05-08
+# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2014-05-10
 #
 # Copyright (c) 2004-2014 Info-ZIP.  All rights reserved.
 #
@@ -538,16 +538,16 @@ O_PPMD   = $(PROD)/Ppmd8.o      \
 #----------------------------------------------------------------------------
 
 # object archive: AES (WinZip/Gladman) encryption
-AR_AES   = $(PROD)/libiz_prvt_aes.a
+AR_AES   = $(PROD)/libiz_aes_wg.a
 
 # object archive: BZIP2 compression
 AR_BZ    = bzip2/libbz2.a
 
 # object archive: LZMA compression
-AR_LZMA  = $(PROD)/libiz_prvt_lzma.a
+AR_LZMA  = $(PROD)/libiz_lzma.a
 
 # object archive: PPMd compression
-AR_PPMD  = $(PROD)/libiz_prvt_ppmd.a
+AR_PPMD  = $(PROD)/libiz_ppmd.a
 
 # object archive: Callable UnZip
 AR_UNZIP = $(PROD)/libizunzip.a
@@ -1055,19 +1055,22 @@ $(AR_UNZIP): $(O_UNZIPL) $(O_UNZIPN) $(LIB_AES_WG) $(LIB_LZMA) $(LIB_PPMD)
 
 $(PPGM_UNZIP): $(O_UNZIP) $(LIB_AES_WG) $(LIB_BZ) $(LIB_LZMA) \
                 $(LIB_PPMD) $(LIB_Z)
-	$(LD) -o $@ $(LF1) $(O_UNZIP) $(LF2)
+	$(LD) -o $@ $(LF1) $(O_UNZIP) $(LIB_AES_WG) $(LIB_LZMA) \
+         $(LIB_PPMD) $(LF2)
 
 # Link rule: unzipsfx
 
 $(PPGM_SFX): $(O_SFX) $(LIB_AES_WG) $(LIB_BZ) $(LIB_LZMA) \
               $(LIB_PPMD) $(LIB_Z)
-	$(LD) -o $@ $(LF1) $(O_SFX) $(LF2)
+	$(LD) -o $@ $(LF1) $(O_SFX) $(LIB_AES_WG) $(LIB_LZMA) \
+         $(LIB_PPMD) $(LF2)
 
 # Link rule: funzip
 
 $(PPGM_FUZ): $(O_FUZ) $(LIB_AES_WG) $(LIB_BZ) $(LIB_LZMA) \
               $(LIB_PPMD) $(LIB_Z)
-	$(LD) -o $@ $(LF1) $(O_FUZ) $(LF2)
+	$(LD) -o $@ $(LF1) $(O_FUZ) $(LIB_AES_WG) $(LIB_LZMA) \
+         $(LIB_PPMD) $(LF2)
 
 # Link rule: zipinfo
 
