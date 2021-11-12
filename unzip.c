@@ -1027,7 +1027,7 @@ int unzip(__G__ argc, argv)
          /* Parsing error message already emitted.
           * Leave a blank line, and add the (brief) SFX usage message.
           */
-        Info(slide, 0x401, ((char *)slide, "\n\n"));
+        Info(slide, 0x401, ((char *)slide, "\n"));
         USAGE( error);
     }
 
@@ -1388,7 +1388,8 @@ static int setsignalhandler(__G__ p_savedhandler_chain, signal_type,
    multichar short options set to arbitrary unused constant. */
 #define o_hh            0x101
 #define o_LI            0x102
-#define o_so            0x103
+#define o_sc            0x103
+#define o_so            0x104
 
 
 /* The below is from the old main command line code with a few changes.
@@ -1461,7 +1462,7 @@ static struct option_struct far options[] = {
 # endif
     {UZO, "j",  "junk-dirs",       o_NO_VALUE,       o_NEGATABLE,
        'j',  "junk directories, extract names only"},
-# if (defined(ATH_BEO) || defined(MACOS))
+# ifdef J_FLAG
     {UZO, "J",  "junk-attrs",      o_NO_VALUE,       o_NEGATABLE,
        'J',  "Junk AtheOS, BeOS or MacOS file attrs"},
 # endif
@@ -1520,6 +1521,8 @@ static struct option_struct far options[] = {
        'S',  "VMS extract text as Stream LF"},
 # endif
 #ifndef SFX
+    {UZO, "",  "commandline",      o_NO_VALUE,       o_NEGATABLE,
+       o_sc, "show processed command line and exit"},
     {UZO, "",  "options",          o_NO_VALUE,       o_NEGATABLE,
        o_so, "show available options on this system"},
 #endif /* ndef SFX */
@@ -1605,6 +1608,12 @@ static struct option_struct far options[] = {
 #  endif
     {ZIO, "s",  "shorter-list",    o_NO_VALUE,       o_NEGATABLE,
        's',  "shorter list"},
+#ifndef SFX
+    {ZIO, "",  "commandline",      o_NO_VALUE,       o_NEGATABLE,
+       o_sc, "show processed command line and exit"},
+    {ZIO, "",  "options",          o_NO_VALUE,       o_NEGATABLE,
+       o_so, "show available options on this system"},
+#endif /* ndef SFX */
     {ZIO, "t",  "totals-line",     o_NO_VALUE,       o_NEGATABLE,
        't',  "totals line"},
     {ZIO, "T",  "decimal-time",    o_NO_VALUE,       o_NEGATABLE,
@@ -1875,8 +1884,7 @@ int uz_opts(__G__ pargc, pargv)
                 else
                     uO.jflag = TRUE;
                 break;
-#if (defined(ATH_BEO) || defined(MACOS) || \
- (defined( UNIX) && defined( __APPLE__)))
+#ifdef J_FLAG
                 case ('J'):    /* Junk AtheOS, BeOS or MacOS file attributes */
                     if( negative ) {
                         uO.J_flag = FALSE;
@@ -1884,7 +1892,7 @@ int uz_opts(__G__ pargc, pargv)
                         uO.J_flag = TRUE;
                     }
                     break;
-# endif /* ATH_BEO || MACOS */
+# endif /* def J_FLAG */
 # ifdef ATH_BEO_UNX
             case ('K'):
                 if (negative) {
@@ -2013,9 +2021,14 @@ int uz_opts(__G__ pargc, pargv)
                     uO.sflag = TRUE;
                 break;
 # endif /* DOS_FLX_NLM_OS2_W32 */
+# ifndef SFX
+            case (o_sc):   /* show processed command line and exit */
+                showhelp = -3;
+                break;
             case (o_so):   /* show available options on this system */
                 showhelp = -2;
                 break;
+# endif
 # ifdef VMS
             /* VMS:  extract "text" files in Stream_LF format (-a[a]) */
             case ('S'):
@@ -2395,8 +2408,14 @@ opts_done:  /* yes, very ugly...but only used by UnZipSFX with -x xlist */
       return PK_OK;
 # ifndef SFX
     } else if (showhelp == -2) {
+      /* show available options */
       *pargc = -1;
       show_options(__G);
+      return PK_OK;
+    } else if (showhelp == -3) {
+      /* show command line args */
+      *pargc = -1;
+      show_commandline(args);
       return PK_OK;
 # endif /* ndef SFX */
     }
@@ -2765,6 +2784,7 @@ static void help_extended(__G)
   "         Default is to exploit destination file system, preserving cases and",
   "         extended name characters on ODS5 and applying ODS2 filtering on ODS2.",
   "",
+  "  --commandline  Show the processed command line and exit.",
   "",
   "Wildcards:",
   "  Internally unzip supports the following wildcards:",
@@ -3037,6 +3057,31 @@ static void show_options(__G)
         Info(slide, 0, ((char *)slide, "%s\n", optiontext));
     }
 } /* end function show_options() */
+
+/* Print processed command line. */
+void show_commandline(args)
+    char *args[];
+{
+#define MAX_CARG_LEN (WSIZE>>2)
+    extent i;
+    char argtext[MAX_CARG_LEN + 1];
+
+    Info(slide, 0, ((char *)slide, "%s\n\n", "Processed command line:"));
+
+    for (i = 0; args[i]; i++)
+    {
+        if (strlen(args[i]) > MAX_CARG_LEN - 6) {
+            /* If arg too big, truncate it and add ... to end.
+               We are just displaying the args and exiting. */
+            args[i][MAX_CARG_LEN - 6] = '\0';
+            strcat(args[i], " ...");
+        }
+        sprintf(argtext, "\"%s\"", args[i]);
+        Info(slide, 0, ((char *)slide, "%s  ", argtext));
+    }
+    Info(slide, 0, ((char *)slide, "%s", "\n"));
+} /* end function show_commandline() */
+
 
 #  ifndef _WIN32_WCE /* Win CE does not support environment variables */
 #   if (!defined(MODERN) || defined(NO_STDLIB_H))
@@ -3468,23 +3513,23 @@ char optionerrbuf[OPTIONERR_BUF_SIZE + 1];
 
 /* error messages */
 static ZCONST char Far op_not_neg_err[] =
-   "option %s not negatable";
+   "option %s not negatable\n";
 static ZCONST char Far op_req_val_err[] =
-   "option %s requires a value";
+   "option %s requires a value\n";
 static ZCONST char Far op_no_allow_val_err[] =
-   "option %s does not allow a value";
+   "option %s does not allow a value\n";
 static ZCONST char Far sh_op_not_sup_err[] =
-   "short option '%c' not supported";
+   "short option '%c' not supported\n";
 static ZCONST char Far oco_req_val_err[] =
-   "option %s requires one character value";
+   "option %s requires one character value\n";
 static ZCONST char Far oco_no_mbc_err[] =
-   "option %s does not support multibyte values";
+   "option %s does not support multibyte values\n";
 static ZCONST char Far num_req_val_err[] =
-   "option %s requires number value";
+   "option %s requires number value\n";
 static ZCONST char Far long_op_ambig_err[] =
-   "long option '%s' ambiguous";
+   "long option '%s' ambiguous\n";
 static ZCONST char Far long_op_not_sup_err[] =
-   "long option '%s' not supported";
+   "long option '%s' not supported\n";
 
 static ZCONST char Far no_arg_files_err[] = "argument files not enabled\n";
 

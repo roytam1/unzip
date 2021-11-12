@@ -6,21 +6,22 @@ Features added (or removed):
  - Copy over UnZip 6.00 and rename as UnZip 6.10a00.  [EG]
 
 6.10a01 (5 Jul 2010):
- - No feature changes.  [EG]
+ - No feature changes.
 
 6.10a02 (10 Jul 2010):
- - Add new command parser code from new-cmdparser/unz6-newcmdparser-diffs.txt.
-    Some modifications to account for changes in UnZip since code was written.
-    UnZip now supports use of get_option() to parse the command line, adding
-    support for a command table and long options.  Command parsing now mostly
-    similar to that used in Zip, but most of UnZip syntax preserved.  One big
-    difference is inverting an option (making negative) is now done by a
-    trailing "-" instead of a leading one.  See the long help and the manual
-    for the current syntax of these and all commands.  (unzip.c, unzpriv.h,
-    zipinfo.c, vms/cmdline.c) [EG]
- - Changed unix/zipgrep to cope with the new command parser.  Added environment
+ - Add new command parser code from new-cmdparser/unz6-newcmdparser-diffs.txt,
+    which is a modified version of the new Zip parser.  Some modifications to
+    account for changes in UnZip since code was written.  UnZip now supports
+    use of get_option() to parse the command line, adding support for a
+    command table and long options.  Command parsing now mostly similar to
+    that used in Zip, but most of UnZip syntax preserved.  One big difference
+    is inverting an option (making negative) is now done by a trailing "-"
+    instead of a leading one.  See the long help and the manual for the
+    current syntax of these and all commands.  (unzip.c, unzpriv.h, zipinfo.c,
+    vms/cmdline.c) [EG]
+ - Changed zipgrep to cope with the new command parser.  Added environment
     variable ZIPGREP_UNZIP to let the user specify a particular UnZip program
-    to use. [SMS]
+    to use.  (unix/zipgrep) [SMS]
  - Add new option --license to show the license and note added to short help
     displayed when no command arguments that this new option exists.  Allows
     distribution of UnZip under the current Info-ZIP license without additional
@@ -30,7 +31,7 @@ Features added (or removed):
     unzpriv.h, unix/unix.c) [SMS]
  - Add VMS symlink works check.  (extract.c) [SMS]
  - Add new option --options to show all available options.  (unzip.c) [EG]
- - Add strerror() if port does not have one.  Add check for mbstr.h. 
+ - Add strerror() if port does not have one.  Add check for mbstr.h.
     (unzpriv.h, unix/configure, unix/unix.c) [SMS]
  - Add uname calls to get system identification.  (unix/configure, unix/unix.c)
     [SMS]
@@ -41,32 +42,85 @@ Features added (or removed):
  - VMS return code updates and allow restoring old status codes.  (vms/vms.c)
     [SMS]
 
+6.00a03 (30 Jul 2010):
+ - fnfilter() now converts to a wide character string and does the isprint()
+    check on that, avoiding the issue of doing the check on multi-byte
+    characters.  (extract.c, win32/win32.c, unzpriv.h, process.c) [EG]
+ - Update TODO list.  (ToDo) [EG]
+
+6.00a04 (5 Aug 2010):
+ - Updated INSTALL with latest information. [SMS]
+ - Remove 8-bit ASCII characters from ToDo. Add items. [SMS]
+ - Add ZipInfo "C" option to command table.  (unzip.c) [SMS]
+ - Add new option --commandline to show the processed command line and exit.
+    Add new function show_commandline(). Update extended help.  (unzip.c,
+    fileio.c, unzip.h, zipinfo.c) [EG]
+
+6.00a05 (8 Aug 2010):
+ - No feature changes.
+
+6.00a06 (9 Aug 2010):
+ - Update version information in description file.  (file_id.diz) [EG]
+
+6.00a07 (10 Aug 2010):
+ - Add announcement file.  (unzip610a.ann) [EG]
+ - Replace /[NO]CASE_INSENSITIVE with /CASE_MATCH.  (vms/unzip_cli.help,
+    vms/unz_cli.cld) [SMS]
+
 
 Bugs fixed:
 
 6.00a00 (5 Jul 2010):
- - Copy over UnZip 6.00 and rename as UnZip 6.10a00.  [EG]
+ - No bug fixes.
 
 6.00a01 (5 Jul 2010):
- - No bug fixes.  [EG]
+ - No bug fixes.
 
 6.00a02 (10 Jul 2010):
- - No bug fixes.  [EG]
+ - No bug fixes.
 
-6.00a03 (xx Jul 2010):
-- inflate.c: Fixed compile problems involving funzip and use of zlib. [SMS]
-- unzip.c: Changed SFX to allow --license, but not --options.  Removed
-   some redundant "BETA" messages, and an unreachable "return". [SMS]
-- unix/configure, unix/Makefile: Fixed various builder problems involving the
-   use of zlib, or when defining BZIP2_SFX to get bzip2 compression support
-   in UnZipSFX. [SMS]
-- unix/unix.c: Changed some UNIX system ID info to agree with the more precise
-   names used by Zip.  For example, "(HP-UX)" -> "(HP-UX B.11.31 ia64)".
-- acorn/acorn.c, amiga/amiga.c, aosvs/aosvs.c, atari/atari.c, atheos/atheos.c,
-   beos/beos.c, flexos/flexos.c, human68k/human68k.c, macos/source/macos.c,
-   msdos/msdos.c, netware/netware.c, os2/os2.c, qdos/qdos.c, tandem/tanunz.c,
-   unix/unix.c, vms/vms.c, win32/win32.c: Changed VMS version (";nnn")
-   deletion code to leave ";" (no digits) unchanged. [SMS]
+6.00a03 (30 Jul 2010):
+ - Fixed compile problems involving funzip and use of zlib.  (inflate.c) [SMS]
+ - Changed SFX to allow --license, but not --options.  Removed some redundant
+    "BETA" messages, and an unreachable "return".  (unzip.c) [SMS]
+ - Fixed various builder problems involving the use of zlib, or when defining
+    BZIP2_SFX to get bzip2 compression support in UnZipSFX.  (unix/configure,
+    unix/Makefile) [SMS]
+ - Changed some UNIX system ID info to agree with the more precise names used
+    by Zip.  For example, "(HP-UX)" -> "(HP-UX B.11.31 ia64)".  (unix/unix.c)
+    [SMS]
+ - Changed VMS version (";nnn") deletion code to leave ";" (no digits)
+    unchanged.  (acorn/acorn.c, amiga/amiga.c, aosvs/aosvs.c, atari/atari.c,
+    atheos/atheos.c, beos/beos.c, flexos/flexos.c, human68k/human68k.c,
+    macos/source/macos.c, msdos/msdos.c, netware/netware.c, os2/os2.c,
+    qdos/qdos.c, tandem/tanunz.c, unix/unix.c, vms/vms.c, win32/win32.c) [SMS]
+ - Changed argc+1 to argc to work with new parser.  Removed CMS_MVS 'U' option.
+    Changed u0.L_flag-negative to u0.L_flag-1 as negative is now always 0 or 1.
+    (unzip.c) [EG]
+
+6.00a04 (5 Aug 2010):
+ - Set minimum value of u0.X_flag to -1 instead of 0, allowing flag to take on
+    values -1, 0, and 1.  Update -S flag comment.  (unzip.c) [SMS]
+ - Change vms_unzip_cmdline() from ulg to unsigned.  (unzpriv.h) [SMS]
+ - Add newlines to command parser error messages.  (unzip.c) [EG]
+
+6.00a05 (8 Aug 2010):
+ - Change fnfilter() from using code used for Unicode for wide char conversions
+    to using standard ANSI wide calls, avoiding dependencies on zwstring and so
+    the need to restructure that code so it works in all contexts.  (extract.c)
+    [EG]
+
+6.00a06 (9 Aug 2010):
+ - Add (char *) casts in fnfilter().  Add (ulg) cast in utf8_to_ucs4_string().
+    (extract.c, process.c) [SMS]
+
+6.00a07 (10 Aug 2010):
+ - Add more -q- to cancel possible previous -q.  (vms/cmdline.c) [SMS]
+
+6.00a08 (11 Aug 2010):
+ - Worked around a limitation in VAX C V3.1-051 involving "\"-continuation of
+    "#if" directives.  Restored lost "-J" to option table on Mac OS X.
+    (unzip.c, unzip.h) [SMS]
 
 ==================
 
