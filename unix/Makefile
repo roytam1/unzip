@@ -1,6 +1,6 @@
 #==============================================================================
 # unix/Makefile
-# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2018-01-25
+# - For UnZip, fUnZip, UnZipSFX, and ZipInfo            Revised: 2018-12-06
 #
 # Copyright (c) 2004-2018 Info-ZIP.  All rights reserved.
 #
@@ -61,11 +61,11 @@
 #   (when the source kit is present), set the "make" macro NO_AES_WG to
 #   1.
 #
-# LZMA compression - See the files INSTALL and szip/README_LZMA.txt for
+# LZMA compression - See the files INSTALL and lzma/README_LZMA.txt for
 #   more information.  To disable LZMA compression support, set the
 #   "make" macro NO_LZMA to 1.
 #
-# PPMd compression - See the files INSTALL and szip/README_LZMA.txt for
+# PPMd compression - See the files INSTALL and ppmd/README_PPMD.txt for
 #   more information.  To disable PPMd compression support, set the
 #   "make" macro NO_PPMD to 1.
 #
@@ -419,15 +419,17 @@ H_AES    = aes_wg/aes.h     \
            aes_wg/sha1.h
 
 # C header files: LZMA compression
-H_LZMA   = szip/SzVersion.h \
-           szip/LzFind.h    \
-           szip/LzHash.h    \
-           szip/LzmaDec.h   \
-           szip/Types.h
+H_LZMA   = lzma/LzFind.h    \
+           lzma/LzHash.h    \
+           lzma/LzmaDec.h   \
+           lzma/SzTypes.h   \
+           lzma/SzVersion.h
 
 # C header files: PPMd compression
-H_PPMD   = szip/Ppmd.h      \
-           szip/Ppmd8.h
+H_PPMD   = ppmd/Ppmd.h      \
+           ppmd/Ppmd8.h     \
+           ppmd/SzTypes.h   \
+           ppmd/SzVersion.h
 
 #----------------------------------------------------------------------------
 #  Build configuration:  object files
@@ -444,6 +446,9 @@ O_UNZIP  = $(PROD)/unzip.o      \
            $(PROD)/extract.o    \
            $(PROD)/fileio.o     \
            $(PROD)/globals.o    \
+           $(PROD)/iconv_map.o  \
+           $(PROD)/if_lzma.o    \
+           $(PROD)/if_ppmd.o    \
            $(PROD)/inflate.o    \
            $(PROD)/list.o       \
            $(PROD)/match.o      \
@@ -457,21 +462,24 @@ O_UNZIP  = $(PROD)/unzip.o      \
            $(OSDEP_OS)
 
 # object files: UnZip object library.  Modules sensitive to DLL/REENTRANT.
-O_UNZIPL = $(PROD)/api_l.o      \
-           $(PROD)/apihelp_l.o  \
-           $(PROD)/crypt_l.o    \
-           $(PROD)/explode_l.o  \
-           $(PROD)/extract_l.o  \
-           $(PROD)/fileio_l.o   \
-           $(PROD)/globals_l.o  \
-           $(PROD)/inflate_l.o  \
-           $(PROD)/list_l.o     \
-           $(PROD)/process_l.o  \
-           $(PROD)/ttyio_l.o    \
-           $(PROD)/ubz2err_l.o  \
-           $(PROD)/unshrink_l.o \
-           $(PROD)/unzip_l.o    \
-           $(PROD)/zipinfo_l.o  \
+O_UNZIPL = $(PROD)/api_l.o       \
+           $(PROD)/apihelp_l.o   \
+           $(PROD)/crypt_l.o     \
+           $(PROD)/explode_l.o   \
+           $(PROD)/extract_l.o   \
+           $(PROD)/fileio_l.o    \
+           $(PROD)/globals_l.o   \
+           $(PROD)/iconv_map_l.o \
+           $(PROD)/if_lzma_l.o   \
+           $(PROD)/if_ppmd_l.o   \
+           $(PROD)/inflate_l.o   \
+           $(PROD)/list_l.o      \
+           $(PROD)/process_l.o   \
+           $(PROD)/ttyio_l.o     \
+           $(PROD)/ubz2err_l.o   \
+           $(PROD)/unshrink_l.o  \
+           $(PROD)/unzip_l.o     \
+           $(PROD)/zipinfo_l.o   \
            $(OSDEP_OCU:.o=_l.o)
 
 # object files: UnZip object library.  Modules insensitive to DLL/REENTRANT.
@@ -489,18 +497,21 @@ O_DLL    = $(O_UNZIP)           \
 O_STUB   = $(PROD)/unzipstb.o
 
 # object files: unzipsfx
-O_SFX    = $(PROD)/unzipsfx.o   \
-           $(PROD)/crc32_s.o    \
-           $(PROD)/crypt_s.o    \
-           $(PROD)/extract_s.o  \
-           $(PROD)/fileio_s.o   \
-           $(PROD)/globals_s.o  \
-           $(PROD)/inflate_s.o  \
-           $(PROD)/match_s.o    \
-           $(PROD)/process_s.o  \
-           $(PROD)/ttyio_s.o    \
-           $(PROD)/ubz2err_s.o  \
-           $(OSDEP_OCS:.o=_s.o) \
+O_SFX    = $(PROD)/unzipsfx.o    \
+           $(PROD)/crc32_s.o     \
+           $(PROD)/crypt_s.o     \
+           $(PROD)/extract_s.o   \
+           $(PROD)/fileio_s.o    \
+           $(PROD)/globals_s.o   \
+           $(PROD)/iconv_map_s.o \
+           $(PROD)/if_lzma_s.o   \
+           $(PROD)/if_ppmd_s.o   \
+           $(PROD)/inflate_s.o   \
+           $(PROD)/match_s.o     \
+           $(PROD)/process_s.o   \
+           $(PROD)/ttyio_s.o     \
+           $(PROD)/ubz2err_s.o   \
+           $(OSDEP_OCS:.o=_s.o)  \
            $(OSDEP_OS)
 
 # object files: funzip
@@ -679,7 +690,8 @@ VERSION = Version 6.1
 
 # A) Core UnZip C files
 
-$(PROD)/unzip.o:      unzip.c     $(H_UNZIP) consts.h crypt.h unzvers.h
+$(PROD)/unzip.o:      unzip.c     $(H_UNZIP) consts.h crypt.h \
+                       if_lzma.h if_ppmd.h unzvers.h
 	$(CC) -c $(CF) -o $@ unzip.c
 
 $(PROD)/crc32.o:      crc32.c     $(H_UNZIP) crc32.h zip.h
@@ -694,7 +706,8 @@ $(PROD)/envargs.o:    envargs.c   $(H_UNZIP)
 $(PROD)/explode.o:    explode.c   $(H_UNZIP)
 	$(CC) -c $(CF) -o $@ explode.c
 
-$(PROD)/extract.o:    extract.c   $(H_UNZIP) crc32.h crypt.h
+$(PROD)/extract.o:    extract.c   $(H_UNZIP) crc32.h crypt.h \
+                       if_lzma.h if_ppmd.h
 	$(CC) -c $(CF) -o $@ extract.c
 
 $(PROD)/fileio.o:     fileio.c    $(H_UNZIP) crc32.h crypt.h ebcdic.h ttyio.h
@@ -702,6 +715,15 @@ $(PROD)/fileio.o:     fileio.c    $(H_UNZIP) crc32.h crypt.h ebcdic.h ttyio.h
 
 $(PROD)/globals.o:    globals.c   $(H_UNZIP)
 	$(CC) -c $(CF) -o $@ globals.c
+
+$(PROD)/iconv_map.o:  iconv_map.c  $(H_UNZIP)
+	$(CC) -c $(CF) -o $@ iconv_map.c
+
+$(PROD)/if_lzma.o:    if_lzma.c   $(H_UNZIP)
+	$(CC) -c $(CF) -o $@ if_lzma.c
+
+$(PROD)/if_ppmd.o:    if_ppmd.c   $(H_UNZIP)
+	$(CC) -c $(CF) -o $@ if_ppmd.c
 
 $(PROD)/inflate.o:    inflate.c   $(H_UNZIP) inflate.h
 	$(CC) -c $(CF) -o $@ inflate.c
@@ -712,7 +734,7 @@ $(PROD)/list.o:       list.c      $(H_UNZIP)
 $(PROD)/match.o:      match.c     $(H_UNZIP)
 	$(CC) -c $(CF) -o $@ match.c
 
-$(PROD)/process.o:    process.c   $(H_UNZIP) crc32.h
+$(PROD)/process.o:    process.c   $(H_UNZIP) crc32.h if_lzma.h if_ppmd.h
 	$(CC) -c $(CF) -o $@ process.c
 
 $(PROD)/ttyio.o:      ttyio.c     $(H_UNZIP) crypt.h ttyio.h zip.h
@@ -744,7 +766,8 @@ $(PROD)/crypt_l.o:    crypt.c     $(H_UNZIPL) crc32.h crypt.h ttyio.h zip.h
 $(PROD)/explode_l.o:  explode.c   $(H_UNZIPL)
 	$(CC) -c $(CF) -DDLL -o $@ explode.c
 
-$(PROD)/extract_l.o:  extract.c   $(H_UNZIPL) crc32.h crypt.h
+$(PROD)/extract_l.o:  extract.c   $(H_UNZIPL) crc32.h crypt.h \
+                       if_lzma.h if_ppmd.h
 	$(CC) -c $(CF) -DDLL -o $@ extract.c
 
 $(PROD)/fileio_l.o:   fileio.c    $(H_UNZIPL) crc32.h crypt.h ebcdic.h ttyio.h
@@ -753,13 +776,22 @@ $(PROD)/fileio_l.o:   fileio.c    $(H_UNZIPL) crc32.h crypt.h ebcdic.h ttyio.h
 $(PROD)/globals_l.o:  globals.c   $(H_UNZIPL)
 	$(CC) -c $(CF) -DDLL -o $@ globals.c
 
+$(PROD)/iconv_map_l.o:  iconv_map.c  $(H_UNZIPL)
+	$(CC) -c $(CF) -DDLL -o $@ iconv_map.c
+
+$(PROD)/if_lzma_l.o:  if_lzma.c   $(H_UNZIPL)
+	$(CC) -c $(CF) -DDLL -o $@ if_lzma.c
+
+$(PROD)/if_ppmd_l.o:  if_ppmd.c   $(H_UNZIPL)
+	$(CC) -c $(CF) -DDLL -o $@ if_ppmd.c
+
 $(PROD)/inflate_l.o:  inflate.c   $(H_UNZIPL) inflate.h
 	$(CC) -c $(CF) -DDLL -o $@ inflate.c
 
 $(PROD)/list_l.o:     list.c      $(H_UNZIPL)
 	$(CC) -c $(CF) -DDLL -o $@ list.c
 
-$(PROD)/process_l.o:  process.c   $(H_UNZIPL)
+$(PROD)/process_l.o:  process.c   $(H_UNZIPL) crc32.h if_lzma.h if_ppmd.h
 	$(CC) -c $(CF) -DDLL -o $@ process.c
 
 $(PROD)/ttyio_l.o:    ttyio.c     $(H_UNZIPL) crypt.h ttyio.h zip.h
@@ -774,7 +806,8 @@ $(PROD)/unreduce_l.o: unreduce.c  $(H_UNZIPL) expand.c
 $(PROD)/unshrink_l.o: unshrink.c  $(H_UNZIPL)
 	$(CC) -c $(CF) -DDLL -o $@ unshrink.c
 
-$(PROD)/unzip_l.o:    unzip.c     $(H_UNZIPL) consts.h crypt.h unzvers.h
+$(PROD)/unzip_l.o:    unzip.c     $(H_UNZIPL) consts.h crypt.h \
+                       if_lzma.h if_ppmd.h unzvers.h
 	$(CC) -c $(CF) -DDLL -o $@ unzip.c
 
 $(PROD)/zipinfo_l.o:  zipinfo.c   $(H_UNZIPL)
@@ -832,7 +865,8 @@ $(PROD)/win32i64_l.o: win32/win32i64.c  $(H_UNZIP)
 # C Compile rules: UnZipSFX
 
 # A) Core UnZipSFX C files
-$(PROD)/unzipsfx.o:   unzip.c     $(H_UNZIP) crypt.h unzvers.h consts.h
+$(PROD)/unzipsfx.o:   unzip.c     $(H_UNZIP) consts.h crypt.h \
+                                   if_lzma.h if_ppmd.h unzvers.h
 	$(CC) -c $(CF) -DSFX -o $@ unzip.c
 
 $(PROD)/crc32_s.o:    crc32.c     $(H_UNZIP) zip.h crc32.h
@@ -841,7 +875,8 @@ $(PROD)/crc32_s.o:    crc32.c     $(H_UNZIP) zip.h crc32.h
 $(PROD)/crypt_s.o:    crypt.c     $(H_UNZIP) zip.h crypt.h crc32.h ttyio.h
 	$(CC) -c $(CF) -DSFX -o $@ crypt.c
 
-$(PROD)/extract_s.o:  extract.c   $(H_UNZIP) crc32.h crypt.h
+$(PROD)/extract_s.o:  extract.c   $(H_UNZIP) crc32.h crypt.h \
+                       if_lzma.h if_ppmd.h
 	$(CC) -c $(CF) -DSFX -o $@ extract.c
 
 $(PROD)/fileio_s.o:   fileio.c    $(H_UNZIP) crc32.h crypt.h ttyio.h ebcdic.h
@@ -850,13 +885,22 @@ $(PROD)/fileio_s.o:   fileio.c    $(H_UNZIP) crc32.h crypt.h ttyio.h ebcdic.h
 $(PROD)/globals_s.o:  globals.c   $(H_UNZIP)
 	$(CC) -c $(CF) -DSFX -o $@ globals.c
 
+$(PROD)/iconv_map_s.o:  iconv_map.c   $(H_UNZIP)
+	$(CC) -c $(CF) -DSFX -o $@ iconv_map.c
+
+$(PROD)/if_lzma_s.o:  if_lzma.c   $(H_UNZIP)
+	$(CC) -c $(CF) -DSFX -o $@ if_lzma.c
+
+$(PROD)/if_ppmd_s.o:  if_ppmd.c   $(H_UNZIP)
+	$(CC) -c $(CF) -DSFX -o $@ if_ppmd.c
+
 $(PROD)/inflate_s.o:  inflate.c   $(H_UNZIP) inflate.h
 	$(CC) -c $(CF) -DSFX -o $@ inflate.c
 
 $(PROD)/match_s.o:    match.c     $(H_UNZIP)
 	$(CC) -c $(CF) -DSFX -o $@ match.c
 
-$(PROD)/process_s.o:  process.c   $(H_UNZIP) crc32.h
+$(PROD)/process_s.o:  process.c   $(H_UNZIP) crc32.h if_lzma.h if_ppmd.h
 	$(CC) -c $(CF) -DSFX -o $@ process.c
 
 $(PROD)/ttyio_s.o:    ttyio.c     $(H_UNZIP) zip.h crypt.h ttyio.h
@@ -951,21 +995,21 @@ $(PROD)/sha1.o:     aes_wg/sha1.c     $(H_AES)
 
 # C Compile rules: LZMA compression
 
-$(PROD)/LzFind.o:   szip/LzFind.c     $(H_LZMA)
-	$(CC) -c $(CF) -o $@ szip/LzFind.c
+$(PROD)/LzFind.o:   lzma/LzFind.c     $(H_LZMA)
+	$(CC) -c $(CF) -o $@ lzma/LzFind.c
 
-$(PROD)/LzmaDec.o:  szip/LzmaDec.c    $(H_LZMA)
-	$(CC) -c $(CF) -o $@ szip/LzmaDec.c
+$(PROD)/LzmaDec.o:  lzma/LzmaDec.c    $(H_LZMA)
+	$(CC) -c $(CF) -o $@ lzma/LzmaDec.c
 
 #----------------------------------------------------------------------------
 
 # C Compile rules: PPMd compression
 
-$(PROD)/Ppmd8.o:    szip/Ppmd8.c      $(H_PPMD)
-	$(CC) -c $(CF) -o $@ szip/Ppmd8.c
+$(PROD)/Ppmd8.o:    ppmd/Ppmd8.c      $(H_PPMD)
+	$(CC) -c $(CF) -o $@ ppmd/Ppmd8.c
 
-$(PROD)/Ppmd8Dec.o: szip/Ppmd8Dec.c   $(H_PPMD)
-	$(CC) -c $(CF) -o $@ szip/Ppmd8Dec.c
+$(PROD)/Ppmd8Dec.o: ppmd/Ppmd8Dec.c   $(H_PPMD)
+	$(CC) -c $(CF) -o $@ ppmd/Ppmd8Dec.c
 
 #----------------------------------------------------------------------------
 #  Build rules: Assemble (.S -> .o)
