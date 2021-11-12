@@ -417,6 +417,14 @@ _EOF_
 $CC $CFLAGS -c conftest.c >/dev/null 2>/dev/null
 [ $? -ne 0 ] && CFLAGSR="${CFLAGSR} -DNO_ERRNO"
 
+echo Check for strerror
+cat > conftest.c << _EOF_
+#include <string.h>
+int main() { strerror( 0); return 0; }
+_EOF_
+$CC $CFLAGS -o conftest conftest.c >/dev/null 2>/dev/null
+[ $? -ne 0 ] && CFLAGSR="${CFLAGSR} -DNEED_STRERROR"
+
 echo Check for directory libraries
 cat > conftest.c << _EOF_
 int main() { return closedir(opendir(".")); }
@@ -476,7 +484,7 @@ CFLAGSR="${CFLAGSR} ${OPT}"
 
 echo Check for MBCS include files
 OPT=""
-for inc in mbstring.h mbctype.h
+for inc in mbstr.h mbstring.h mbctype.h
 do
    echo "#include <$inc>" > conftest.c
    $CPP conftest.c > /dev/null 2>/dev/null
@@ -509,13 +517,26 @@ else
 #
   echo "-- have MBCS support"
   CFLAGSR="${CFLAGSR} -D_MBCS"
-# check for library-supplied functions
-# add FUNCTION_NAME='function_name' to flags if found
+# Realistic check for working MBCS library functions.
+# Add FUNCTION_NAME='function_name' to flags if found.
   for func in mbschr mbsrchr
   do
     echo Check for MBCS $func
-    echo "int main() { $func(); return 0; }" > conftest.c
-    $CC $BFLAG -o conftest conftest.c >/dev/null 2>/dev/null
+    cat > conftest.c << _EOF_
+#include <stdlib.h>
+#ifdef HAVE_MBSTR_H
+#  include <mbstr.h>
+#endif
+int main()
+{
+  char *tst;
+  tst = $func( "abc", 'b');
+  printf( " tst: >%s<.\n", tst);
+  return (tst == NULL);
+}
+_EOF_
+    $CC ${CFLAGS} ${CFLAGSR} -o conftest conftest.c >/dev/null 2>/dev/null
+    [ $? -eq 0 ] && ./conftest > /dev/null
     [ $? -eq 0 ] && CFLAGSR="${CFLAGSR} -D`echo $func | tr '[a-z]' '[A-Z]'`=$func"
   done
 fi
@@ -644,6 +665,28 @@ else
   fi
 fi
 
+# System identification
+UNAME_M=''
+uname_m=` uname -m 2> /dev/null ` && \
+ UNAME_M=" -DUNAME_M='\\\"${uname_m}\\\"'"
+UNAME_O=''
+uname_o=` uname -o 2> /dev/null ` && \
+ UNAME_O=" -DUNAME_O='\\\"${uname_o}\\\"'"
+UNAME_P=''
+uname_p=` uname -p 2> /dev/null ` && \
+ UNAME_P=" -DUNAME_P='\\\"${uname_p}\\\"'"
+UNAME_R=''
+uname_r=` uname -r 2> /dev/null ` && \
+ UNAME_R=" -DUNAME_R='\\\"${uname_r}\\\"'"
+UNAME_S=''
+uname_s=` uname -s 2> /dev/null ` && \
+ UNAME_S=" -DUNAME_S='\\\"${uname_s}\\\"'"
+UNAME_V=''
+uname_v=` uname -v 2> /dev/null ` && \
+ UNAME_V=" -DUNAME_V='\\\"${uname_v}\\\"'"
+
+CFLAGSR="${CFLAGSR} ${UNAME_M} ${UNAME_O} ${UNAME_P} ${UNAME_R}"
+CFLAGSR="${CFLAGSR} ${UNAME_S} ${UNAME_V}"
 
 echo CC=\"${CC}\" CF=\"${CFLAGSR} ${D_USE_BZ2}\" CRCA_O=\"${CRC32OA}\" \
        AS=\"${CC} -c\" LFLAGS1=\"${LFLAGS1}\" LF2=\"${LFLAGS2}\" \

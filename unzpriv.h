@@ -669,6 +669,10 @@
    typedef unsigned int extent;
 #endif /* ?MODERN */
 
+#ifdef NEED_STRERROR
+   char *strerror();
+#endif /* def NEED_STRERROR */
+
 
 
 
@@ -1226,6 +1230,9 @@
  */
 #ifdef _MBCS
 #  include <locale.h>
+#  ifdef HAVE_MBSTR_H
+#    include <mbstr.h>
+#  endif /* def HAVE_MBSTR_H */
    /* Multi Byte Character Set */
 #  define ___MBS_TMP_DEF  char *___tmp_ptr;
 #  define ___TMP_PTR      ___tmp_ptr
@@ -2565,6 +2572,14 @@ int    huft_build                OF((__GPRO__ ZCONST unsigned *b, unsigned n,
                             const char *path, z_stat *buf));      /* win32.c */
 #endif
 #endif
+
+/*---------------------------------------------------------------------------
+    Mac-OS-X-only functions:
+  ---------------------------------------------------------------------------*/
+
+#if defined( UNIX) && defined( __APPLE__)
+    int vol_attr_ok( const char *path);
+#endif /* defined( UNIX) && defined( __APPLE__) */
 
 /*---------------------------------------------------------------------------
     Miscellaneous/shared functions:

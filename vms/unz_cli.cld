@@ -25,6 +25,7 @@ Define	Verb		UNZIP
 	Qualifier	TRAVERSE_DIRS, Negatable
 	Qualifier	UPPERCASE, Negatable
 	Qualifier	UPDATE, Negatable
+	Qualifier	VERBOSE, Nonnegatable
 	Qualifier	VERSION, Negatable
 	Qualifier	RESTORE, VALUE(TYPE=RESTORE_KEYWORDS, LIST), Negatable
 	Qualifier	COMMENT, Negatable

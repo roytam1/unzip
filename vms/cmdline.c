@@ -217,7 +217,7 @@ $DESCRIPTOR(cli_information,    "ZIPINFO");             /* -Z */
 $DESCRIPTOR(cli_short,          "SHORT");               /* -Zs */
 $DESCRIPTOR(cli_medium,         "MEDIUM");              /* -Zm */
 $DESCRIPTOR(cli_long,           "LONG");                /* -Zl */
-$DESCRIPTOR(cli_verbose,        "VERBOSE");             /* -Zv */
+$DESCRIPTOR(cli_verbose,        "VERBOSE");             /* -v, -Zv */
 $DESCRIPTOR(cli_header,         "HEADER");              /* -Zh */
 $DESCRIPTOR(cli_totals,         "TOTALS");              /* -Zt */
 $DESCRIPTOR(cli_times,          "TIMES");               /* -ZT */
@@ -660,6 +660,13 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
             *ptr++ = '-';
         if (status != CLI$_ABSENT)
             *ptr++ = 'u';
+
+        /*
+        **  Verbose ("-v" report).
+        */
+        status = cli$present(&cli_verbose);
+        if (status != CLI$_ABSENT)
+            *ptr++ = 'v';
 
         /*
         **  Version (retain VMS/DEC-20 file versions)

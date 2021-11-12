@@ -256,6 +256,17 @@ M  pipe through \"more\" pager              -s  spaces in filenames => '_'\n\n";
 #else /* !VMS */
 #ifdef ATH_BEO_UNX
    static ZCONST char Far local2[] = " -X  restore UID/GID info";
+#  ifdef __APPLE__
+#ifdef MORE
+   static ZCONST char Far local3[] = "\
+  -K  keep setuid/setgid/tacky permissions   -M  pipe through \"more\" pager\n\
+  -J  No special AppleDouble file handling\n";
+#else
+   static ZCONST char Far local3[] = "\
+  -K  keep setuid/setgid/tacky permissions   -J  No spec'l AplDbl file handling\
+\n";
+#endif
+#  else /* def __APPLE__ */
 #ifdef MORE
    static ZCONST char Far local3[] = "\
   -K  keep setuid/setgid/tacky permissions   -M  pipe through \"more\" pager\n";
@@ -263,6 +274,7 @@ M  pipe through \"more\" pager              -s  spaces in filenames => '_'\n\n";
    static ZCONST char Far local3[] = "\
   -K  keep setuid/setgid/tacky permissions\n";
 #endif
+#  endif /* def __APPLE__ [else] */
 #else /* !ATH_BEO_UNX */
 #ifdef TANDEM
    static ZCONST char Far local2[] = "\
@@ -1246,6 +1258,10 @@ int unzip(__G__ argc, argv)
 # endif
 #endif
 
+#if defined( UNIX) && defined( __APPLE__)
+    /* Set flag according to the capabilities of the destination volume. */
+    G.exdir_attr_ok = vol_attr_ok( (uO.exdir == NULL) ? "." : uO.exdir);
+#endif /* defined( UNIX) && defined( __APPLE__) */
 
 /*---------------------------------------------------------------------------
     Okey dokey, we have everything we need to get started.  Let's roll.
@@ -1523,7 +1539,8 @@ int uz_opts(__G__ pargc, pargv)
                     else
                         uO.jflag = TRUE;
                     break;
-#if (defined(ATH_BEO) || defined(MACOS))
+#if (defined(ATH_BEO) || defined(MACOS) || \
+ (defined( UNIX) && defined( __APPLE__)))
                 case ('J'):    /* Junk AtheOS, BeOS or MacOS file attributes */
                     if( negative ) {
                         uO.J_flag = FALSE, negative = 0;
@@ -1531,7 +1548,7 @@ int uz_opts(__G__ pargc, pargv)
                         uO.J_flag = TRUE;
                     }
                     break;
-#endif /* ATH_BEO || MACOS */
+#endif /* ATH_BEO || MACOS || defined( UNIX) && defined( __APPLE__) */
 #ifdef ATH_BEO_UNX
                 case ('K'):
                     if (negative) {
@@ -1767,7 +1784,7 @@ int uz_opts(__G__ pargc, pargv)
 #if (defined(RESTORE_UIDGID) || defined(RESTORE_ACL))
                 case ('X'):   /* restore owner/protection info (need privs?) */
                     if (negative) {
-                        uO.X_flag = MAX(uO.X_flag-negative,0);
+                        uO.X_flag = MAX((uO.X_flag- negative), -1);
                         negative = 0;
                     } else
                         ++uO.X_flag;
