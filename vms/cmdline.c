@@ -13,7 +13,7 @@
  * cc /define = TEST=1 /include = [] /object = [.vms] [.vms]cmdline.c
  * set command /object = [.vms]unz_cli.obj [.vms]unz_cli.cld
  * link /executable = [] [.vms]cmdline.obj, [.vms]unz_cli.obj
- * EXEC*UTE == "$SYS$DISK:[]'"
+ * EXEC*UTE == "$ SYS$DISK:[]'"
  * exec cmdline [ /qualifiers ...] [parameters ...]
  */
 
@@ -25,7 +25,7 @@
  */
 #if 0
 #define module_name VMS_UNZIP_CMDLINE
-#define module_ident "02-013"
+#define module_ident "02-015"
 #endif /* 0 */
 
 /*
@@ -43,6 +43,15 @@
 **              returned to UnZip.
 **
 **  Modified by:
+**
+**      02-015          S. Schweda              31-Jul-2010 22:00
+**              Rewrote option conversion code to use a separate argv[]
+**              member for each option, eliminating combined short
+**              options.  Changed /ZIPINFO /COMMENT to use "-z" instead
+**              of (incorrect) "-c".  Removed traces of /EXTRACT.  Added
+**              /VERBOSE = COMMAND.  Replaced /[NO]CASE_INSENSITIVE with
+**              /CASE_MATCH.  Added (and used) macros DESCRIPTOR_D and
+**              ADD_ARG.
 **
 **      02-014          E. Gordon               08-Jul-2010 16:41
 **              Modified to work with get_options() and new command table.
@@ -139,35 +148,35 @@ globalvalue CLI$_COMMA;
 #endif
 
 /*
-**  "Macro" to initialize a dynamic string descriptor.
-*/
-#define init_dyndesc(dsc) {\
-        dsc.dsc$w_length = 0;\
-        dsc.dsc$b_dtype = DSC$K_DTYPE_T;\
-        dsc.dsc$b_class = DSC$K_CLASS_D;\
-        dsc.dsc$a_pointer = NULL;}
+ * DESCRIPTOR_D macro.  Like $DESCRIPTOR, but with:
+ *    dsc$descriptor_s  ->  dsc$descriptor_d
+ *       DSC$K_CLASS_S  ->  DSC$K_CLASS_D
+ *              string  ->  (NULL)
+ */
+#define DESCRIPTOR_D( name) struct dsc$descriptor_d name = \
+ { 0, DSC$K_DTYPE_T, DSC$K_CLASS_D, NULL }
 
 /*
-**  Memory allocation step for argv string buffer.
-*/
+ *  Memory allocation block size for argv string buffer.
+ */
 #define ARGBSIZE_UNIT 256
 
 /*
  *  Memory reallocation macro for argv string buffer.
  */
-#define CHECK_BUFFER_ALLOCATION(buf, reserved, requested) { \
+#define CHECK_BUFFER_ALLOCATION( buf, reserved, requested) { \
     if ((requested) > (reserved)) { \
         char *save_buf = (buf); \
         (reserved) += ARGBSIZE_UNIT; \
-        if (((buf) = (char *) realloc((buf), (reserved))) == NULL) { \
-            if (save_buf != NULL) free(save_buf); \
-            return (SS$_INSFMEM); \
+        if (((buf) = (char *) realloc( (buf), (reserved))) == NULL) { \
+            if (save_buf != NULL) free( save_buf); \
+            return SS$_INSFMEM; \
         } \
     } \
 }
 
 /*
- * Add argument to argv string buffer.
+ * Macro to add an argument to argv string buffer.
  */
 #define ADD_ARG( opt) \
     x = cmdl_len; \
@@ -234,18 +243,18 @@ $DESCRIPTOR(cli_ods2,           "ODS2");                /* -2 */
 $DESCRIPTOR(cli_traverse,       "TRAVERSE_DIRS");       /* -: */
 
 $DESCRIPTOR(cli_information,    "ZIPINFO");             /* -Z */
-$DESCRIPTOR(cli_short,          "SHORT");               /* -Zs */
-$DESCRIPTOR(cli_medium,         "MEDIUM");              /* -Zm */
+$DESCRIPTOR(cli_header,         "HEADER");              /* -Zh */
 $DESCRIPTOR(cli_long,           "LONG");                /* -Zl */
+$DESCRIPTOR(cli_medium,         "MEDIUM");              /* -Zm */
+$DESCRIPTOR(cli_one_line,       "ONE_LINE");            /* -Z2 */
+$DESCRIPTOR(cli_page,           "PAGE");                /* -M , -ZM */
+$DESCRIPTOR(cli_short,          "SHORT");               /* -Zs */
+$DESCRIPTOR(cli_times,          "TIMES");               /* -ZT */
+$DESCRIPTOR(cli_totals,         "TOTALS");              /* -Zt */
+$DESCRIPTOR(cli_noverbose,      "NOVERBOSE");           /* -v-, -Zv- */
 $DESCRIPTOR(cli_verbose,        "VERBOSE");             /* -v, -Zv */
 $DESCRIPTOR(cli_verbose_normal, "VERBOSE.NORMAL");      /* -v, -Zv */
 $DESCRIPTOR(cli_verbose_command, "VERBOSE");            /* (none) */
-$DESCRIPTOR(cli_header,         "HEADER");              /* -Zh */
-$DESCRIPTOR(cli_totals,         "TOTALS");              /* -Zt */
-$DESCRIPTOR(cli_times,          "TIMES");               /* -ZT */
-$DESCRIPTOR(cli_one_line,       "ONE_LINE");            /* -Z2 */
-
-$DESCRIPTOR(cli_page,           "PAGE");                /* -M , -ZM */
 
 $DESCRIPTOR(cli_yyz,            "YYZ_UNZIP");
 
@@ -265,8 +274,12 @@ extern void *vms_unzip_cld;
 globalref void *vms_unzip_cld;
 #endif
 
-/* extern unsigned long LIB$GET_INPUT(void), LIB$SIG_TO_RET(void); */
+/* extern unsigned int LIB$GET_INPUT(void), LIB$SIG_TO_RET(void); */
 
+/*
+ * Old systems may lack <cli$routines.h>, so we provide the important
+ * stuff.
+ */
 #ifndef cli$dcl_parse
 #  define cli$dcl_parse CLI$DCL_PARSE
 #endif
@@ -276,27 +289,20 @@ globalref void *vms_unzip_cld;
 #ifndef cli$get_value
 #  define cli$get_value CLI$GET_VALUE
 #endif
-extern unsigned long cli$dcl_parse ();
-extern unsigned long cli$present ();
-extern unsigned long cli$get_value ();
+extern unsigned int cli$dcl_parse();
+extern unsigned int cli$present();
+extern unsigned int cli$get_value();
 
-unsigned long vms_unzip_cmdline (int *, char ***);
-static unsigned long get_list (struct dsc$descriptor_s *,
-                               struct dsc$descriptor_d *, int,
-                               char **, unsigned long *, unsigned long *);
-static unsigned long check_cli (struct dsc$descriptor_s *);
-
-
-#ifdef TEST
-int
-main(int argc, char **argv)
-{
-    return (vms_unzip_cmdline(&argc, &argv));
-}
-#endif /* TEST */
+static unsigned int get_list( struct dsc$descriptor_s *,
+                              struct dsc$descriptor_d *,
+                              int,
+                              char **,
+                              unsigned int *,
+                              unsigned int *);
+static unsigned int check_cli( struct dsc$descriptor_s *);
 
 
-unsigned long
+unsigned int
 vms_unzip_cmdline (int *argc_p, char ***argv_p)
 {
 /*
@@ -304,8 +310,8 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
 **
 **  Function:
 **
-**      Parse the DCL command line and create a fake argv array to be
-**      handed off to Zip.
+**      Parse the DCL command line and create a replacement argv array
+**      to be passed to UnZip.
 **
 **      NOTE: the argv[] is built as we go, so all the parameters are
 **      checked in the appropriate order!!
@@ -328,27 +334,25 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
 **  Modified to work with the get_option() command line parser.  08 July 2010
 **
 */
-    register unsigned long status;
-    char options[256];
-    char *the_cmd_line;                 /* buffer for argv strings */
-    unsigned long cmdl_size;            /* allocated size of buffer */
-    unsigned long cmdl_len;             /* used size of buffer */
     char *opt;
     char *ptr;
-    int  x, len, zipinfo, exclude_list;
+    char *the_cmd_line;                 /* buffer for argv strings */
+    unsigned int cmdl_size;             /* allocated size of buffer */
+    unsigned int cmdl_len;              /* used size of buffer */
+    unsigned int status;
+    int exclude_list;
+    int len;
+    int x;
+    int zipinfo;
 
-    int new_argc;
-    char **new_argv;
+    int new_argc;                       /* Arg count for new arg vector. */
+    char **new_argv;                    /* New arg vector. */
 
-    struct dsc$descriptor_d work_str;
-    struct dsc$descriptor_d foreign_cmdline;
-    struct dsc$descriptor_d output_directory;
-    struct dsc$descriptor_d password_arg;
+    DESCRIPTOR_D( work_str);
+    DESCRIPTOR_D( foreign_cmdline);
+    DESCRIPTOR_D( output_directory);    /* Arg for /DIRECTORY = dir_name. */
+    DESCRIPTOR_D( password_arg);        /* Arg for /PASSWORD = passwd. */
 
-    init_dyndesc(work_str);
-    init_dyndesc(foreign_cmdline);
-    init_dyndesc(output_directory);
-    init_dyndesc(password_arg);
 
     /*
     **  See if the program was invoked by the CLI (SET COMMAND) or by
@@ -370,31 +374,25 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
              (*(foreign_cmdline.dsc$a_pointer) == '"') &&
              (*(foreign_cmdline.dsc$a_pointer + 1) == '-'))) {
             show_VMSCLI_usage = FALSE;
-            return (SS$_NORMAL);
+            return SS$_NORMAL;
         }
 
         str$concat(&work_str, &unzip_command, &foreign_cmdline);
         status = cli$dcl_parse(&work_str, &vms_unzip_cld, lib$get_input,
                         lib$get_input, 0);
-        if (!(status & 1)) return (status);
+        if (!(status & 1)) return status;
     }
 
     /*
-    **  There will always to be a new_argv[] because of the image name.
-    */
+     *  There will always be a new_argv[] because of the image name.
+     */
     if ((the_cmd_line = (char *) malloc(cmdl_size = ARGBSIZE_UNIT)) == NULL)
-        return (SS$_INSFMEM);
+        return SS$_INSFMEM;
 
 #define UNZIP_COMMAND_NAME "unzip"
 
-    strcpy(the_cmd_line, UNZIP_COMMAND_NAME);
+    strcpy( the_cmd_line, UNZIP_COMMAND_NAME);
     cmdl_len = sizeof( UNZIP_COMMAND_NAME);
-
-    /*
-     * First, check to see if any of the simple options were specified.
-     */
-    options[0] = '-';
-    ptr = &options[1];          /* Point to temporary buffer */
 
     /*
      * UnZip or ZipInfo?
@@ -403,36 +401,19 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
     status = cli$present( &cli_information);
     if (status & 1)
     {
-        /* ZipInfo.  ("unzip -Z".  All options are short.) */
+        /* ZipInfo ("unzip -Z"). */
         zipinfo = 1;
 
-        *ptr++ = 'Z';
-
-        if (cli$present(&cli_one_line) & 1)
-            *ptr++ = '2';
-        if (cli$present(&cli_short) & 1)
-            *ptr++ = 's';
-        if (cli$present(&cli_medium) & 1)
-            *ptr++ = 'm';
-        if (cli$present(&cli_long) & 1)
-            *ptr++ = 'l';
-        if (cli$present(&cli_verbose) & 1)
-            *ptr++ = 'v';
-        if (cli$present(&cli_header) & 1)
-            *ptr++ = 'h';
-        if (cli$present(&cli_comment) & 1)
-            *ptr++ = 'c';
-        if (cli$present(&cli_totals) & 1)
-            *ptr++ = 't';
-        if (cli$present(&cli_times) & 1)
-            *ptr++ = 'T';
+        /* Put out "-Z" option first. */
+#define IPT__Z   "-Z"           /* "-Z"  ZipInfo. */
+        ADD_ARG( IPT__Z);
     }
     else
     {
         /* UnZip (normal). */
 
         /* Process special qualifiers (those with deferred or no
-         * new-command-line activity.
+         * new-command-line activity).
          */
 
         /*
@@ -454,18 +435,13 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
             /* /PASSWORD = passwd */
             status = cli$get_value( &cli_password, &password_arg);
         }
-
-        /*
-         * Verbose command-line translation.
-         */
-        status = cli$present( &cli_verbose_command);
-        if (status & 1)
-        {
-            /* /VERBOSE = COMMAND */
-            verbose_command = 1;
-        }
-
     } /* ZipInfo [else] */
+
+    /* Process options common to UnZip and ZipInfo. */
+
+    /* Process special qualifiers (those with deferred or no
+     * new-command-line activity).
+     */
 
     /*
     **  Check existence of a list of files to exclude, fetch is done later.
@@ -473,38 +449,18 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
     status = cli$present(&cli_exclude);
     exclude_list = ((status & 1) != 0);
 
-/* 2010-07-30 SMS.  Is this supposed to be disabled? */
-#if 0
     /*
-     *  If the user didn't give any DCL qualifier, assume he wants the
-     *  UNIX interface.
+     * Verbose command-line translation.
      */
-    if ( (ptr == &options[1]) &&
-         (output_directory.dsc$w_length == 0) &&
-         (password_arg.dsc$w_length == 0) &&
-         (!exclude_list)  ) {
-        free(the_cmd_line);
-        return (SS$_NORMAL);
-    }
-#endif /* 0 */
-
-    /*
-     *  Now copy the final (simple) options string to the_cmd_line.
-     */
-    len = ptr - &options[0];
-    if (len > 1) {
-        options[len] = '\0';
-        ADD_ARG( options);
+    status = cli$present( &cli_verbose_command);
+    if (status & 1)
+    {
+        /* /VERBOSE = COMMAND */
+        verbose_command = 1;
     }
 
     /*
-     * UnZip and ZipInfo complex (separate argv[]) options.
-     */
-
-    /* Complex options common to UnZip and ZipInfo. */
-
-    /*
-     * Filename matching case-sensitivity (-C)
+     * Filename matching case-sensitivity (-C).
      * Clear any existing "-C" option with "-C-", then add
      * the desired "C" value.
      */
@@ -580,7 +536,7 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
 
     if (zipinfo == 0)
     {
-        /* UnZip (normal) complex options. */
+        /* UnZip (normal) options. */
 
         /*
          * Convert files as text (CR LF -> LF, etc.)
@@ -1080,12 +1036,19 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
 #define OPT_V   "-v-v"          /* "-v"  Verbose/version report. */
 #define OPT_VN  "-v-"           /* ""    Normal extract (default). */
 
+        status = cli$present( &cli_noverbose);
+        if (status & 1)
+        {
+            /* /NOVERBOSE */
+            ADD_ARG( OPT_VN);
+        }
+
         status = cli$present( &cli_verbose_normal);
         if ((status & 1) || (status == CLI$_NEGATED))
         {
             if (status == CLI$_NEGATED)
             {
-                /* /NOVERBOSE */
+                /* /NOVERBOSE (?) */
                 opt = OPT_VN;
             }
             else
@@ -1252,7 +1215,236 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
             ADD_ARG( opt);
         }
 									
-    } /* if (zipinfo != 0) */
+    }
+    else /* if (zipinfo == 0) */
+    {
+        /* ZipInfo options. */
+
+        /*
+         * Show only file names, one per line (but allow /HEADER (-h),
+         * /TOTALS (-t), or /COMMENT (-z)).
+         * Clear any existing "-2" option with "-2-", then add
+         * the desired "2" value.
+         */
+#define IPT_2   "-2-2"          /* "-2"  Named-only format. */
+#define IPT_2N  "-2-"           /* ""    Normal format (default). */
+
+        status = cli$present( &cli_one_line);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOONE_LINE */
+                opt = IPT_2N;
+            }
+            else
+            {
+                /* /ONE_LINE */
+                opt = IPT_2;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Put out header line.
+         * Clear any existing "-h" option with "-h-", then add
+         * the desired "h" value.
+         */
+#define IPT_H   "-h-h"          /* "-h"  Put out header line. */
+#define IPT_HN  "-h-"           /* ""    Omit header line (default). */
+
+        status = cli$present( &cli_header);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOHEADER */
+                opt = IPT_HN;
+            }
+            else
+            {
+                /* /HEADER */
+                opt = IPT_H;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Long UNIX "ls -l" format.
+         * Clear any existing "-l" option with "-l-", then add
+         * the desired "l" value.
+         */
+#define IPT_L   "-l-l"          /* "-l"  Long UNIX "ls -l" format. */
+#define IPT_LN  "-l-"           /* ""    Normal format (default). */
+
+        status = cli$present( &cli_long);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOLONG */
+                opt = IPT_LN;
+            }
+            else
+            {
+                /* /LONG */
+                opt = IPT_L;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Medium UNIX "ls -l" format.
+         * Clear any existing "-m" option with "-m-", then add
+         * the desired "m" value.
+         */
+#define IPT_M   "-m-m"          /* "-m"  Medium UNIX "ls -l" format. */
+#define IPT_MN  "-m-"           /* ""    Normal format (default). */
+
+        status = cli$present( &cli_medium);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOMEDIUM */
+                opt = IPT_MN;
+            }
+            else
+            {
+                /* /MEDIUM */
+                opt = IPT_M;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Short UNIX "ls -l" format (default).
+         * Clear any existing "-s" option with "-s-", then add
+         * the desired "s" value.
+         */
+#define IPT_S   "-s-s"          /* "-s"  Short UNIX "ls -l" format (deflt). */
+#define IPT_SN  "-s-"           /* ""    Normal format (default). */
+
+        status = cli$present( &cli_short);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOSHORT */
+                opt = IPT_SN;
+            }
+            else
+            {
+                /* /SHORT */
+                opt = IPT_S;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Put out totals summary.
+         * Clear any existing "-t" option with "-t-", then add
+         * the desired "t" value.
+         */
+#define IPT_T   "-t-t"          /* "-t"  Put out totals summary. */
+#define IPT_TN  "-t-"           /* ""    Omit totals summary (default). */
+
+        status = cli$present( &cli_totals);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOCOMMENT */
+                opt = IPT_TN;
+            }
+            else
+            {
+                /* /COMMENT */
+                opt = IPT_T;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Put out date-times as sortable decimal values.
+         * Clear any existing "-T" option with "-T-", then add
+         * the desired "T" value.
+         */
+#define IPT__T   "-T-T"         /* "-T"  Put out sortable date-times. */
+#define IPT__TN  "-T-"          /* ""    Put out normal date-times (deflt). */
+
+        status = cli$present( &cli_times);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOTIMES */
+                opt = IPT__TN;
+            }
+            else
+            {
+                /* /TIMES */
+                opt = IPT__T;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Verbose, multi-page format.
+         * Clear any existing "-v" option with "-v-", then add
+         * the desired "v" value.
+         */
+#define IPT_V   "-v-v"          /* "-v"  Verbose, multi-page format. */
+#define IPT_VN  "-v-"           /* ""    Normal format (default). */
+
+        status = cli$present( &cli_noverbose);
+        if (status & 1)
+        {
+            /* /NOVERBOSE */
+            ADD_ARG( IPT_VN);
+        }
+
+        status = cli$present( &cli_verbose_normal);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOVERBOSE (?) */
+                opt = IPT_VN;
+            }
+            else
+            {
+                /* /VERBOSE */
+                opt = IPT_V;
+            }
+            ADD_ARG( opt);
+        }
+
+        /*
+         * Put out archive comment.
+         * Clear any existing "-z" option with "-z-", then add
+         * the desired "z" value.
+         */
+#define IPT_Z   "-z-z"          /* "-z"  Put out archive comment. */
+#define IPT_ZN  "-z-"           /* ""    Omit header line (default). */
+
+        status = cli$present( &cli_comment);
+        if ((status & 1) || (status == CLI$_NEGATED))
+        {
+            if (status == CLI$_NEGATED)
+            {
+                /* /NOCOMMENT */
+                opt = IPT_ZN;
+            }
+            else
+            {
+                /* /COMMENT */
+                opt = IPT_Z;
+            }
+            ADD_ARG( opt);
+        }
+
+    } /* if (zipinfo == 0) [else] */
 
     /*
     **  If specified, add the decryption password argument.
@@ -1280,7 +1472,6 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
         strncpy(&the_cmd_line[x], work_str.dsc$a_pointer,
                 work_str.dsc$w_length);
         the_cmd_line[cmdl_len-1] = '\0';
-
     }
 
     /*
@@ -1303,7 +1494,7 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
     if (status & 1) {
         status = get_list(&cli_infile, &foreign_cmdline, '\0',
                           &the_cmd_line, &cmdl_size, &cmdl_len);
-        if (!(status & 1)) return (status);
+        if (!(status & 1)) return status;
     }
 
     /*
@@ -1317,7 +1508,7 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
 
         status = get_list(&cli_exclude, &foreign_cmdline, '\0',
                           &the_cmd_line, &cmdl_size, &cmdl_len);
-        if (!(status & 1)) return (status);
+        if (!(status & 1)) return status;
     }
 
     /*
@@ -1325,7 +1516,7 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
     **  release unused space.
     */
     if ((the_cmd_line = (char *) realloc(the_cmd_line, cmdl_len)) == NULL)
-        return (SS$_INSFMEM);
+        return SS$_INSFMEM;
 
     /*
     **  Now that we've built our new UNIX-like command line, count the
@@ -1340,7 +1531,7 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
     **  is supposed to be NULL, so allocate enough for new_argc+1.
     */
     if ((new_argv = (char **) calloc(new_argc+1, sizeof(char *))) == NULL)
-        return (SS$_INSFMEM);
+        return SS$_INSFMEM;
 
     /*
     **  For each option, store the address in new_argv[] and convert the
@@ -1367,14 +1558,14 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
     *argc_p = new_argc;
     *argv_p = new_argv;
 
-    return (SS$_NORMAL);
+    return SS$_NORMAL;
 }
 
 
 
-static unsigned long
+static unsigned int
 get_list (struct dsc$descriptor_s *qual, struct dsc$descriptor_d *rawtail,
-          int delim, char **p_str, unsigned long *p_size, unsigned long *p_end)
+          int delim, char **p_str, unsigned int *p_size, unsigned int *p_end)
 {
 /*
 **  Routine:    get_list
@@ -1397,16 +1588,16 @@ get_list (struct dsc$descriptor_s *qual, struct dsc$descriptor_d *rawtail,
 **
 */
 
-    register unsigned long status;
-    struct dsc$descriptor_d work_str;
-
-    init_dyndesc(work_str);
+    unsigned int status;
+    DESCRIPTOR_D( work_str);
 
     status = cli$present(qual);
     if (status & 1) {
 
-        unsigned long len, old_len;
-        long ind, sind;
+        unsigned int len;
+        unsigned int old_len;
+        int ind;
+        int sind;
         int keep_case;
         char *src, *dst; int x;
 
@@ -1416,7 +1607,7 @@ get_list (struct dsc$descriptor_s *qual, struct dsc$descriptor_d *rawtail,
         if (*p_str == NULL) {
             *p_size = ARGBSIZE_UNIT;
             if ((*p_str = (char *) malloc(*p_size)) == NULL)
-                return (SS$_INSFMEM);
+                return SS$_INSFMEM;
             len = 0;
         } else {
             len = *p_end;
@@ -1456,13 +1647,11 @@ get_list (struct dsc$descriptor_s *qual, struct dsc$descriptor_d *rawtail,
         }
         *p_end = len;
     }
-
-    return (SS$_NORMAL);
-
+    return SS$_NORMAL;
 }
 
 
-static unsigned long
+static unsigned int
 check_cli (struct dsc$descriptor_s *qual)
 {
 /*
@@ -1476,7 +1665,7 @@ check_cli (struct dsc$descriptor_s *qual)
 **
 */
     lib$establish(lib$sig_to_ret);      /* Establish condition handler */
-    return (cli$present(qual));         /* Just see if something was given */
+    return cli$present(qual);           /* Just see if something was given */
 }
 
 
@@ -1515,7 +1704,7 @@ Valid main options are /TEST, /FRESHEN, /UPDATE, /PIPE, /SCREEN, /COMMENT%s.\n",
       SFXOPT_EXDIR));
     Info(slide, flag, ((char *)slide, "\
 Modifying options are /TEXT, /BINARY, /JUNK, /EXISTING, /QUIET,\n\
-                      /CASE_INSENSITIVE, /LOWERCASE, %s/VERSION, /RESTORE.\n",
+                      /CASE_MATCH, /LOWERCASE, %s/VERSION, /RESTORE.\n",
       SFXOPT1));
 #ifdef BETA
     Info(slide, flag, ((char *)slide, BetaVersion, "\n", "SFX"));
@@ -1578,7 +1767,7 @@ in list (excluding those in xlist) contained in the specified .zip archive(s).\
 miscellaneous options:\n  \
 /HEADER   print header line       /TOTALS  totals for listed files or for all\n\
   /COMMENT  print zipfile comment   /TIMES   times in sortable decimal format\n\
-  /[NO]CASE_INSENSITIVE  match filenames case-insensitively\n\
+  /CASE_MATCH = [ BLIND | SENSITIVE ]  match filenames case-[in]sensitively\n\
   /[NO]PAGE page output through built-in \"more\"\n\
   /EXCLUDE=(file-spec1,etc.)  exclude file-specs from listing\n"));
 
@@ -1622,13 +1811,13 @@ Modifiers include:\n\
 
         Info(slide, flag, ((char *)slide, "\
 Examples (see unzip.txt or \"HELP UNZIP\" for more info):\n\
-   unzip edit1 /EXCL=joe.jou /CASE_INSENSITIVE    => Extract all files except\
+   unzip edit1 /EXCL=joe.jou /CASE_MATCH = BLIND  => Extract all files except\
 \n\
       joe.jou (or JOE.JOU, or any combination of case) from zipfile edit1.zip.\
 \n  \
  unzip zip201 \"Makefile.VMS\" vms/*.[ch]         => extract VMS Makefile and\
 \n\
-      *.c and *.h files; must quote uppercase names if /CASE_INSENS not used.\
+      *.c and *.h files; must quote uppercase names if /CASE = SENS.\
 \n\
    unzip foo /DIR=tmp:[.test] /JUNK /TEXT /EXIS=NEW  => extract all files to\
 \n\
@@ -1646,3 +1835,13 @@ Examples (see unzip.txt or \"HELP UNZIP\" for more info):\n\
 
 #endif /* ?SFX */
 #endif /* !TEST */
+
+
+#ifdef TEST
+int
+main( int argc, char **argv)
+{
+    return vms_unzip_cmdline( &argc, &argv);
+}
+#endif /* def TEST */
+

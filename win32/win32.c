@@ -3029,6 +3029,51 @@ char *wide_to_local_string(wide_string, escape_all)
 }
 
 
+wchar_t *local_to_wchar_string(local_string)
+  char *local_string;       /* path of local name */
+{
+  wchar_t  *qw;
+  int       ulen;
+  int       ulenw;
+
+  if (local_string == NULL)
+    return NULL;
+
+    /* get length */
+    ulenw = MultiByteToWideChar(
+                CP_ACP,            /* ANSI code page */
+                0,                 /* flags for character-type options */
+                local_string,      /* string to convert */
+                -1,                /* string length (-1 = NULL terminated) */
+                NULL,              /* buffer */
+                0 );               /* buffer length (0 = return length) */
+    if (ulenw == 0) {
+      /* failed */
+      return NULL;
+    }
+    ulenw++;
+    /* get length in bytes */
+    ulen = sizeof(wchar_t) * (ulenw + 1);
+    if ((qw = (wchar_t *)malloc(ulen + 1)) == NULL) {
+      return NULL;
+    }
+    /* convert multibyte to wide */
+    ulen = MultiByteToWideChar(
+               CP_ACP,            /* ANSI code page */
+               0,                 /* flags for character-type options */
+               local_string,      /* string to convert */
+               -1,                /* string length (-1 = NULL terminated) */
+               qw,                /* buffer */
+               ulenw);            /* buffer length (0 = return length) */
+    if (ulen == 0) {
+      /* failed */
+      free(qw);
+      return NULL;
+    }
+
+  return qw;
+}
+
 #if 0
 wchar_t *utf8_to_wchar_string(utf8_string)
   char *utf8_string;       /* path to get utf-8 name for */
@@ -3075,50 +3120,6 @@ wchar_t *utf8_to_wchar_string(utf8_string)
   return qw;
 }
 
-wchar_t *local_to_wchar_string(local_string)
-  char *local_string;       /* path of local name */
-{
-  wchar_t  *qw;
-  int       ulen;
-  int       ulenw;
-
-  if (local_string == NULL)
-    return NULL;
-
-    /* get length */
-    ulenw = MultiByteToWideChar(
-                CP_ACP,            /* ANSI code page */
-                0,                 /* flags for character-type options */
-                local_string,      /* string to convert */
-                -1,                /* string length (-1 = NULL terminated) */
-                NULL,              /* buffer */
-                0 );               /* buffer length (0 = return length) */
-    if (ulenw == 0) {
-      /* failed */
-      return NULL;
-    }
-    ulenw++;
-    /* get length in bytes */
-    ulen = sizeof(wchar_t) * (ulenw + 1);
-    if ((qw = (wchar_t *)malloc(ulen + 1)) == NULL) {
-      return NULL;
-    }
-    /* convert multibyte to wide */
-    ulen = MultiByteToWideChar(
-               CP_ACP,            /* ANSI code page */
-               0,                 /* flags for character-type options */
-               local_string,      /* string to convert */
-               -1,                /* string length (-1 = NULL terminated) */
-               qw,                /* buffer */
-               ulenw);            /* buffer length (0 = return length) */
-    if (ulen == 0) {
-      /* failed */
-      free(qw);
-      return NULL;
-    }
-
-  return qw;
-}
 #endif /* 0 */
 #endif /* UNICODE_SUPPORT && !FUNZIP */
 

@@ -9,7 +9,7 @@ Define	Verb		UNZIP
 	Qualifier	SCREEN, Negatable
 	Qualifier	DIRECTORY, VALUE(REQUIRED,TYPE=$FILE), Nonnegatable
 	Qualifier	FRESHEN, Negatable
-        Qualifier       HELP, NonNegatable, VALUE(type=HELP_OPTS)
+	Qualifier	HELP, NonNegatable, VALUE(type=HELP_OPTS)
 	Qualifier	JUNK, Negatable
 	Qualifier	LIST, Nonnegatable
 	Qualifier	BRIEF, Nonnegatable, Default
@@ -26,6 +26,7 @@ Define	Verb		UNZIP
 	Qualifier	UPPERCASE, Negatable
 	Qualifier	UPDATE, Negatable
 	Qualifier	VERBOSE, NonNegatable, VALUE(type=VERBOSE_OPTS, list)
+	Qualifier	NOVERBOSE, NonNegatable
 	Qualifier	VERSION, Negatable
 	Qualifier	RESTORE, VALUE(TYPE=RESTORE_KEYWORDS, LIST), Negatable
 	Qualifier	COMMENT, Negatable
@@ -57,6 +58,7 @@ Define	Verb		UNZIP
 	DisAllow	TEXT.NONE and TEXT.ALL
 	DisAllow	TEXT.NONE and TEXT.STMLF
 	DisAllow	(neg TEXT) and TEXT.STMLF
+	DisAllow	NOVERBOSE and VERBOSE.NORMAL
 	DisAllow	ZIPINFO and HELP
 
 Define	Type		CONVBIN_KEYWORDS
@@ -79,9 +81,9 @@ Define	Type		EXISTING_KEYWORDS
 	Keyword		OVERWRITE
 	Keyword		NOEXTRACT
 
-Define  Type            HELP_OPTS
-        Keyword         NORMAL, DEFAULT
-        Keyword         EXTENDED
+Define	Type		HELP_OPTS
+	Keyword		NORMAL, DEFAULT
+	Keyword		EXTENDED
 
 Define	Type		RESTORE_KEYWORDS
 	Keyword		DATE, VALUE(TYPE=RESTOREDATE_KEYS, Required),
@@ -90,7 +92,7 @@ Define	Type		RESTORE_KEYWORDS
 	Keyword		PROTECTION, Default, Negatable
 
 Define	Type		RESTOREDATE_KEYS
-        Keyword		FILES, DEFAULT
+	Keyword		FILES, DEFAULT
 	Keyword		ALL
 
 Define	Type		QUIET_MODIFIER
@@ -99,23 +101,32 @@ Define	Type		QUIET_MODIFIER
 Define	Type		FULL_MODIFIER
 	Keyword		DIAGNOSTICS
 
-Define  Type            VERBOSE_OPTS
-        Keyword         NORMAL, DEFAULT
-        Keyword         COMMAND
+Define	Type		VERBOSE_OPTS
+	Keyword		NORMAL, DEFAULT, Negatable
+	Keyword		COMMAND
 
 Define Syntax INFORMATION
 	Parameter	P1, Label=ZIPFILE, Prompt="Zip file"
 	Parameter	P2, Label=INFILE, VALUE(LIST), Prompt="Files to display"
 	Qualifier	ZIPINFO, NonNegatable, Default
-	Qualifier	ONE_LINE, Nonnegatable
-	Qualifier	SHORT, Nonnegatable
-	Qualifier	MEDIUM, Nonnegatable
-	Qualifier	LONG, Nonnegatable
-	Qualifier	VERBOSE, Nonnegatable
-	Qualifier	HEADER, Nonnegatable
-	Qualifier	COMMENT, Nonnegatable
-	Qualifier	TOTALS, Nonnegatable
-	Qualifier	TIMES, Nonnegatable
+	Qualifier	ONE_LINE, Negatable
+	Qualifier	SHORT, Negatable
+	Qualifier	MEDIUM, Negatable
+	Qualifier	LONG, Negatable
+	Qualifier	VERBOSE, NonNegatable, VALUE(type=VERBOSE_OPTS, list)
+	Qualifier	NOVERBOSE, NonNegatable
+	Qualifier	HEADER, Negatable
+	Qualifier	COMMENT, Negatable
+	Qualifier	TOTALS, Negatable
+	Qualifier	TIMES, Negatable
 	Qualifier	EXCLUDE, VALUE(LIST), Nonnegatable
 	Qualifier	CASE_MATCH, VALUE(type=CASE_MATCH_OPTS)
 	Qualifier	PAGE, Negatable
+
+	DisAllow	NOVERBOSE and VERBOSE.NORMAL
+	DisAllow	ONE_LINE and SHORT
+	DisAllow	ONE_LINE and MEDIUM
+	DisAllow	ONE_LINE and LONG
+	DisAllow	SHORT and MEDIUM
+	DisAllow	SHORT and LONG
+	DisAllow	MEDIUM and LONG

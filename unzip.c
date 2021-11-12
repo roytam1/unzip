@@ -1136,7 +1136,7 @@ int unzip(__G__ argc, argv)
     for (G.pfnames = argv, i = argc;  i > 0;  --i) {
 #  else
     /* argc does not include the zipfile specification */
-    for (G.pfnames = argv, i = argc+1;  i > 0;  --i) {
+    for (G.pfnames = argv, i = argc;  i > 0;  --i) {
 #  endif
 #  ifdef __human68k__
         extern char *_toslash(char *);
@@ -1427,10 +1427,10 @@ static struct option_struct far options[] = {
     /* for CMS_MVS map to lower case */
     {UZO, "C",  "CMS-MVS-lower",   o_NO_VALUE,       o_NEGATABLE,
        'C',  "CMS/MVS lower case"},
-# else /* def CMS_MVS */
-    {UZO, "C",  "ignore-case",     o_NO_VALUE,       o_NEGATABLE,
+# else /* ifdef CMS_MVS */
+    {ZIO, "C",  "ignore-case",     o_NO_VALUE,       o_NEGATABLE,
        'C',  "ignore case"},
-# endif /* def CMS_MVS [else] */
+# endif /* ifdef CMS_MVS [else] */
 # if (!defined(SFX) || defined(SFX_EXDIR))
     {UZO, "d",  "extract-dir",     o_REQUIRED_VALUE, o_NEGATABLE,
        'd',  "extraction root directory"},
@@ -1534,11 +1534,6 @@ static struct option_struct far options[] = {
 # ifdef UNICODE_SUPPORT
     {UZO, "U",  "Unicode",         o_NO_VALUE,       o_NEGATABLE,
        'U',  "escape non-ASCII Unicode, disable Unicode"},
-# else /* !UNICODE_SUPPORT */
-#  ifndef CMS_MVS
-    {UZO, "U",  "lowercase-names", o_NO_VALUE,       o_NEGATABLE,
-       'U',  "names to lower case"},
-#  endif /* !CMS_MVS */
 # endif /* ?UNICODE_SUPPORT */
 # ifndef SFX
     {UZO, "v",  "verbose",         o_NO_VALUE,       o_NEGATABLE,
@@ -1748,11 +1743,16 @@ int uz_opts(__G__ pargc, pargv)
             case ('b'):
                 if (negative) {
 # if (defined(TANDEM) || defined(VMS))
+                    /* AS negative IS ALWAYS 1, IS THIS RIGHT? */
                     uO.bflag = MAX(uO.bflag-negative,0);
 # endif
                     /* do nothing:  "-b" is default */
                 } else {
-# if (defined(TANDEM) || defined(VMS))
+# ifdef VMS
+                    if (uO.aflag == 0)
+                       ++uO.bflag;
+# endif
+# ifdef TANDEM
                     ++uO.bflag;
 # endif
                     uO.aflag = 0;
@@ -1906,7 +1906,7 @@ int uz_opts(__G__ pargc, pargv)
 # ifndef CMS_MVS
             case ('L'):    /* convert (some) filenames to lowercase */
                 if (negative) {
-                    uO.L_flag = MAX(uO.L_flag-negative,0);
+                    uO.L_flag = MAX(uO.L_flag-1,0);
                 } else
                     ++uO.L_flag;
                 break;
@@ -2052,15 +2052,6 @@ int uz_opts(__G__ pargc, pargv)
                 else
                     uO.U_flag++;
                 break;
-# else /* !UNICODE_SUPPORT */
-#  ifndef CMS_MVS
-            case ('U'):    /* obsolete; to be removed in version 6.0 */
-                if (negative)
-                    uO.L_flag = TRUE;
-                else
-                    uO.L_flag = FALSE;
-                break;
-#  endif /* !CMS_MVS */
 # endif /* ?UNICODE_SUPPORT */
 # ifndef SFX
             case ('v'):    /* verbose */
@@ -2316,7 +2307,6 @@ int uz_opts(__G__ pargc, pargv)
         Info(slide, 0x401, ((char *)slide, LoadFarString(InvalidOptionsMsg)));
         error = TRUE;
     }
-
     if (uO.aflag > 2)
         uO.aflag = 2;
 # ifdef VMS
