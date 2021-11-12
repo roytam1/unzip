@@ -927,9 +927,9 @@ vms_unzip_cmdline (int *argc_p, char ***argv_p)
          * Clear any existing "-q" option with "-q-q-", then add
          * the desired "q" value.
          */
-#define OPT_Q   "-q-q-q"        /* "-q"  Quiet (NORMAL). */
-#define OPT_QQ  "-q-q-qq"       /* "-qq" Quiet (SUPER). */
-#define OPT_QN  "-q-q-"         /* ""    Normal noisiness (default). */
+#define OPT_Q   "-q-q-q-q-q"    /* "-q"  Quiet (NORMAL). */
+#define OPT_QQ  "-q-q-q-q-qq"   /* "-qq" Quiet (SUPER). */
+#define OPT_QN  "-q-q-q-q-"     /* ""    Normal noisiness (default). */
 
         status = cli$present( &cli_quiet);
         if ((status & 1) || (status == CLI$_NEGATED))
