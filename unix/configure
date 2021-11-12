@@ -4,7 +4,7 @@
 
 #==============================================================================
 # unix/configure: Detect feature support and pass that information to Makefile.
-# - For UnZip, UnZipSFX, fUnZip and ZipInfo             Revised: 2014-05-14
+# - For UnZip, UnZipSFX, fUnZip, and ZipInfo            Revised: 2014-08-18
 #
 # Copyright (c) 2004-2014 Info-ZIP.  All rights reserved.
 #
@@ -824,8 +824,9 @@ _EOF_
         CFLAGS_OPT="-O3 ${C_PARMS}"
         CFLAGS_TST="${CFLAGS_TST} -D_ALL_SOURCE"
         CFLAGS_TST="${CFLAGS_TST} -D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED=1"
+        CFLAGS_TST="${CFLAGS_TST} -DICONV=1"
         LFLAGS2="${LFLAGS2} -q64"
-        AR='ar -cq -X64'
+        AR='ar -X64 -cq'
         AR_BZ='ar -X64'
         if [ -n "${LIST}" ]; then # Listings enabled?
           CFLAGS_OPT="${CFLAGS_OPT} -qlist -qsource -qshowinc -qreport"
@@ -856,8 +857,9 @@ _EOF_
         CFLAGS_OPT="-O3 ${C_PARMS}"
         CFLAGS_TST="${CFLAGS_TST} -D_ALL_SOURCE"
         CFLAGS_TST="${CFLAGS_TST} -D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED=1"
+        CFLAGS_TST="${CFLAGS_TST} -DICONV=1"
         LFLAGS2="${LFLAGS2} -q64"
-        AR='ar -cq -X64'
+        AR='ar -X64 -cq'
         AR_BZ='ar -X64'
         if [ -n "${LIST}" ]; then # Listings enabled?
           CFLAGS_OPT="${CFLAGS_OPT} -qlist -qsource -qshowinc -qreport"
@@ -918,6 +920,7 @@ _EOF_
         CFLAGS_TST="${CFLAGS_TST} -DEBCDIC -DSYSV"
         CFLAGS_TST="${CFLAGS_TST} -D_ALL_SOURCE -D_OPEN_SYS_TIMED_EXT"
         CFLAGS_TST="${CFLAGS_TST} -D_XOPEN_SOURCE_EXTENDED=1"
+        CFLAGS_TST="${CFLAGS_TST} -DICONV=1"
         RANLIB="echo"               # z/OS UNIX has no ranlib utility
         echo "  IBM z/OS XL C ($CFLAGS_OPT)"
       fi
@@ -963,6 +966,7 @@ _EOF_
         CFLAGS_TST="${CFLAGS_TST} -DEBCDIC -DSYSV"
         CFLAGS_TST="${CFLAGS_TST} -D_ALL_SOURCE -D_OPEN_SYS_TIMED_EXT"
         CFLAGS_TST="${CFLAGS_TST} -D_XOPEN_SOURCE_EXTENDED=1"
+        CFLAGS_TST="${CFLAGS_TST} -DICONV=1"
         RANLIB="echo"               # z/VM UNIX has no ranlib utility
         echo "  IBM XL C for z/VM ($CFLAGS_OPT)"
       fi
@@ -2017,8 +2021,8 @@ int main()
   return (out == 0);
 }
 _EOF_
-    $CC_TST ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} -o conftest \
-     conftest.c >/dev/null 2>/dev/null
+    ${CC_TST} ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} \
+     -o conftest conftest.c >/dev/null 2>/dev/null
     status=$?
     if [ $status -eq 0 ]; then
       ucname=` echo ${func} | tr '[a-z]' '[A-Z]' `
@@ -2074,7 +2078,8 @@ int main()
 #endif
 }
 _EOF_
-  $CC_TST $CFLAGS -o conftest conftest.c >/dev/null 2>/dev/null
+  ${CC_TST} ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} \
+   -o conftest conftest.c >/dev/null 2>/dev/null
   status=$?
   if [ $status -ne 0 ]; then
     echo '  No.'
@@ -2485,7 +2490,8 @@ int main()
   return mblen(tst, MB_CUR_MAX);
 }
 _EOF_
-$CC_TST ${CFLAGS} -o conftest conftest.c >/dev/null 2>/dev/null
+${CC_TST} ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} \
+ -o conftest conftest.c >/dev/null 2>/dev/null
 status=$?
 if [ $status -ne 0 ]; then
   echo '  No (NO_MBCS).'
@@ -2514,8 +2520,8 @@ int main()
   return (tst == NULL);
 }
 _EOF_
-  $CC_TST ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} -o conftest \
-   conftest.c >/dev/null 2>/dev/null
+  ${CC_TST} ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} \
+   -o conftest conftest.c >/dev/null 2>/dev/null
   status=$?
   if [ $status -eq 0 ]; then
     ./conftest >/dev/null
@@ -2543,7 +2549,8 @@ main()
 #endif
 }
 _EOF_
-$CC_TST ${CFLAGS} -c conftest.c >/dev/null 2>/dev/null
+${CC_TST} ${CFLAGS} ${CFLAGS_OPT} ${CFLAGS_TST} ${CFLAGS_USR} \
+ -c conftest.c >/dev/null 2>/dev/null
 status=$?
 if [ $status -ne 0 ]; then
   echo '  No (NO_VALLOC).'

@@ -1455,8 +1455,18 @@ Bugs fixed:
    used (char, instead of int arrays), and such (unlikely) failures are
    fatal.  (extract.c) [SMS]
 
-6.10c10 (? ??? 2014):
+6.10c10 (18 Aug 2014):
  - Reconciled common encryption code with Zip.  (crypt.c, crypt.h) [SMS]
  - Added a dummy/comment C macro, x_SYMLINKS, to the Windows vc10
    builder for UnZipSFX (like the existing one in the UnZip builder).
    (win32/vc10/unzipsfx/unzipsfx.vcxproj) [SMS]
+ - Support single-source z/OS MVS builds.  (zos/bbunzip.c,
+   zos/build.jcl) [AD]
+ - Add z/OS MVS executable and source ship builds.  (zos/xmit.jcl,
+   zos/zipsrc.jcl) [AD]
+ - Correct ar -X option placement.  (unix/configure) [AD]
+ - IBM XL C builds with ICONV=1 to support utf-8 via iconv().
+   (unix/configure) [AD]
+ - Unix builder script was ignoring some early test results when running
+   later tests, causing erroneous configuration related to wide
+   characters and Unicode.  (unix/configure)  [EG, SMS]

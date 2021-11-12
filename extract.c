@@ -3402,7 +3402,7 @@ static int extract_or_test_member(__G)    /* return PK-type error code */
             if (G.lrec.compression_method == AESENCRED)
             {
                 /* Subtract the MAC data size from G.csize, to keep
-                 * the MAC data away from UZlzma().  Remember doing
+                 * the MAC data away from UZppmd().  Remember doing
                  * this, so that G.csize can be restored later, before
                  * trying to read the MAC data.
                  */
