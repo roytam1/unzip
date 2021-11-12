@@ -212,6 +212,7 @@ static ZCONST char Far MthdTerse[] = "tersed (IBM)";
 static ZCONST char Far MthdLZ77[] = "LZ77-compressed (IBM)";
 static ZCONST char Far MthdWavPack[] = "WavPacked";
 static ZCONST char Far MthdPPMd[] = "PPMd-ed";
+static ZCONST char Far MthdAES[] = "AES-ed";
 
 static ZCONST char Far DeflNorm[] = "normal";
 static ZCONST char Far DeflMax[] = "maximum";
@@ -247,10 +248,12 @@ static ZCONST char Far ShannonFanoTrees[] =
   "  number of Shannon-Fano trees (implosion):       %c\n";
 static ZCONST char Far CompressSubtype[] =
   "  compression sub-type (deflation):               %s\n";
+static ZCONST char Far GenPurpBitFlags[] =
+  "  general-purpose bit flags:                      %04x\n";
 static ZCONST char Far FileSecurity[] =
-  "  file security status:                           %sencrypted\n";
+  "   file security status:                           %sencrypted%s\n";
 static ZCONST char Far ExtendedLocalHdr[] =
-  "  extended local header:                          %s\n";
+  "   extended local header:                          %s\n";
 static ZCONST char Far FileModDate[] =
   "  file last modified on (DOS date/time):          %s\n";
 #ifdef USE_EF_UT_TIME
@@ -343,6 +346,7 @@ static ZCONST char Far efMD5[] = "Fred Kantor MD5";
 static ZCONST char Far efASiUnix[] = "ASi Unix";
 static ZCONST char Far efTandem[] = "Tandem NSK";
 static ZCONST char Far efTheos[] = "Theos";
+static ZCONST char Far efAES[] = "AES encrypt";
 static ZCONST char Far efUnknown[] = "unknown";
 
 static ZCONST char Far OS2EAs[] = ".\n\
@@ -415,6 +419,9 @@ static ZCONST char Far First20[] = ".  The first\n    20 are:  ";
 static ZCONST char Far ColonIndent[] = ":\n   ";
 static ZCONST char Far efFormat[] = " %02x";
 
+static ZCONST char Far AesExtraField[] = ".\n\
+    Vers: 0x%04x, Vend ID: %c%c, AES mode: 0x%02x, Cmpr mthd: %s";
+
 static ZCONST char Far lExtraFieldType[] = "\n\
   There %s a local extra field with ID 0x%04x (%s) and\n\
   %u data bytes (%s).\n";
@@ -438,6 +445,12 @@ static ZCONST char Far DecimalTime[] = "%04u%02u%02u.%02u%02u%02u";
   static ZCONST char Far lngYMDHMSTimeError[] = "???? ??? ?? ??:??:??";
 #endif
 
+static ZCONST char Far *method[NUM_METHODS] = {
+    MthdNone, MthdShrunk, MthdRedF1, MthdRedF2, MthdRedF3, MthdRedF4,
+    MthdImplode, MthdToken, MthdDeflate, MthdDeflat64, MthdDCLImplode,
+    MthdBZip2, MthdLZMA, MthdTerse, MthdLZ77, MthdWavPack, MthdPPMd,
+    MthdAES
+};
 
 
 
@@ -1188,6 +1201,30 @@ int zipinfo(__G)   /* return PK-type error code */
 
 
 
+/*****************/
+/*  cmpr_mthd()  */
+/*****************/
+
+static ZCONST char *cmpr_mthd( __G__ methid)
+    __GDEF
+    unsigned methid;
+{
+    static char mthd[ 16];
+    ZCONST char *ret;
+    unsigned methnum;
+
+    methnum = find_compr_idx( methid);
+    if (methnum >= NUM_METHODS)
+    {
+        sprintf( (char *)(ret = mthd), LoadFarString( UnknownNo), methid);
+    }
+    else
+    {
+        ret = method[ methnum];
+    }
+    return ret;
+}
+
 
 /************************/
 /*  Function zi_long()  */
@@ -1213,11 +1250,6 @@ static int zi_long(__G__ pEndprev, error_in_archive)
         OS_Acorn, OS_VFAT, OS_MVS, OS_BeOS, OS_Tandem, OS_Theos, OS_MacDarwin,
         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
         OS_AtheOS
-    };
-    static ZCONST char Far *method[NUM_METHODS] = {
-        MthdNone, MthdShrunk, MthdRedF1, MthdRedF2, MthdRedF3, MthdRedF4,
-        MthdImplode, MthdToken, MthdDeflate, MthdDeflat64, MthdDCLImplode,
-        MthdBZip2, MthdLZMA, MthdTerse, MthdLZ77, MthdWavPack, MthdPPMd
     };
     static ZCONST char Far *dtypelng[4] = {
         DeflNorm, DeflMax, DeflFast, DeflSFast
@@ -1310,8 +1342,11 @@ static int zi_long(__G__ pEndprev, error_in_archive)
           LoadFarStringSmall(dtypelng[dnum])));
     }
 
+    Info(slide, 0, ((char *)slide, LoadFarString( GenPurpBitFlags),
+      G.crec.general_purpose_bit_flag));
     Info(slide, 0, ((char *)slide, LoadFarString(FileSecurity),
-      (G.crec.general_purpose_bit_flag & 1) ? nullStr : "not "));
+      (G.crec.general_purpose_bit_flag & 0x0001) ? nullStr : "not ",
+      (G.crec.general_purpose_bit_flag & 0x0040) ? " (strong)": nullStr));
     Info(slide, 0, ((char *)slide, LoadFarString(ExtendedLocalHdr),
       (G.crec.general_purpose_bit_flag & 8) ? "yes" : "no"));
     /* print upper 3 bits for amusement? */
@@ -1700,6 +1735,9 @@ static int zi_long(__G__ pEndprev, error_in_archive)
 #endif
                     ef_fieldname = efTheos;
                     break;
+                case EF_AES:
+                    ef_fieldname = efAES;
+                    break;
                 default:
                     ef_fieldname = efUnknown;
                     break;
@@ -1709,6 +1747,14 @@ static int zi_long(__G__ pEndprev, error_in_archive)
 
             /* additional, field-specific information: */
             switch (eb_id) {
+                case EF_AES:
+                    Info(slide, 0, ((char *)slide,
+                     LoadFarString( AesExtraField),
+                     makeword( ef_ptr),                     /* Version. */
+                     ef_ptr[ 2], ef_ptr[ 3],                /* Vendor ID. */
+                     ef_ptr[ 4],                            /* AES mode. */
+                     cmpr_mthd( makeword( &ef_ptr[ 5]))));  /* Cmpr mthd. */
+                    break;
                 case EF_OS2:
                 case EF_ACL:
                     if (eb_datalen >= EB_OS2_HLEN) {

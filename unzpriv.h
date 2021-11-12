@@ -680,6 +680,7 @@
 /*  Defines  */
 /*************/
 
+#define UNZIP_AESVERS   51
 #define UNZIP_BZ2VERS   46
 #ifdef ZIP64_SUPPORT
 # ifdef USE_BZIP2
@@ -1803,7 +1804,8 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define IBMLZ77ED        19
 #define WAVPACKED        97
 #define PPMDED           98
-#define NUM_METHODS      17     /* number of known method IDs */
+#define AESENCRED        99
+#define NUM_METHODS      18     /* number of known method IDs */
 /* don't forget to update list.c (list_files()), extract.c and zipinfo.c
  * appropriately if NUM_METHODS changes */
 
@@ -1860,6 +1862,7 @@ int insert_arg OF((char ***args, ZCONST char *arg, int insert_at,
 #define EF_THEOSO    0x4854    /* old Theos port */
 #define EF_MD5       0x4b46    /* Fred Kantor's MD5 ("FK") */
 #define EF_ASIUNIX   0x756e    /* ASi's Unix ("nu") */
+#define EF_AES       0x9901    /* AES encryption ("c^!") */
 
 #define EB_HEADSIZE       4    /* length of extra field block header */
 #define EB_ID             0    /* offset of block ID in header */

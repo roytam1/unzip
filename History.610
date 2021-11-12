@@ -252,6 +252,10 @@ Bugs fixed:
 6.10b (10 Dec 2010):
  - No bug fixes.
 
+6.10b+ (xx Xxx 2011):
+ - VMS-specific problem could cause "unzip -a" to truncate the last line
+   in a text file which had a one-character line ending (like LF) which
+   fell at the end of an internal buffer.  (vms/vms.c) [SMS]
 
 ==================
 

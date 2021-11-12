@@ -118,6 +118,16 @@ int unshrink(__G)
 #endif
 
 
+/* SMSd. */
+fprintf( stderr,
+ " unshrink(0).  parent = %%x%08x , Value = %%x%08x , stack = %%x%08x .\n",
+ parent, Value, stack);
+
+fprintf( stderr,
+ " unshrink(0).  stacktop = %%x%08x .\n",
+ stacktop);
+
+
 /*---------------------------------------------------------------------------
     Initialize various variables.
   ---------------------------------------------------------------------------*/
@@ -175,12 +185,23 @@ int unshrink(__G)
         READBITS(codesize, code)
         if (G.zipeof)
             break;
+
+#if 0
+/* SMSd. */
+fprintf( stderr, " unshrink(2).  code = %d.\n", code);
+#endif /* 0 */
+
         if (code == BOGUSCODE) {   /* possible to have consecutive escapes? */
             READBITS(codesize, code)
             if (G.zipeof)
                 break;
             if (code == 1) {
                 ++codesize;
+
+/* SMSd. */
+fprintf( stderr, " unshrink(4).  codesize = %d, MAXBITS = %d.\n",
+ codesize, MAX_BITS);
+
                 Trace((stderr, " (codesize now %d bits)\n", codesize));
                 if (codesize > MAX_BITS) return PK_ERR;
             } else if (code == 2) {
@@ -200,16 +221,30 @@ int unshrink(__G)
         newstr = stacktop;
         curcode = code;
 
+fprintf( stderr,
+ " unshrink(6).  newstr = stacktop = %%x%08x .\n",
+ stacktop);
+
         if (parent[code] == FREE_CODE) {
             /* or (FLAG_BITS[code] & FREE_CODE)? */
             Trace((stderr, " (found a KwKwK code %d; oldcode = %d)\n", code,
               oldcode));
             *newstr-- = finalval;
+
+fprintf( stderr,
+ " unshrink(7).  newstr = %%x%08x , code = %d, oldcode = %d, fr(code) = %d.\n",
+ newstr, code, oldcode, (FLAG_BITS[code] & FREE_CODE));
             code = oldcode;
         }
 
         while (code != BOGUSCODE) {
             if (newstr < stack) {
+
+/* SMSd. */
+fprintf( stderr,
+ " unshrink(8).  newstr = %%x%08x, stack = %%x%08x , code = %d.\n",
+ newstr, stack, code);
+
                 /* Bogus compression stream caused buffer underflow! */
                 Trace((stderr, "unshrink stack overflow!\n"));
                 return PK_ERR;
@@ -219,14 +254,29 @@ int unshrink(__G)
                 Trace((stderr, " (found a KwKwK code %d; oldcode = %d)\n",
                   code, oldcode));
                 *newstr-- = finalval;
+
+fprintf( stderr,
+ " unshrink(9).  newstr = %%x%08x , code = %d,\
+ oldcode = %d, fr(code) = %d.\n",
+ newstr, code, oldcode, (FLAG_BITS[code] & FREE_CODE));
+
                 code = oldcode;
             } else {
                 *newstr-- = Value[code];
+
+fprintf( stderr,
+ " unshrink(A).  newstr = %%x%08x , code (prev) = %d, code (new) = %d.\n",
+ newstr, code, (shrint)(parent[code] & CODE_MASK));
                 code = (shrint)(parent[code] & CODE_MASK);
             }
         }
 
         len = (int)(stacktop - newstr++);
+
+/* SMSd. */
+fprintf( stderr, " unshrink(E).  newstr = %%x%08x .\n", newstr);
+
+
         finalval = *newstr;
 
     /*-----------------------------------------------------------------------

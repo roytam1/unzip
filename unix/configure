@@ -51,6 +51,31 @@ else
   echo '  Ok'
 fi
 
+echo "Check C compiler+linker operation"
+cat > conftest.c << _EOF_
+#include <stdio.h>
+int main()
+{
+   printf( "  Ok\n");
+   return 0;
+}
+_EOF_
+$CC $CFLAGS -o conftest conftest.c
+status=$?
+if test $status -ne 0; then
+  echo ''
+  echo "C compiler+linker \"${CC}\" does not work as expected."
+  echo "Failing command was: $CC $CFLAGS -o conftest conftest.c"
+  exit $status
+else
+  ./conftest
+  status=$?
+  if test $status -ne 0; then
+    echo "Test executable exited with bad status: ${status}."
+    exit $status
+  fi
+fi
+
 echo 'Check C compiler type (optimization options)'
 # Sun C?
 cat > conftest.c << _EOF_

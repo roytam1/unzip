@@ -149,7 +149,7 @@ The most important changes are:
    - fixed false "uncompressed size mismatch" messages when extracting
      encrypted archive entries
    - do not restore SUID/SGID/Tacky attribute bits on Unix (BeOS, AtheOS)
-     unless explicitely requested by new "-K" command line qualifier
+     unless explicitly requested by new "-K" command line qualifier
    - optional support for "-W" qualifier to modify the pattern matching syntax
      (with -W: "*" stops at directory delimiter, "**" matches unlimited)
    - prevent buffer overflow caused by bogus extra-long Zipfile specification
@@ -214,7 +214,7 @@ The 5.4 release adds new ports, again. Other important items are changes
 to the listing format, new supplemental features and several bug fixes
 (especially concerning time-stamp handling...):
 
-   - new IBM OS/390 port, a UNIX derivate (POSIX with EBCDIC charset)
+   - new IBM OS/390 port, a UNIX derivative (POSIX with EBCDIC charset)
    - complete revision of the MacOS port
    - changed listing formats to enlarge the file size fields for more digits
    - added capability to restore directory attributes on MSDOS, OS/2, WIN32

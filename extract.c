@@ -151,15 +151,18 @@ static ZCONST char Far ComprMsgNum[] =
    static ZCONST char Far CmprIBMLZ77[]    = "IBM LZ77";
    static ZCONST char Far CmprWavPack[]    = "WavPack";
    static ZCONST char Far CmprPPMd[]       = "PPMd";
+   static ZCONST char Far CmprAES[]        = "AES encr";
    static ZCONST char Far *ComprNames[NUM_METHODS] = {
      CmprNone, CmprShrink, CmprReduce, CmprReduce, CmprReduce, CmprReduce,
      CmprImplode, CmprTokenize, CmprDeflate, CmprDeflat64, CmprDCLImplode,
-     CmprBzip, CmprLZMA, CmprIBMTerse, CmprIBMLZ77, CmprWavPack, CmprPPMd
+     CmprBzip, CmprLZMA, CmprIBMTerse, CmprIBMLZ77, CmprWavPack, CmprPPMd,
+     CmprAES
    };
    static ZCONST unsigned ComprIDs[NUM_METHODS] = {
      STORED, SHRUNK, REDUCED1, REDUCED2, REDUCED3, REDUCED4,
      IMPLODED, TOKENIZED, DEFLATED, ENHDEFLATED, DCLIMPLODED,
-     BZIPPED, LZMAED, IBMTERSED, IBMLZ77ED, WAVPACKED, PPMDED
+     BZIPPED, LZMAED, IBMTERSED, IBMLZ77ED, WAVPACKED, PPMDED,
+     AESENCRED
    };
 #endif /* !SFX */
 static ZCONST char Far FilNamMsg[] =
@@ -921,6 +924,12 @@ int extract_or_test_files(__G)    /* return PK-type error code */
 static int store_info(__G)   /* return 0 if skipping, 1 if OK */
     __GDEF
 {
+#ifdef USE_AES
+#  define UNKN_AES (G.crec.compression_method!=AESENCRED)
+#else
+#  define UNKN_AES TRUE       /* AES unknown */
+#endif
+
 #ifdef USE_BZIP2
 #  define UNKN_BZ2 (G.crec.compression_method!=BZIPPED)
 #else
@@ -933,16 +942,16 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
 #  define UNKN_LZMA TRUE      /* LZMA unknown */
 #endif
 
-#ifdef USE_WAVP
-#  define UNKN_WAVP (G.crec.compression_method!=WAVPACKED)
-#else
-#  define UNKN_WAVP TRUE      /* WavPack unknown */
-#endif
-
 #ifdef USE_PPMD
 #  define UNKN_PPMD (G.crec.compression_method!=PPMDED)
 #else
 #  define UNKN_PPMD TRUE      /* PPMd unknown */
+#endif
+
+#ifdef USE_WAVP
+#  define UNKN_WAVP (G.crec.compression_method!=WAVPACKED)
+#else
+#  define UNKN_WAVP TRUE      /* WavPack unknown */
 #endif
 
 #ifdef SFX
@@ -950,11 +959,11 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
 #    define UNKN_COMPR \
      (G.crec.compression_method!=STORED && G.crec.compression_method<DEFLATED \
       && G.crec.compression_method>ENHDEFLATED \
-      && UNKN_BZ2 && UNKN_LZMA && UNKN_WAVP && UNKN_PPMD)
+      && UNKN_AES && UNKN_BZ2 && UNKN_PPMD && UNKN_LZMA && UNKN_WAVP)
 # else
 #    define UNKN_COMPR \
      (G.crec.compression_method!=STORED && G.crec.compression_method!=DEFLATED\
-      && UNKN_BZ2 && UNKN_LZMA && UNKN_WAVP && UNKN_PPMD)
+      && UNKN_AES && UNKN_BZ2 && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP)
 # endif
 #else
 # ifdef COPYRIGHT_CLEAN  /* no reduced files */
@@ -970,14 +979,14 @@ static int store_info(__G)   /* return 0 if skipping, 1 if OK */
 # endif
 # ifdef USE_DEFLATE64
 #    define UNKN_COMPR (UNKN_RED || UNKN_SHR || \
-     G.crec.compression_method==TOKENIZED || \
-     (G.crec.compression_method>ENHDEFLATED && UNKN_BZ2 && UNKN_LZMA \
-      && UNKN_WAVP && UNKN_PPMD))
+      G.crec.compression_method==TOKENIZED || \
+      (G.crec.compression_method>ENHDEFLATED \
+      && UNKN_AES && UNKN_BZ2 && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP))
 # else
 #    define UNKN_COMPR (UNKN_RED || UNKN_SHR || \
-     G.crec.compression_method==TOKENIZED || \
-     (G.crec.compression_method>DEFLATED && UNKN_BZ2 && UNKN_LZMA \
-      && UNKN_WAVP && UNKN_PPMD))
+      G.crec.compression_method==TOKENIZED || \
+      (G.crec.compression_method>DEFLATED \
+      && UNKN_AES && UNKN_BZ2 && UNKN_LZMA && UNKN_PPMD && UNKN_WAVP))
 # endif
 #endif
 

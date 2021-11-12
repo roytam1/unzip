@@ -181,7 +181,7 @@ freely, subject to the above disclaimer and the following restrictions:
 #  define MSDOS
 #endif
 
-/* RSXNTDJ (at least up to v1.3) compiles for WIN32 (RSXNT) using a derivate
+/* RSXNTDJ (at least up to v1.3) compiles for WIN32 (RSXNT) using a derivative
    of the EMX environment, but defines MSDOS and __GO32__. ARG !!! */
 #if (defined(MSDOS) && defined(WIN32))
 #  undef MSDOS                  /* WIN32 is >>>not<<< MSDOS */

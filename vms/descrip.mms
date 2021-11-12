@@ -1,6 +1,6 @@
-#                                               1 March 2009.  SMS.
+#                                               25 April 2011.  SMS.
 #
-#    UnZip 6.0 for VMS - MMS (or MMK) Description File.
+#    UnZip 6.1 for VMS - MMS (or MMK) Description File.
 #
 # Usage:
 #
@@ -11,12 +11,14 @@
 #
 # Optional macros:
 #
-#    USEBZ2=1       Build with optional BZIP2 support.  This macro
-#                   is a shortcut for IZ_BZIP2=SYS$DISK:[.BZIP2].
-#                   Additionally, it forces invokation of the UnZip-supplied
-#                   bzip2 make script provided in [.bzip2]descrbz2.mms.
-#                   This results in a "single-command" build of UnZip with
-#                   bzip2 support directly from the sources.
+#    AES=1          Enable AES encryption support.  DEC C only.
+#
+#    CCOPTS=xxx     Compile with CC options xxx.  For example:
+#                   CCOPTS=/ARCH=HOST
+#
+#    DBG=1          Compile with /DEBUG /NOOPTIMIZE.
+#                   Link with /DEBUG /TRACEBACK.
+#                   (Default is /NOTRACEBACK.)
 #
 #    IZ_BZIP2=dev:[dir]  Build with optional BZIP2 support.  The value
 #                        of the MMS macro, ("dev:[dir]", or a suitable
@@ -24,7 +26,7 @@
 #                   BZIP2 object library (LIBBZ2_NS.OLB) is expected to
 #                   be in a "[.dest]" directory under that one
 #                   ("dev:[dir.ALPHAL]", for example), or in that
-#                   directory itself.
+#                   directory itself.  See also USEBZ2=1, below.)
 #                   By default, the SFX programs are built without BZIP2
 #                   support.  Add "BZIP2_SFX=1" to the LOCAL_UNZIP C
 #                   macros to enable it.  (See LOCAL_UNZIP, below.)
@@ -38,13 +40,6 @@
 #                   ("dev:[dir.ALPHAL]", for example), or in that
 #                   directory itself.
 #
-#    CCOPTS=xxx     Compile with CC options xxx.  For example:
-#                   CCOPTS=/ARCH=HOST
-#
-#    DBG=1          Compile with /DEBUG /NOOPTIMIZE.
-#                   Link with /DEBUG /TRACEBACK.
-#                   (Default is /NOTRACEBACK.)
-#
 #    LARGE=1        Enable large-file (>2GB) support.  Non-VAX only.
 #
 #    LINKOPTS=xxx   Link with LINK options xxx.  For example:
@@ -53,13 +48,20 @@
 #    LIST=1         Compile with /LIST /SHOW = (ALL, NOMESSAGES).
 #                   Link with /MAP /CROSS_REFERENCE /FULL.
 #
+#    "LOCAL_UNZIP= c_macro_1=value1 [, c_macro_2=value2 [...]]"
+#                   Compile with these additional C macros defined.
+#
 #    NOSHARE=1      Link /NOSYSSHR (not using shareable images).
 #    NOSHARE=OLDVAX Link /NOSYSSHR on VAX for:
 #                      DEC C with VMS before V7.3.
 #                      VAX C without DEC C RTL (DEC C not installed).
 #
-#    "LOCAL_UNZIP= c_macro_1=value1 [, c_macro_2=value2 [...]]"
-#                   Compile with these additional C macros defined.
+#    USEBZ2=1       Build with optional BZIP2 support.  This macro
+#                   is a shortcut for IZ_BZIP2=SYS$DISK:[.BZIP2].
+#                   Additionally, it forces invokation of the UnZip-supplied
+#                   bzip2 make script provided in [.bzip2]descrbz2.mms.
+#                   This results in a "single-command" build of UnZip with
+#                   bzip2 support directly from the sources.
 #
 # VAX-specific optional macros:
 #

@@ -67,15 +67,15 @@
 #  include <rms.h>
 
 /* Define maximum path length according to NAM[L] member size. */
-#  ifndef NAM_MAXRSS
+#  ifndef NAMX_MAXRSS
 #    ifdef NAML$C_MAXRSS
-#      define NAM_MAXRSS NAML$C_MAXRSS
+#      define NAMX_MAXRSS NAML$C_MAXRSS
 #    else
-#      define NAM_MAXRSS NAM$C_MAXRSS
+#      define NAMX_MAXRSS NAM$C_MAXRSS
 #    endif
 #  endif
 
-#  define _MAX_PATH (NAM_MAXRSS+1)      /* to define FILNAMSIZ below */
+#  define _MAX_PATH (NAMX_MAXRSS+1)     /* to define FILNAMSIZ below */
 
 #  ifdef RETURN_CODES  /* VMS interprets standard PK return codes incorrectly */
 #    define RETURN(ret) return_VMS(__G__ (ret))   /* verbose version */

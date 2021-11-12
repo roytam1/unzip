@@ -460,6 +460,16 @@ int decrypt(__G__ passwrd)
 
     Trace((stdout, "\n[incnt = %d]: ", GLOBAL(incnt)));
 
+/* SMSd. */
+fprintf( stderr, " decrypt().  incnt = %d, newzip = %d, passwrd: >%s<\n",
+ GLOBAL( incnt), GLOBAL( newzip), passwrd);
+
+fprintf( stderr, "             l.c_m = %d, l.e_f_len = %d.\n",
+ GLOBAL( lrec.compression_method), GLOBAL( lrec.extra_field_length));
+
+/* SMSd. */
+fprintf( stderr, "             key0: %%x%08x .\n", GLOBAL(key));
+
     /* get header once (turn off "encrypted" flag temporarily so we don't
      * try to decrypt the same data twice) */
     GLOBAL(pInfo->encrypted) = FALSE;
@@ -496,6 +506,9 @@ int decrypt(__G__ passwrd)
             return PK_WARN;   /* user indicated no more prompting */
     } else if ((GLOBAL(key) = (char *)malloc(IZ_PWLEN+1)) == (char *)NULL)
         return PK_MEM2;
+
+/* SMSd. */
+fprintf( stderr, "             key1: %%x%08x .\n", GLOBAL(key));
 
     /* try a few keys */
     n = 0;

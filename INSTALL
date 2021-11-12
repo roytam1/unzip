@@ -44,7 +44,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (quick-start instructions):
     Info-ZIP's UnZip utility for extraction of our distribution archives,
     applying the command option "-a" (= translate text files to native format)
     in the extraction command.  In case this procedure is not applicable, an
-    appropiate third-party conversion utility may be used to achieve the
+    appropriate third-party conversion utility may be used to achieve the
     desired line termination style (examples: "flip", available for Unix, DOS,
     OS/2; or "tr" on Unix).  However, as of UnZip 6.10 some text files
     normally read directly by utilities (such as Visual Studio files) are
@@ -230,7 +230,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         UnZip's listing. But the actual UTC timestamp values stored in the
         NTFS file attributes vary depending on whether extraction is done
         at summer or winter time.
-        This option is not recommended because it sacrifies the timestamp
+        This option is not recommended because it sacrifices the timestamp
         comparison checks when extracting or modifying archives in "update
         only newer" mode.
         However, for environments where consistency of >displayed< dates
@@ -321,7 +321,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         Enable a simple "run command after extraction" feature for
         the (command line) UnZipSFX stub.  This feature is currently
         incompatible with the "-d <extract_dir>" command line option,
-        therefore CHEAP_SFX_AUTORUN implicitely sets the NO_SFX_EXDIR
+        therefore CHEAP_SFX_AUTORUN implicitly sets the NO_SFX_EXDIR
         option.
 
       NO_ZIPINFO
@@ -342,7 +342,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         to run the program.  For 16-bit executables (DOS and OS/2), the
         special memory management to support the 64k history buffer results
         in a slight performance (= speed) penalty.  And for the SFX stub,
-        "deflate64" support might be unnessessary as long as the Info-ZIP
+        "deflate64" support might be unnecessary as long as the Info-ZIP
         Zip utility does not support it (quite likely, this will never
         get implemented).  So, the NO_DEFLATE64 option is provided to allow
         exclusion of the deflate64 support.
@@ -368,7 +368,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
               make -f unix/Makefile D_USE_BZ2=-DUSE_BZIP2 L_BZ2=-lbz2 \
                LIBBZ2=bzip2/libbz2.a YourTarget
              (Do not use the continuation line and replace YourTarget with
-             the appropiate target name.)
+             the appropriate target name.)
           b) Edit the Makefile and remove the comment signs from the lines
              that define the macros D_USE_BZ2, L_BZ2, and LIBBZ2 (at about
              line 84 ff.).
@@ -412,7 +412,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         Since reducing was only used by very early PKZIP beta versions (0.9x),
         support for it is now omitted by default (COPYRIGHT_CLEAN).  To in-
         clude unreducing capability, define USE_SMITH_CODE and replace the
-        stub unreduce.c source file by the separatly distributed full source
+        stub unreduce.c source file by the separately distributed full source
         code module.  Note that this subjects UnZip to any and all restrictions
         in Smith's copyright; see the UnZip COPYING.OLD file for details.
 
@@ -516,7 +516,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
        enabled on systems which are capable of using UTF-8 as the native
        charset.  For MBCS support, the C runtime library must supply
        implementations for the mblen() function and the MB_CUR_MAX runtime
-       macro/function.  The NO_MBCS symbol explicitely disables MBCS support
+       macro/function.  The NO_MBCS symbol explicitly disables MBCS support
        for testing purpose, or when MBCS support does not work as expected.
 
       HAVE_WORKING_ISPRINT
@@ -717,7 +717,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         With emx+gcc, a good choice is GNUMake 3.75 (or higher) from the
         djgpp V2 distribution used on win32\Makefile.emx.
 
-        The unzip32.dll WinDLL executables can be built using the appropiate
+        The unzip32.dll WinDLL executables can be built using the appropriate
         Makefile in the win32\ subdirectory, or by using the Microsoft Visual
         C++ project files supplied below the windll subdirectory.  Besides the
         MSC compilers, gcc-mingw32, Watcom C and Borland C allow to build the
@@ -732,7 +732,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
 
       WinCE (WinCE or WinNT)
         Only Microsoft Visual C++ 5.0, 6.0 or Visual C++ embedded 3.0 or later
-        are supported.  Use the appropiate version of the included project
+        are supported.  Use the appropriate version of the included project
         files and check wince\README for details.
 
       AmigaDOS
@@ -933,7 +933,7 @@ Macintosh
   Motorola 68020 or PowerPC 601 processor. Other configurations may work
   but it is not tested at all.
   The application (MacZip) is distributed as a combination of zip and unzip
-  in one program. The offical release is a fat binary with both regular 68K
+  in one program. The official release is a fat binary with both regular 68K
   and native PowerPC versions included.
   Move the executable(s) somewhere--for example, drag it (or them) to your
   Applications folder.  For easy access, make an alias in the Launcher Control

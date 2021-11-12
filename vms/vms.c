@@ -145,11 +145,11 @@ typedef struct vmsdirattr {
 /*
  *   Local static storage
  */
-static struct FAB        fileblk;       /* File Access Block */
-static struct XABDAT     dattim;        /* date-time XAB */
-static struct XABRDT     rdt;           /* revision date-time XAB */
-static struct RAB        rab;           /* Record Access Block */
-static struct NAM_STRUCT nam;           /* name block */
+static struct FAB         fileblk;      /* File Access Block */
+static struct XABDAT      dattim;       /* date-time XAB */
+static struct XABRDT      rdt;          /* revision date-time XAB */
+static struct RAB         rab;          /* Record Access Block */
+static struct NAMX_STRUCT nam;          /* name block */
 
 static struct FAB *outfab = NULL;
 static struct RAB *outrab = NULL;
@@ -483,11 +483,9 @@ int check_format(__G)
     nam = cc$rms_naml;                  /* Initialize NAML. */
     fab.fab$l_naml = &nam;              /* Point FAB to NAML. */
 
-    fab.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-    fab.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
-
 #endif /* NAML$C_MAXRSS */
 
+    NAMX_DNA_FNA_SET( fab)
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNA = G.zipfn;
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNS = strlen(G.zipfn);
 
@@ -736,14 +734,12 @@ static int create_default_output(__GPRO)
 
 #ifdef NAML$C_MAXRSS
 
-        nam = CC_RMS_NAM;               /* Initialize NAML. */
-        fileblk.FAB_NAM = &nam;         /* Point FAB to NAML. */
-
-        fileblk.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-        fileblk.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
+        nam = CC_RMS_NAMX;              /* Initialize NAML. */
+        fileblk.FAB_NAMX = &nam;        /* Point FAB to NAML. */
 
 #endif /* NAML$C_MAXRSS */
 
+        NAMX_DNA_FNA_SET( fileblk)
         FAB_OR_NAML(fileblk, nam).FAB_OR_NAML_FNA = G.filename;
         FAB_OR_NAML(fileblk, nam).FAB_OR_NAML_FNS = strlen(G.filename);
 
@@ -754,8 +750,10 @@ static int create_default_output(__GPRO)
             fileblk.fab$l_xab = (void *) &dattim;
         }
 
-/* 2005-02-14 SMS.  What does this mean?  ----vvvvvvvvvvvvvvvvvvvvvvvvvvv */
-        fileblk.fab$w_ifi = 0;  /* Clear IFI. It may be nonzero after ZIP */
+        /* Zip-archived FAB data may include a non-zero IFI, which must
+         * be cleared here.
+         */
+        fileblk.fab$w_ifi = 0;
         fileblk.fab$b_fac = FAB$M_BRO | FAB$M_PUT;  /* {block|record} output */
 #ifdef SYMLINKS
         if (G.symlnk)
@@ -853,7 +851,7 @@ static int create_default_output(__GPRO)
 
         if (ERR(ierr))
         {
-            char buf[NAM_MAXRSS + 128]; /* Name length + message length. */
+            char buf[NAMX_MAXRSS + 128]; /* Name length + message length. */
 
             sprintf(buf, "[ Cannot create ($create) output file %s ]\n",
               G.filename);
@@ -940,14 +938,12 @@ static int create_rms_output(__GPRO)
 
 #ifdef NAML$C_MAXRSS
 
-        nam = CC_RMS_NAM;               /* Initialize NAML. */
-        outfab->FAB_NAM = &nam;         /* Point FAB to NAML. */
-
-        outfab->fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-        outfab->fab$l_fna = (char *) -1;    /* Using NAML for file name. */
+        nam = CC_RMS_NAMX;              /* Initialize NAML. */
+        outfab->FAB_NAMX = &nam;        /* Point FAB to NAML. */
 
 #endif /* NAML$C_MAXRSS */
 
+        NAMX_DNA_FNA_SET( *outfab)
         FAB_OR_NAML(*outfab, nam).FAB_OR_NAML_FNA = G.filename;
         FAB_OR_NAML(*outfab, nam).FAB_OR_NAML_FNS = strlen(G.filename);
 
@@ -965,8 +961,11 @@ static int create_rms_output(__GPRO)
                 }
             }
         }
-/* 2005-02-14 SMS.  What does this mean?  ----vvvvvvvvvvvvvvvvvvvvvvvvvvv */
-        outfab->fab$w_ifi = 0;  /* Clear IFI. It may be nonzero after ZIP */
+
+        /* Zip-archived FAB data may include a non-zero IFI, which must
+         * be cleared here.
+         */
+        outfab->fab$w_ifi = 0;
         outfab->fab$b_fac = FAB$M_BIO | FAB$M_PUT;      /* block-mode output */
 #ifdef SYMLINKS
         /* 2007-02-28 SMS.
@@ -1020,7 +1019,7 @@ static int create_rms_output(__GPRO)
 
         if (ERR(ierr))
         {
-            char buf[NAM_MAXRSS + 128]; /* Name length + message length. */
+            char buf[NAMX_MAXRSS + 128]; /* Name length + message length. */
 
             sprintf(buf, "[ Cannot create ($create) output file %s ]\n",
               G.filename);
@@ -1038,7 +1037,7 @@ static int create_rms_output(__GPRO)
             ierr = sys$extend(outfab);
             if (ERR(ierr))
             {
-                char buf[NAM_MAXRSS + 128];    /* Name length + msg length. */
+                char buf[NAMX_MAXRSS + 128];    /* Name length + msg length. */
 
                 sprintf(buf, "[ Cannot allocate space for %s ]\n", G.filename);
                 vms_msg(__G__ buf, ierr);
@@ -1144,14 +1143,14 @@ static struct dsc$descriptor    pka_fibdsc =
 {   sizeof(pka_fib), DSC$K_DTYPE_Z, DSC$K_CLASS_S, (void *) &pka_fib  };
 
 static struct dsc$descriptor_s  pka_devdsc =
-{   0, DSC$K_DTYPE_T, DSC$K_CLASS_S, &nam.NAM_DVI[1]  };
+{   0, DSC$K_DTYPE_T, DSC$K_CLASS_S, &nam.NAMX_DVI[1]  };
 
 static struct dsc$descriptor_s  pka_fnam =
 {   0, DSC$K_DTYPE_T, DSC$K_CLASS_S, NULL  };
 
 /* Expanded and resultant name storage. */
-static char exp_nam[NAM_MAXRSS];
-static char res_nam[NAM_MAXRSS];
+static char exp_nam[NAMX_MAXRSS];
+static char res_nam[NAMX_MAXRSS];
 
 /* Special ODS5-QIO-compatible name storage. */
 #ifdef NAML$C_MAXRSS
@@ -1225,13 +1224,10 @@ static int create_qio_output(__GPRO)
     else                        /* !(uO.cflag) : redirect output */
     {
         fileblk = cc$rms_fab;           /* Initialize FAB. */
-        nam = CC_RMS_NAM;               /* Initialize NAM[L]. */
-        fileblk.FAB_NAM = &nam;         /* Point FAB to NAM[L]. */
+        nam = CC_RMS_NAMX;              /* Initialize NAM[L]. */
+        fileblk.FAB_NAMX = &nam;        /* Point FAB to NAM[L]. */
 
 #ifdef NAML$C_MAXRSS
-
-        fileblk.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-        fileblk.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
 
         /* Special ODS5-QIO-compatible name storage. */
         nam.naml$l_filesys_name = sys_nam;
@@ -1240,14 +1236,15 @@ static int create_qio_output(__GPRO)
 #endif /* NAML$C_MAXRSS */
 
         /* VMS-format file name, derived from archive. */
+        NAMX_DNA_FNA_SET( fileblk)
         FAB_OR_NAML(fileblk, nam).FAB_OR_NAML_FNA = G.filename;
         FAB_OR_NAML(fileblk, nam).FAB_OR_NAML_FNS = strlen(G.filename);
 
         /* Expanded and resultant name storage. */
-        nam.NAM_ESA = exp_nam;
-        nam.NAM_ESS = sizeof(exp_nam);
-        nam.NAM_RSA = res_nam;
-        nam.NAM_RSS = sizeof(res_nam);
+        nam.NAMX_ESA = exp_nam;
+        nam.NAMX_ESS = sizeof(exp_nam);
+        nam.NAMX_RSA = res_nam;
+        nam.NAMX_RSS = sizeof(res_nam);
 
         if ( ERR(status = sys$parse(&fileblk)) )
         {
@@ -1255,7 +1252,7 @@ static int create_qio_output(__GPRO)
             return OPENOUT_FAILED;
         }
 
-        pka_devdsc.dsc$w_length = (unsigned short)nam.NAM_DVI[0];
+        pka_devdsc.dsc$w_length = (unsigned short)nam.NAMX_DVI[0];
 
         if ( ERR(status = sys$assign(&pka_devdsc, &pka_devchn, 0, 0)) )
         {
@@ -1297,14 +1294,14 @@ static int create_qio_output(__GPRO)
            here.)
         */
 
-        pka_fnam.dsc$a_pointer = nam.NAM_L_NAME;
+        pka_fnam.dsc$a_pointer = nam.NAMX_L_NAME;
         pka_fnam.dsc$w_length =
-          nam.NAM_B_NAME + nam.NAM_B_TYPE + nam.NAM_B_VER;
+          nam.NAMX_B_NAME + nam.NAMX_B_TYPE + nam.NAMX_B_VER;
 
 #if 0
-        pka_fnam.dsc$w_length = nam.NAM_B_NAME + nam.NAM_B_TYPE;
+        pka_fnam.dsc$w_length = nam.NAMX_B_NAME + nam.NAMX_B_TYPE;
         if ( uO.V_flag /* keep versions */ )
-            pka_fnam.dsc$w_length += nam.NAM_B_VER;
+            pka_fnam.dsc$w_length += nam.NAMX_B_VER;
 #endif /* 0 */
 
 #endif /* ?NAML$C_MAXRSS */
@@ -1314,7 +1311,7 @@ static int create_qio_output(__GPRO)
         */
         for (i = 0; i < 3; i++)
         {
-            pka_fib.FIB$W_DID[i] = nam.NAM_DID[i];
+            pka_fib.FIB$W_DID[i] = nam.NAMX_DID[i];
             pka_fib.FIB$W_FID[i] = 0;
         }
 
@@ -1417,7 +1414,7 @@ static int create_qio_output(__GPRO)
 
         if ( ERR(status) )
         {
-            char buf[NAM_MAXRSS + 128]; /* Name length + message length. */
+            char buf[NAMX_MAXRSS + 128]; /* Name length + message length. */
 
             sprintf(buf, "[ Cannot create (QIO) output file %s ]\n",
               G.filename);
@@ -1462,25 +1459,19 @@ static int create_qio_output(__GPRO)
 static int replace_rms_newversion(__GPRO)
 {
     int ierr;
-    struct NAM_STRUCT nam;
+    struct NAMX_STRUCT nam;
 
-    nam = CC_RMS_NAM;           /* Initialize local NAM[L] block. */
-    outfab->FAB_NAM = &nam;     /* Point FAB to local NAM[L]. */
+    nam = CC_RMS_NAMX;          /* Initialize local NAM[L] block. */
+    outfab->FAB_NAMX = &nam;    /* Point FAB to local NAM[L]. */
 
     /* Arrange to store the resultant file spec (with new version), so
      * that we can extract the actual file version from it, for later
      * use in the "extracting:/inflating:/..."  message (G.filename).
      */
-    nam.NAM_RSA = res_nam;
-    nam.NAM_RSS = sizeof(res_nam);
+    nam.NAMX_RSA = res_nam;
+    nam.NAMX_RSS = sizeof(res_nam);
 
-#ifdef NAML$C_MAXRSS
-
-    outfab->fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-    outfab->fab$l_fna = (char *) -1;    /* Using NAML for file name. */
-
-#endif /* NAML$C_MAXRSS */
-
+    NAMX_DNA_FNA_SET( *outfab)
     FAB_OR_NAML(*outfab, nam).FAB_OR_NAML_FNA = G.filename;
     FAB_OR_NAML(*outfab, nam).FAB_OR_NAML_FNS = strlen(G.filename);
 
@@ -1490,7 +1481,7 @@ static int replace_rms_newversion(__GPRO)
     /* Create the new-version file. */
     ierr = sys$create(outfab);
 
-    if (nam.NAM_RSL > 0)
+    if (nam.NAMX_RSL > 0)
     {
         /* File spec version pointers.
          * Versions must exist, so a simple right-to-left search for ";"
@@ -1500,7 +1491,7 @@ static int replace_rms_newversion(__GPRO)
         char *semi_col_res;
 
         /* NUL-terminate the (complete) resultant file spec. */
-        res_nam[nam.NAM_RSL] = '\0';
+        res_nam[nam.NAMX_RSL] = '\0';
 
         /* Find the versions (";") in the original and resultant file specs. */
         semi_col_orig = strrchr(G.filename, ';');
@@ -2270,8 +2261,8 @@ static int _flush_varlen(__G__ rawbuf, size, final_flag)
 /*
  *   Routine _flush_stream breaks decompressed stream into records
  *   depending on format of the stream (fab->rfm, G.pInfo->textmode, etc.)
- *   and puts out these records. It also handles CR LF sequences.
- *   Should be used when extracting *text* files.
+ *   and puts out these records.  It also adjusts line-end (CR, LF)
+ *   sequences.  Should be used when extracting *text* files.
  */
 
 #define VT      0x0B
@@ -2305,11 +2296,16 @@ static int _flush_varlen(__G__ rawbuf, size, final_flag)
 
 static unsigned find_eol(p, n, l)
 /*
- *  Find first CR, LF, CR/LF or LF/CR in string 'p' of length 'n'.
- *  Return offset of the sequence found or 'n' if not found.
- *  If found, return in '*l' length of the sequence (1 or 2) or
- *  zero if sequence end not seen, i.e. CR or LF is last char
- *  in the buffer.
+ * Find the first CR, LF, CR+LF or LF+CR in string "p" of length "n".
+ * Return the offset of the sequence found, or "n" if not found.
+ * If found, set "*l" to the length of the sequence (1 or 2).  If not
+ * found, set "*l" to zero.  Note that at the end of a data block, a
+ * 1-character line ending (like, say, LF) will be treated as
+ * incomplete, until a later second line-ending character (or any
+ * non-line-ending character) is reached.  A side effect of this scheme
+ * is that at the end of a data stream with a one-character line ending
+ * (like, say, LF), the return value will be zero (because no second
+ * line-ending character can possibly be found).
  */
     ZCONST uch *p;
     unsigned n;
@@ -2373,7 +2369,6 @@ static int _flush_stream(__G__ rawbuf, size, final_flag)
         return WriteRecord(__G__ locbuf, recsize);
     }
 
-
     if ( loccnt > 0 )
     {
         /* Find end of record partially saved in locbuf */
@@ -2417,23 +2412,37 @@ static int _flush_stream(__G__ rawbuf, size, final_flag)
             {
                 if ( eol_off >= size )
                 {
-                    end = size;
-                    complete = 0;
-                }
-                else if ( eol_len == 0 )
-                {
-                    got_eol = rawbuf[eol_off];
+                    /* 2011-02-07 SMS.
+                     * Does this ever happen?
+                     */
                     end = size;
                     complete = 0;
                 }
                 else
                 {
+                    /* 2011-02-07 SMS.
+                     * Previously, the following memcpy() was not being
+                     * done in the "eol_len == 0" case, causing loss of
+                     * data at the end of a last line with a 1-character
+                     * line ending, like LF, when doing "unzip -a".
+                     */
+                    if ( eol_len == 0 )
+                    {
+                        /* Last char in buffer might be 1-char line end. */
+                        got_eol = rawbuf[eol_off];
+                        complete = 0;
+                    }
+                    else
+                    {
+                        /* Found certain 1- or 2-char line end. */
+                        complete = 1;
+                    }
+                    /* Append available data to the data in locbuf. */
                     memcpy(locptr, rawbuf, eol_off);
                     recsize = loccnt + eol_off;
                     locptr += eol_off;
                     loccnt += eol_off;
                     end = eol_off + eol_len;
-                    complete = 1;
                 }
             }
         }
@@ -3104,8 +3113,8 @@ int set_direc_attribs(__G__ d)
     int type;
     ush attr;
     struct XABPRO pro;
-    char dir_name[NAM_MAXRSS + 1];
-    char warnmsg[NAM_MAXRSS + 128]; /* Name length + message length. */
+    char dir_name[NAMX_MAXRSS + 1];
+    char warnmsg[NAMX_MAXRSS + 128]; /* Name length + message length. */
     int retcode = PK_OK;
 
     /* Re-append the closing ']' character which has been stripped in
@@ -3261,15 +3270,12 @@ int set_direc_attribs(__G__ d)
         pka_atr[pka_idx].atr$l_addr = 0; /* NULL when DECC VAX gets fixed. */
     }
 
-    nam = CC_RMS_NAM;               /* Initialize NAM[L]. */
-    outfab->FAB_NAM = &nam;         /* Point FAB to NAM[L]. */
+    nam = CC_RMS_NAMX;              /* Initialize NAM[L]. */
+    outfab->FAB_NAMX = &nam;        /* Point FAB to NAM[L]. */
 
     /* Point the FAB-NAM[L] to the VMS-format directory file name. */
 
 #ifdef NAML$C_MAXRSS
-
-    outfab->fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-    outfab->fab$l_fna = (char *) -1;    /* Using NAML for file name. */
 
     /* Special ODS5-QIO-compatible name storage. */
     nam.naml$l_filesys_name = sys_nam;
@@ -3277,14 +3283,15 @@ int set_direc_attribs(__G__ d)
 
 #endif /* NAML$C_MAXRSS */
 
+    NAMX_DNA_FNA_SET( *outfab)
     FAB_OR_NAML(*outfab, nam).FAB_OR_NAML_FNA = dir_name;
     FAB_OR_NAML(*outfab, nam).FAB_OR_NAML_FNS = strlen(dir_name);
 
     /* Expanded and resultant name storage. */
-    nam.NAM_ESA = exp_nam;
-    nam.NAM_ESS = sizeof(exp_nam);
-    nam.NAM_RSA = res_nam;
-    nam.NAM_RSS = sizeof(res_nam);
+    nam.NAMX_ESA = exp_nam;
+    nam.NAMX_ESS = sizeof(exp_nam);
+    nam.NAMX_RSA = res_nam;
+    nam.NAMX_RSS = sizeof(res_nam);
 
     status = sys$parse(outfab);
     if ( ERR(status) )
@@ -3298,7 +3305,7 @@ int set_direc_attribs(__G__ d)
     }
 
     /* Set the length in the device name descriptor. */
-    pka_devdsc.dsc$w_length = (unsigned short) nam.NAM_DVI[0];
+    pka_devdsc.dsc$w_length = (unsigned short) nam.NAMX_DVI[0];
 
     /* Open a channel to the disk device. */
     status = sys$assign(&pka_devdsc, &pka_devchn, 0, 0);
@@ -3317,7 +3324,7 @@ int set_direc_attribs(__G__ d)
     */
     for (i = 0; i < 3; i++)
     {
-        pka_fib.FIB$W_DID[i] = nam.NAM_DID[i];
+        pka_fib.FIB$W_DID[i] = nam.NAMX_DID[i];
         pka_fib.FIB$W_FID[i] = 0;
     }
 
@@ -3340,8 +3347,8 @@ int set_direc_attribs(__G__ d)
 #else /* !NAML$C_MAXRSS */
 
     /* ODS2-only: Use the whole name. */
-    pka_fnam.dsc$a_pointer = nam.NAM_L_NAME;
-    pka_fnam.dsc$w_length = nam.NAM_B_NAME + nam.NAM_B_TYPE + nam.NAM_B_VER;
+    pka_fnam.dsc$a_pointer = nam.NAMX_L_NAME;
+    pka_fnam.dsc$w_length = nam.NAMX_B_NAME + nam.NAMX_B_TYPE + nam.NAMX_B_VER;
 
 #endif /* ?NAML$C_MAXRSS */
 
@@ -3626,13 +3633,10 @@ int stamp_file(__G__ fname, modtime)
     };
 
     fileblk = cc$rms_fab;               /* Initialize FAB. */
-    nam = CC_RMS_NAM;                   /* Initialize NAM[L]. */
-    fileblk.FAB_NAM = &nam;             /* Point FAB to NAM[L]. */
+    nam = CC_RMS_NAMX;                  /* Initialize NAM[L]. */
+    fileblk.FAB_NAMX = &nam;            /* Point FAB to NAM[L]. */
 
 #ifdef NAML$C_MAXRSS
-
-    fileblk.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-    fileblk.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
 
     /* Special ODS5-QIO-compatible name storage. */
     nam.naml$l_filesys_name = sys_nam;
@@ -3640,13 +3644,14 @@ int stamp_file(__G__ fname, modtime)
 
 #endif /* NAML$C_MAXRSS */
 
+    NAMX_DNA_FNA_SET( fileblk)
     FAB_OR_NAML(fileblk, nam).FAB_OR_NAML_FNA = (char *)fname;
     FAB_OR_NAML(fileblk, nam).FAB_OR_NAML_FNS = strlen(fname);
 
-    nam.NAM_ESA = exp_nam;
-    nam.NAM_ESS = sizeof(exp_nam);
-    nam.NAM_RSA = res_nam;
-    nam.NAM_RSS = sizeof(res_nam);
+    nam.NAMX_ESA = exp_nam;
+    nam.NAMX_ESS = sizeof(exp_nam);
+    nam.NAMX_RSA = res_nam;
+    nam.NAMX_RSS = sizeof(res_nam);
 
     if ( ERR(status = sys$parse(&fileblk)) )
     {
@@ -3654,7 +3659,7 @@ int stamp_file(__G__ fname, modtime)
         return -1;
     }
 
-    pka_devdsc.dsc$w_length = (unsigned short)nam.NAM_DVI[0];
+    pka_devdsc.dsc$w_length = (unsigned short)nam.NAMX_DVI[0];
 
     if ( ERR(status = sys$assign(&pka_devdsc, &pka_devchn, 0, 0)) )
     {
@@ -3682,8 +3687,8 @@ int stamp_file(__G__ fname, modtime)
 #else /* !NAML$C_MAXRSS */
 
     /* Extract only the name.type;version. */
-    pka_fnam.dsc$a_pointer = nam.NAM_L_NAME;
-    pka_fnam.dsc$w_length = nam.NAM_B_NAME + nam.NAM_B_TYPE + nam.NAM_B_VER;
+    pka_fnam.dsc$a_pointer = nam.NAMX_L_NAME;
+    pka_fnam.dsc$w_length = nam.NAMX_B_NAME + nam.NAMX_B_TYPE + nam.NAMX_B_VER;
 
 #endif /* ?NAML$C_MAXRSS */
 
@@ -3692,7 +3697,7 @@ int stamp_file(__G__ fname, modtime)
     */
     for (i = 0; i < 3; i++)
     {
-        pka_fib.FIB$W_DID[i] = nam.NAM_DID[i];
+        pka_fib.FIB$W_DID[i] = nam.NAMX_DID[i];
         pka_fib.FIB$W_FID[i] = 0;
     }
 
@@ -3725,7 +3730,7 @@ int stamp_file(__G__ fname, modtime)
     */
     for (i = 0; i < 3; i++)
     {
-        pka_fib.FIB$W_DID[i] = nam.NAM_DID[i];
+        pka_fib.FIB$W_DID[i] = nam.NAMX_DID[i];
         pka_fib.FIB$W_FID[i] = 0;
     }
 
@@ -3901,11 +3906,11 @@ char *do_wild( __G__ wld )
 {
     int status;
 
-    static char filenam[NAM_MAXRSS + 1];
-    static char efn[NAM_MAXRSS];
-    static char last_wild[NAM_MAXRSS + 1];
+    static char filenam[NAMX_MAXRSS + 1];
+    static char efn[NAMX_MAXRSS];
+    static char last_wild[NAMX_MAXRSS + 1];
     static struct FAB fab;
-    static struct NAM_STRUCT nam;
+    static struct NAMX_STRUCT nam;
     static int first_call = 1;
     static ZCONST char deflt[] = "[]*.ZIP";
 
@@ -3915,26 +3920,20 @@ char *do_wild( __G__ wld )
         strcpy( last_wild, wld );
 
         fab = cc$rms_fab;               /* Initialize FAB. */
-        nam = CC_RMS_NAM;               /* Initialize NAM[L]. */
-        fab.FAB_NAM = &nam;             /* Point FAB to NAM[L]. */
+        nam = CC_RMS_NAMX;              /* Initialize NAM[L]. */
+        fab.FAB_NAMX = &nam;            /* Point FAB to NAM[L]. */
 
-#ifdef NAML$C_MAXRSS
-
-        fab.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-        fab.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
-
-#endif /* NAML$C_MAXRSS */
-
+        NAMX_DNA_FNA_SET( fab)
         FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNA = (char *) deflt;
         FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNS = sizeof(deflt) - 1;
 
         FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNA = last_wild;
         FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNS = strlen(last_wild);
 
-        nam.NAM_ESA = efn;
-        nam.NAM_ESS = sizeof(efn)-1;
-        nam.NAM_RSA = filenam;
-        nam.NAM_RSS = sizeof(filenam)-1;
+        nam.NAMX_ESA = efn;
+        nam.NAMX_ESS = sizeof(efn)-1;
+        nam.NAMX_RSA = filenam;
+        nam.NAMX_RSS = sizeof(filenam)-1;
 
         first_call = 0;
 
@@ -3942,7 +3941,7 @@ char *do_wild( __G__ wld )
          * Parse the file spec.  If sys$parse() fails, save the VMS
          * error message for later use, and return an empty string.
          */
-        nam.NAM_NOP = NAM_M_SYNCHK;     /* Syntax-only analysis. */
+        nam.NAMX_NOP = NAMX_M_SYNCHK;     /* Syntax-only analysis. */
         if ( !OK(status = sys$parse(&fab)) )
         {
             vms_msg_fetch(status);
@@ -3955,7 +3954,7 @@ char *do_wild( __G__ wld )
          * sys$search() will work properly.  Regardless of parse error,
          * leave filenam[] as-was.
          */
-        nam.NAM_NOP = 0;                /* Normal analysis. */
+        nam.NAMX_NOP = 0;                /* Normal analysis. */
         if ( OK(status = sys$parse(&fab)) )
         {
             status = sys$search(&fab);
@@ -3975,7 +3974,7 @@ char *do_wild( __G__ wld )
             return (char *)NULL;
         }
     }
-    filenam[nam.NAM_RSL] = '\0';        /* Add the NUL terminator. */
+    filenam[nam.NAMX_RSL] = '\0';        /* Add the NUL terminator. */
     return filenam;
 
 } /* end function do_wild() */
@@ -4245,40 +4244,34 @@ int dest_struct_level(char *path)
     int sts;
 
     struct FAB fab;
-    struct NAM_STRUCT nam;
-    char e_name[NAM_MAXRSS + 1];
+    struct NAMX_STRUCT nam;
+    char e_name[NAMX_MAXRSS + 1];
 
     struct dsc$descriptor_s dev_descr =
      { 0, DSC$K_DTYPE_T, DSC$K_CLASS_S, 0 };
 
     fab = cc$rms_fab;                   /* Initialize FAB. */
-    nam = CC_RMS_NAM;                   /* Initialize NAM[L]. */
-    fab.FAB_NAM = &nam;                 /* Point FAB to NAM[L]. */
+    nam = CC_RMS_NAMX;                  /* Initialize NAM[L]. */
+    fab.FAB_NAMX = &nam;                /* Point FAB to NAM[L]. */
 
-#ifdef NAML$C_MAXRSS
-
-    fab.fab$l_dna = (char *) -1;        /* Using NAML for default name. */
-    fab.fab$l_fna = (char *) -1;        /* Using NAML for file name. */
-
-#endif /* NAML$C_MAXRSS */
-
+    NAMX_DNA_FNA_SET( fab)
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNA = PATH_DEFAULT;
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNS = strlen(PATH_DEFAULT);
 
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNA = path;
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNS = strlen(path);
 
-    nam.NAM_ESA = e_name;
-    nam.NAM_ESS = sizeof(e_name) - 1;
+    nam.NAMX_ESA = e_name;
+    nam.NAMX_ESS = sizeof(e_name) - 1;
 
-    nam.NAM_NOP = NAM_M_SYNCHK;         /* Syntax-only analysis. */
+    nam.NAMX_NOP = NAMX_M_SYNCHK;         /* Syntax-only analysis. */
     sts = sys$parse(&fab);
 
     if ((sts & STS$M_SUCCESS) == STS$K_SUCCESS)
     {
         /* Load resultant device name into device descriptor. */
-        dev_descr.dsc$a_pointer = nam.NAM_L_DEV;
-        dev_descr.dsc$w_length = nam.NAM_B_DEV;
+        dev_descr.dsc$a_pointer = nam.NAMX_L_DEV;
+        dev_descr.dsc$w_length = nam.NAMX_B_DEV;
 
         /* Get filesystem type code.
            (Text results for this item code have been unreliable.)
@@ -4764,7 +4757,7 @@ int checkdir(__G__ pathcomp, fcn)
     static int  mkdir_failed=0;
     int status;
     struct FAB fab;
-    struct NAM_STRUCT nam;
+    struct NAMX_STRUCT nam;
 
 
 /************
@@ -4789,15 +4782,10 @@ int checkdir(__G__ pathcomp, fcn)
         root_dest = PATH_DEFAULT;   /* Default destination for ODSx sensing. */
         root_has_dir = 0;           /* Root includes a directory. */
         fab = cc$rms_fab;           /* Initialize FAB. */
-        nam = CC_RMS_NAM;           /* Initialize NAM[L]. */
-        fab.FAB_NAM = &nam;         /* Point FAB to NAM[L]. */
+        nam = CC_RMS_NAMX;          /* Initialize NAM[L]. */
+        fab.FAB_NAMX = &nam;        /* Point FAB to NAM[L]. */
 
-#ifdef NAML$C_MAXRSS
-
-        fab.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-        fab.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
-
-#endif /* NAML$C_MAXRSS */
+        NAMX_DNA_FNA_SET( fab)
 
         /* Specified file spec. */
         FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNA = pathcomp;
@@ -4808,8 +4796,8 @@ int checkdir(__G__ pathcomp, fcn)
         FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNS = strlen(PATH_DEFAULT);
 
         /* Expanded file spec. */
-        nam.NAM_ESA = pathbuf;
-        nam.NAM_ESS = NAM_MAXRSS;
+        nam.NAMX_ESA = pathbuf;
+        nam.NAMX_ESS = NAMX_MAXRSS;
 
         status = sys$parse(&fab);
 
@@ -4827,43 +4815,43 @@ int checkdir(__G__ pathcomp, fcn)
         /* Should be only a device:[directory], so name+type+version
            should have length 2 (".;").
         */
-        if (nam.NAM_B_NAME + nam.NAM_B_TYPE + nam.NAM_B_VER > 2)
+        if (nam.NAMX_B_NAME + nam.NAMX_B_TYPE + nam.NAMX_B_VER > 2)
         {
             Info(slide, 1, ((char *)slide,
               "Invalid destination directory (includes file name): %s\n",
-              FnFilter1(nam.NAM_ESA)));
+              FnFilter1(nam.NAMX_ESA)));
             return MPN_ERR_SKIP;
         }
 
         /* Truncate at name, leaving only "dev:[dir]". */
-        *nam.NAM_L_NAME = '\0';
-        rootlen = nam.NAM_L_NAME - nam.NAM_ESA;
+        *nam.NAMX_L_NAME = '\0';
+        rootlen = nam.NAMX_L_NAME - nam.NAMX_ESA;
 
         /* Remove any trailing dots in directory. */
-        if ((nam.NAM_ESA[rootlen-1] == ']') &&
-            (nam.NAM_ESA[rootlen-2] != '^'))
+        if ((nam.NAMX_ESA[rootlen-1] == ']') &&
+            (nam.NAMX_ESA[rootlen-2] != '^'))
         {
             root_has_dir = 1;
             rootlen -= 2;
-            while ((nam.NAM_ESA[rootlen] == '.') &&
-                   (nam.NAM_ESA[rootlen-1] != '^'))
+            while ((nam.NAMX_ESA[rootlen] == '.') &&
+                   (nam.NAMX_ESA[rootlen-1] != '^'))
             {
                 rootlen--;
             }
-            nam.NAM_ESA[++rootlen] = ']';
-            nam.NAM_ESA[++rootlen] = '\0';
+            nam.NAMX_ESA[++rootlen] = ']';
+            nam.NAMX_ESA[++rootlen] = '\0';
         }
 
-        devlen = nam.NAM_L_DIR - nam.NAM_ESA;
+        devlen = nam.NAMX_L_DIR - nam.NAMX_ESA;
 
         /* If directory not found, then create it. */
         if (status == RMS$_DNF)
         {
-            if (status = mkdir(nam.NAM_ESA, 0))
+            if (status = mkdir(nam.NAMX_ESA, 0))
             {
                 Info(slide, 1, ((char *)slide,
                   "Can not create destination directory: %s\n",
-                  FnFilter1(nam.NAM_ESA)));
+                  FnFilter1(nam.NAMX_ESA)));
 
                 /* path didn't exist, tried to create, and failed. */
                 return MPN_ERR_SKIP;
@@ -4871,7 +4859,7 @@ int checkdir(__G__ pathcomp, fcn)
         }
 
         /* Save the (valid) device:[directory] spec. */
-        strcpy(pathbuf, nam.NAM_ESA);
+        strcpy(pathbuf, nam.NAMX_ESA);
         root_dest = pathbuf;
 
         /* At this point, the true destination is known.  If the user
@@ -4904,7 +4892,7 @@ int checkdir(__G__ pathcomp, fcn)
 
         /* Set various pointers and lengths. */
         devptr = pathbuf;
-        dirptr = pathbuf + (nam.NAM_L_DIR - nam.NAM_ESA);
+        dirptr = pathbuf + (nam.NAMX_L_DIR - nam.NAMX_ESA);
         rootend = pathbuf + rootlen;
         *(end = rootend) = '\0';
         root_dirlen = dirlen = rootlen - devlen;
@@ -4920,7 +4908,7 @@ int checkdir(__G__ pathcomp, fcn)
 
     if ( function == INIT )
     {
-        if ( strlen(G.filename) + rootlen + 13 > NAM_MAXRSS )
+        if ( strlen(G.filename) + rootlen + 13 > NAMX_MAXRSS )
             return MPN_ERR_TOOLONG;
 
         if ( rootlen == 0 )     /* No root given, reset everything. */
@@ -4964,7 +4952,7 @@ int checkdir(__G__ pathcomp, fcn)
             *end++ = '.';
         }
 
-        else if ( cmplen + (end-pathptr) > NAM_MAXRSS )
+        else if ( cmplen + (end-pathptr) > NAMX_MAXRSS )
             return MPN_ERR_TOOLONG;
 
         else
@@ -4988,23 +4976,17 @@ int checkdir(__G__ pathcomp, fcn)
         {   /* Expand renamed filename using collected path, return
              *  at pathcomp */
             fab = cc$rms_fab;           /* Initialize FAB. */
-            nam = CC_RMS_NAM;           /* Initialize NAM[L]. */
-            fab.FAB_NAM = &nam;         /* Point FAB to NAM[L]. */
+            nam = CC_RMS_NAMX;          /* Initialize NAM[L]. */
+            fab.FAB_NAMX = &nam;        /* Point FAB to NAM[L]. */
 
-#ifdef NAML$C_MAXRSS
-
-            fab.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-            fab.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
-
-#endif /* NAML$C_MAXRSS */
-
+            NAMX_DNA_FNA_SET( fab)
             FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNA = pathptr;
             FAB_OR_NAML(fab, nam).FAB_OR_NAML_DNS = end - pathptr;
             FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNA = G.filename;
             FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNS = strlen(G.filename);
 
-            nam.NAM_ESA = pathcomp;     /* (Great design. ---v.  SMS.) */
-            nam.NAM_ESS = NAM_MAXRSS;   /* Assume large enough. */
+            nam.NAMX_ESA = pathcomp;    /* (Great design. ---v.  SMS.) */
+            nam.NAMX_ESS = NAMX_MAXRSS; /* Assume large enough. */
 
             if (!OK(status = sys$parse(&fab)) && status == RMS$_DNF )
                                          /* Directory not found: */
@@ -5013,10 +4995,10 @@ int checkdir(__G__ pathcomp, fcn)
                 char    *dirend;
                 int     mkdir_failed;
 
-                dirend = (char*)nam.NAM_L_DIR + nam.NAM_B_DIR;
+                dirend = (char*)nam.NAMX_L_DIR + nam.NAMX_B_DIR;
                 save = *dirend;
                 *dirend = '\0';
-                if ( (mkdir_failed = mkdir(nam.NAM_L_DEV, 0)) &&
+                if ( (mkdir_failed = mkdir(nam.NAMX_L_DEV, 0)) &&
                      errno == EEXIST )
                     mkdir_failed = 0;
                 *dirend = save;
@@ -5024,7 +5006,7 @@ int checkdir(__G__ pathcomp, fcn)
                     return 3;
                 created_dir = TRUE;
             }                                /* if (sys$parse... */
-            pathcomp[nam.NAM_ESL] = '\0';
+            pathcomp[nam.NAMX_ESL] = '\0';
             return MPN_OK;
         }                                /* if (USE_DEFAULT) */
         else
@@ -5117,7 +5099,7 @@ int check_for_newer(__G__ filenam)   /* return 1 if existing file newer or */
     struct FAB fab;
     struct XABDAT xdat;
 #ifdef NAML$C_MAXRSS
-    struct NAM_STRUCT nam;
+    struct NAMX_STRUCT nam;
 #endif
 
     /* 2008-07-12 SMS.
@@ -5137,14 +5119,12 @@ int check_for_newer(__G__ filenam)   /* return 1 if existing file newer or */
 
 #ifdef NAML$C_MAXRSS
 
-    nam  = CC_RMS_NAM;                  /* Initialize NAM[L]. */
-    fab.FAB_NAM = &nam;                 /* Point FAB to NAM[L]. */
-
-    fab.fab$l_dna = (char *) -1;    /* Using NAML for default name. */
-    fab.fab$l_fna = (char *) -1;    /* Using NAML for file name. */
+    nam = CC_RMS_NAMX;                  /* Initialize NAM[L]. */
+    fab.FAB_NAMX = &nam;                /* Point FAB to NAM[L]. */
 
 #endif /* NAML$C_MAXRSS */
 
+    NAMX_DNA_FNA_SET( fab)
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNA = filenam;
     FAB_OR_NAML(fab, nam).FAB_OR_NAML_FNS = strlen(filenam);
 
