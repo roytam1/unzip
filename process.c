@@ -3599,6 +3599,8 @@ zvoid *getRISCOSexfield(ef_buf, ef_len)
 #endif /* (RISCOS || ACORN_FTYPE_NFS) */
 
 
+#ifdef USE_EF_STREAM
+
 /*********************************/
 /* Function ef_scan_for_stream() */
 /*********************************/
@@ -3768,3 +3770,5 @@ unsigned ef_scan_for_stream( ef_ptr, ef_len, btmp_siz, btmp, xlhdr, cmnt)
 
   return sts;
 }
+
+#endif /* def USE_EF_STREAM */

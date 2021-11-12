@@ -363,7 +363,7 @@ static ZCONST char Far efTandem[] = "Tandem NSK";
 static ZCONST char Far efTheos[] = "Theos";
 static ZCONST char Far efAES[] = "AES_WG encrypt";
 static ZCONST char Far efJavaCAFE[] = "Java CAFE";
-static ZCONST char Far efStream[] = "Local Hdr Ext'n (strm)";
+static ZCONST char Far efStream[] = "Ext'd Lcl Hdr (stream)";
 static ZCONST char Far efUnknown[] = "unknown";
 
 static ZCONST char Far OS2EAs[] = ".\n\
@@ -2288,7 +2288,7 @@ static int zi_long(__G__ pEndprev, error_in_archive)
                             Info( slide, 0, ((char *)slide,
                              LoadFarString( efStreamBitMapByte),
                              *(ef_ptr+ eb_ndx)));
-                            if ((*(ef_ptr+ eb_ndx)& 0x80) == 0)
+                            if ((*(ef_ptr+ eb_ndx)& EB_STREAM_EOB) == 0)
                             {
                               eb_state = 1;
                               eb_ndx++;

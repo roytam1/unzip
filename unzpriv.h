@@ -2706,10 +2706,12 @@ unsigned ef_scan_for_izux        OF((ZCONST uch *ef_buf, long ef_len,
                                      int ef_is_c, ulg dos_mdatetime,
                                      iztimes *z_utim, ulg *z_uidgid));
 
+#ifdef USE_EF_STREAM
 unsigned ef_scan_for_stream      OF((ZCONST uch *ef_ptr, long ef_len,
                                      int *btmp_siz, uch *btmp,
                                      ext_local_file_hdr *xlhdr,
                                      char **cmnt));
+#endif /* def USE_EF_STREAM */
 
 #ifdef IZ_CRYPT_AES_WG
 int ef_scan_for_aes              OF((ZCONST uch *ef_buf, long ef_len,
