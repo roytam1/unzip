@@ -66,6 +66,8 @@ Features added (or removed):
  - Add announcement file.  (unzip610a.ann) [EG]
  - Replace /[NO]CASE_INSENSITIVE with /CASE_MATCH.  (vms/unzip_cli.help,
     vms/unz_cli.cld) [SMS]
+6.00a (23 Aug 2010):
+ - Add note to README.  Update announcement.  (README, unzip610a.ann) [EG]
 
 
 Bugs fixed:
@@ -117,10 +119,10 @@ Bugs fixed:
 6.00a07 (10 Aug 2010):
  - Add more -q- to cancel possible previous -q.  (vms/cmdline.c) [SMS]
 
-6.00a08 (11 Aug 2010):
+6.00a (23 Aug 2010):
  - Worked around a limitation in VAX C V3.1-051 involving "\"-continuation of
-    "#if" directives.  Restored lost "-J" to option table on Mac OS X.
-    (unzip.c, unzip.h) [SMS]
+    "#if" directives.  Restored lost "-J" to option table on Mac OS X.  Created
+    J_FLAG define to enable -J option.  (unzip.c, unzip.h) [SMS]
 
 ==================
 

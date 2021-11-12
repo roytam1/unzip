@@ -30,7 +30,7 @@ To compile UnZip, UnZipSFX and/or fUnZip (quick-start instructions):
     For VMS, see the Install section below or [.vms]INSTALL.VMS for details.
 
     For DOS and other OSes without explicit timezone support (i.e., everybody
-    but Unix, VMS, Windows 95 and NT?), make sure the "TZ" environment variable
+    but Unix, VMS, Windows 95 and later), make sure the "TZ" environment variable
     is set to a valid and reasonable value; see your compiler docs for details.
 
 (*) The UnZip sources as well as other Info-ZIP source archives are packaged
@@ -454,14 +454,16 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
            more versatile Unicode support and additional "debugging" options
            for checking the correct recognition of non-ASCII Unicode
            characters.
-        c) The operating system and the compilation environment allow to use
+        c) The operating system and the compilation environment allow use of
            unicode-encoded "wide character" data for native text strings
-           support.
+           support.  (This is mainly Windows NT and later.)
            Complete support for this method requires a throughout revision
-           of the UnZip code. All internal string handling and text output
-           needs to be ported to use wchar_t character storage.
-           This porting is still in an experimental stage and not ready
-           for general distribution.
+           of the UnZip code to convert the MBCS 8-bit string calls used now
+           to the equivalent wide character calls.  All internal string
+           handling and text output needs to be ported to use wchar_t
+           character storage, which for the most part requires just proper
+           type updating.  This capability is planned for inclusion in
+           UnZip 6.10.
 
         On some ports UNICODE_SUPPORT is set automatically:
         - WIN32 (and WinCE) use method b) by defining UNICODE_SUPPORT and
@@ -475,8 +477,8 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
       NO_SETLOCALE (for Unix)
         On Unix, it is now assumed that <locale.h> and the setlocale function
         are available, to setup locale-aware filtering of displayed filenames.
-        The option NO_SETLOCALE allows to disable the dependency on <locale.h>
-        and setlocale() on systems where this assumption is invalid (and the
+        The option NO_SETLOCALE disables the dependency on <locale.h> and
+        setlocale() on systems where this assumption is invalid (and the
         auto-configuring "make" target "generic" cannot be used for
         capabilities detection).
 
@@ -484,12 +486,12 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
       NO_MBCS
        Enable multi-byte character set support.  This is the default for the
        Human68k system (originated from Japan) and for Win32 (here only DBCS
-       "double-byte character set" support).  The MBCS support should also be
-       enabled on systems which are capable of using UTF-8 as native charset.
-       For MBCS support, the C runtime library must supply implementations
-       for the mblen() function and the MB_CUR_MAX runtime macro/function.
-       The NO_MBCS symbol allows to explicitely disable MBCS support for
-       testing purpose, or when MBCS support does not work as expected.
+       "double-byte character set" support).  MBCS support should also be
+       enabled on systems which are capable of using UTF-8 as the native
+       charset.  For MBCS support, the C runtime library must supply
+       implementations for the mblen() function and the MB_CUR_MAX runtime
+       macro/function.  The NO_MBCS symbol explicitely disables MBCS support
+       for testing purpose, or when MBCS support does not work as expected.
 
       HAVE_WORKING_ISPRINT
       NO_WORKING_ISPRINT
@@ -499,7 +501,9 @@ To compile UnZip, UnZipSFX and/or fUnZip (detailed instructions):
         In cases where isprint() flags printable extended characters as
         unprintable, defining NO_WORKING_ISPRINT allows to disable the enhanced
         filtering capability in fnfilter().  (The ASCII control codes 0x01 to
-        0x1f are always escaped on ASCII systems.)
+        0x1f are always escaped on ASCII systems.)  If UNICODE_SUPPORT is
+        enabled, the isprint() check is now done using wide characters to
+        avoid MBCS issues.
 
       DEBUG
         Used for debugging purposes; enables Trace() statements.  Generally
@@ -915,5 +919,9 @@ Macintosh OS X (Unix Apple)
   minimal, we plan to support additional Mac OS X features, such as resource
   forks, in future releases.
 
-Human68K, TOPS-20, AOS/VS, MVS, VM/CMS, etc.
+MVS, VM/CMS, z/OS
+  More information may be coming soon.
+
+Human68K, TOPS-20, AOS/VS, etc.
   Dunno, sorry...
+

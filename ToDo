@@ -31,11 +31,15 @@ New stuff to be added to the main list (if not already there):
     Feature Requests > Info-ZIP UnZip > How to include large file support
     in unzip 6.00")
 - Recover ftp damaged file.  (12 Jul 2010 EG, from forum thread "Info-ZIP
-  Software Discussions and Feature Requests > Info-ZIP UnZip > Recover
-  ascii ftp damaged zip file - I've done it!")
+    Software Discussions and Feature Requests > Info-ZIP UnZip > Recover
+    ascii ftp damaged zip file - I've done it!")
 - Support for more Mac-specific file attributes in AppleDouble scheme.
+    (3 Aug 2010 SMS)
 - Testing Mac-specific attribute code on (different-endian) Intel Mac
-  (including crossing between Power PC and Intel).
+    (including crossing between Power PC and Intel).  (3 Aug 2010 SMS)
+- Look at controlling attribute extraction more finely, maybe using a
+    new --restore-attributes=(protection,owner,acl) option.  (3 Aug
+    2010 SMS, EG)
 
 
 ================================
@@ -83,6 +87,8 @@ For UnZip 6.1/who knows:
      - extend the built-in translation tables to support other language
        regions besides "Western_Latin1" (e.g. Russian-kyrillic, Japanese,
        Chinese)
+       There has been talk on the forum to link to the libiconv library
+       to do translations.
      - streamline the multilingual codepage and UTF-8 support for the UNIX
        port (standard codepage translation facility?, like WideChar<->AnsiCP
        translation functions under MS Windows)
@@ -90,6 +96,7 @@ For UnZip 6.1/who knows:
         should happen for 6.1
         (there is internal alpha-state code for better "wide" support on
         Windows available at the time of the 6.0 release)
+        Planned for UnZip 6.10b.
 
    o revise the "extended charcodes" handling in decryption password to
      support UTF-8 encoding on Unicode-aware systems where the "native"
@@ -105,13 +112,11 @@ For UnZip 6.1/who knows:
      - add a (long) option to switch off UnZip's internal pattern matching
        on filename arguments.
 
-        probably in 6.1,
-        (first prototype of the revised command parser was available at the
-        time of the 6.0 release)
+        Initial implementation done in 6.1
 
    o add command line options for miscellaneous features requested by users
      and/or development team members:
-     - display the Info-ZIP software license
+     - display the Info-ZIP software license (done as --license in 6.1)
      - more fine-tuning for file attributes set/restored at extraction, like:
        set/clear archive attribute on DOS/OS2/WIN32;
        apply/skip standard or user-defined umask filter on UNIX (& Unix-alike)
@@ -221,7 +226,7 @@ New stuff:
 
         who knows (zip -F, -FF already exist)
 
-Some maintenance or OS specific topics for 6.0 release:
+Some maintenance or OS specific topics for 6.x release:
 
    * add "unix-style-path -> partitioned-dataset filename" conversion
      to MVS port

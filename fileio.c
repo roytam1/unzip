@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 1990-2009 Info-ZIP.  All rights reserved.
+  Copyright (c) 1990-2010 Info-ZIP.  All rights reserved.
 
   See the accompanying file LICENSE, version 2009-Jan-02 or later
   (the contents of which are also included in unzip.h) for terms of use.
@@ -2953,3 +2953,4 @@ int Far zfstrcmp(const char Far *s1, const char Far *s2)
 #endif /* !_MSC_VER || (_MSC_VER < 600) */
 
 #endif /* SMALL_MEM */
+
